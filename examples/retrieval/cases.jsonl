@@ -1,0 +1,20 @@
+{"id": "q1", "input": "machine learning tutorial", "relevant": {"doc1": 3, "doc2": 2, "doc5": 1}}
+{"id": "q2", "input": "python data science", "relevant": {"doc3": 3, "doc4": 1}}
+{"id": "q3", "input": "neural networks deep learning", "relevant": {"doc1": 2, "doc6": 3}}
+{"id": "q4", "input": "web development javascript", "relevant": {"doc7": 3, "doc8": 2}}
+{"id": "q5", "input": "database sql query", "relevant": {"doc9": 3, "doc10": 1}}
+{"id": "q6", "input": "cloud computing aws", "relevant": {"doc11": 3, "doc12": 2}}
+{"id": "q7", "input": "mobile app android", "relevant": {"doc13": 3}}
+{"id": "q8", "input": "security encryption", "relevant": {"doc14": 3, "doc15": 2}}
+{"id": "q9", "input": "devops ci cd", "relevant": {"doc16": 3, "doc17": 1}}
+{"id": "q10", "input": "natural language processing", "relevant": {"doc18": 3, "doc1": 1}}
+{"id": "q11", "input": "computer vision opencv", "relevant": {"doc19": 3}}
+{"id": "q12", "input": "reinforcement learning", "relevant": {"doc20": 3, "doc6": 2}}
+{"id": "q13", "input": "frontend react", "relevant": {"doc7": 2, "doc21": 3}}
+{"id": "q14", "input": "backend nodejs", "relevant": {"doc22": 3, "doc8": 1}}
+{"id": "q15", "input": "data visualization matplotlib", "relevant": {"doc23": 3, "doc3": 1}}
+{"id": "q16", "input": "kubernetes docker", "relevant": {"doc24": 3, "doc16": 2}}
+{"id": "q17", "input": "git version control", "relevant": {"doc25": 3}}
+{"id": "q18", "input": "api design rest", "relevant": {"doc26": 3, "doc22": 1}}
+{"id": "q19", "input": "testing pytest", "relevant": {"doc27": 3, "doc17": 2}}
+{"id": "q20", "input": "open source contribution", "relevant": {"doc28": 3, "doc25": 1}}

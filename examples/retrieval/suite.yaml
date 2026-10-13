@@ -1,0 +1,26 @@
+# Retrieval example: exercises recall@k, MRR and nDCG with a tiny corpus.
+# Offline, deterministic, suitable for CI.
+name: retrieval-example
+dataset: cases.jsonl
+
+system:
+  target: python:retrievers:good_retriever
+
+scorers:
+  - name: recall
+    type: recall_at_k
+    params: {k: 5}
+  - name: mrr
+    type: mrr
+    params: {k: 10}
+  - name: ndcg
+    type: ndcg
+    params: {k: 5, pass_threshold: 0.5}
+
+gate:
+  metric: ndcg
+  max_drop: 0.1
+  alpha: 0.05
+  min_cases: 15
+
+cache_dir: .evalproof/cache
