@@ -62,7 +62,7 @@ uv run evalproof compare runs/baseline.json runs/noisy.json \
 
 With Ollama installed, the LLM example is
 [`examples/support-qa`](examples/support-qa) (`ollama pull qwen3:1.7b` and
-`ollama pull qwen3:8b`; about 6–10 minutes per run on a laptop).
+`ollama pull qwen3:8b`; about 6–10 minutes per run on an Apple M5).
 
 To install the CLI elsewhere: `uv tool install git+https://github.com/technobasant/evalproof`.
 
