@@ -30,7 +30,7 @@ import streamlit as st  # noqa: E402
 # would keep serving the previous library while saying it runs this repository's code.
 # Fingerprint the code and data it runs, and start afresh when they change.
 _inputs = [*(ROOT / "src" / "evalproof").rglob("*.py"), *(ROOT / "examples").rglob("*.json*")]
-_stamp = max(p.stat().st_mtime_ns for p in _inputs)
+_stamp = tuple(p.stat().st_mtime_ns for p in sorted(_inputs))
 if getattr(sys.modules.get("evalproof"), "app_stamp", None) != _stamp:
     for _name in [m for m in sys.modules if m.split(".")[0] == "evalproof"]:
         del sys.modules[_name]

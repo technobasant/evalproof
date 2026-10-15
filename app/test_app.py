@@ -73,7 +73,8 @@ def test_a_pushed_library_change_is_picked_up_without_a_reboot() -> None:
     # library rather than keep the copy it imported before the push.
     at = run_app()
     before = sys.modules["evalproof"]
-    src = Path(__file__).resolve().parents[1] / "src" / "evalproof" / "stats.py"
+    lib = Path(__file__).resolve().parents[1] / "src" / "evalproof"
+    src = min(lib.rglob("*.py"), key=lambda p: p.stat().st_mtime_ns)  # not just the newest
     stat = src.stat()
     try:
         os.utime(src, ns=(stat.st_atime_ns, stat.st_mtime_ns + 10**9 * 3600))
