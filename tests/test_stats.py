@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from statistics import NormalDist
 
 import pytest
 
@@ -63,6 +64,25 @@ def test_binom_cdf() -> None:
 )
 def test_mcnemar_exact(b: int, c: int, expected: float) -> None:
     assert mcnemar_exact(b, c) == pytest.approx(expected)
+
+
+def test_binom_cdf_other_p_and_edges() -> None:
+    # P(X<=1), X~Bin(3,.25) = .75^3 + 3·.25·.75^2
+    assert binom_cdf(1, 3, 0.25) == pytest.approx(0.84375)
+    assert binom_cdf(-1, 10) == 0.0
+    assert binom_cdf(10, 10) == 1.0
+
+
+def test_mcnemar_exact_many_discordant_pairs() -> None:
+    # Past ~1,030 discordant pairs comb(n, i) no longer fits in a float; this raised
+    # OverflowError. The exact p-value must stay finite, symmetric and close to the
+    # continuity-corrected normal approximation at this size.
+    assert mcnemar_exact(600, 600) == 1.0
+    p = mcnemar_exact(540, 560)
+    assert p == mcnemar_exact(560, 540)
+    z = (abs(540 - 560) - 1) / math.sqrt(1100)
+    assert p == pytest.approx(2 * (1 - NormalDist().cdf(z)), rel=0.01)
+    assert mcnemar_exact(500, 700) < 1e-8
 
 
 def test_mcnemar_rejects_negative() -> None:

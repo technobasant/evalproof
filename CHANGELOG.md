@@ -2,6 +2,15 @@
 
 All notable changes are listed here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- `evalproof compare` raised OverflowError when a metric had more than about 1,030
+  discordant pairs: the exact McNemar test summed `comb(n, i) * 0.5**n` in floating
+  point, and `comb(n, i)` outgrows the largest float. The binomial tail is now summed
+  as integers and divided once, so it stays exact at any size.
+
 ## [0.1.1] — 2026-10-13
 
 ### Fixed

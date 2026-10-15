@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from fractions import Fraction
 from statistics import NormalDist
 
 import numpy as np
@@ -102,7 +103,26 @@ def paired_bootstrap(
 
 
 def binom_cdf(k: int, n: int, p: float = 0.5) -> float:
-    return float(sum(math.comb(n, i) * p**i * (1 - p) ** (n - i) for i in range(k + 1)))
+    """``P(X <= k)`` for ``X ~ Binomial(n, p)``, summed exactly and rounded once.
+
+    In floating point, ``comb(n, i)`` alone passes the largest float from about
+    n = 1,030, so a comparison with that many discordant pairs raised OverflowError
+    instead of returning a p-value. Integers and fractions do not overflow.
+    """
+    if k < 0:
+        return 0.0
+    if k >= n:
+        return 1.0
+    q = Fraction(p)
+    if q == Fraction(1, 2):
+        # The McNemar case: every outcome has probability 2**-n, so sum the binomial
+        # coefficients as integers and divide once (int / int is correctly rounded).
+        term = total = 1
+        for i in range(1, k + 1):
+            term = term * (n - i + 1) // i
+            total += term
+        return total / (1 << n)
+    return float(sum(math.comb(n, i) * q**i * (1 - q) ** (n - i) for i in range(k + 1)))
 
 
 def mcnemar_exact(b: int, c: int) -> float:
