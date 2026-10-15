@@ -4,6 +4,16 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+### Added
+
+- `app/`: a Streamlit app. *Check a drop* turns paired pass/fail counts into the exact
+  McNemar test, a paired-bootstrap interval, the gate's verdict and the suite size at
+  which the same drop would become significant. *The recorded run* replays the committed
+  `examples/support-qa` runs: the comparison, the twelve answers that changed, a latency
+  budget, and judge calibration on a gold sample of chosen size. It runs the library from
+  `src/` through the same `compare_runs` and `decide` calls as the CLI; CI installs the
+  app's own requirements and drives both views.
+
 ### Fixed
 
 - `evalproof compare` raised OverflowError when a metric had more than about 1,030

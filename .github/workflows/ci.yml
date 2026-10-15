@@ -79,3 +79,20 @@ jobs:
           check regressed 1
           check noisy 0
           check refactored 0
+
+  # The Streamlit app imports src/ directly, so a library change can break it without
+  # failing the tests above. Install the app's own requirements, as Streamlit Community
+  # Cloud does, and drive both views.
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.23"  # the uv that wrote uv.lock; bump both together
+          python-version: "3.12"
+      - name: install what Streamlit Community Cloud installs
+        run: |
+          uv venv /tmp/app
+          uv pip install --python /tmp/app -r app/requirements.txt pytest
+      - run: /tmp/app/bin/python -m pytest app -p no:cacheprovider

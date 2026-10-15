@@ -1,0 +1,9 @@
+# Streamlit Community Cloud reads the dependency file next to the entrypoint before
+# the repository root, so the app has its own list and uv.lock stays exactly as CI
+# uses it. The app imports evalproof from ../src, so this is evalproof's runtime
+# dependencies plus Streamlit.
+streamlit>=1.65,<2
+httpx>=0.27
+numpy>=1.26
+pydantic>=2.7
+pyyaml>=6.0
