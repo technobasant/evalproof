@@ -6,13 +6,16 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ### Added
 
-- `app/`: a Streamlit app. *Check a drop* turns paired pass/fail counts into the exact
-  McNemar test, a paired-bootstrap interval, the gate's verdict and the suite size at
-  which the same drop would become significant. *The recorded run* replays the committed
-  `examples/support-qa` runs: the comparison, the twelve answers that changed, a latency
-  budget, and judge calibration on a gold sample of chosen size. It runs the library from
-  `src/` through the same `compare_runs` and `decide` calls as the CLI; CI installs the
-  app's own requirements and drives both views.
+- `app/`: an interactive Streamlit app, live at https://evalproof.streamlit.app.
+  *Check a drop* starts from four scenarios (the recorded run, the same rates on 4× the
+  cases, a small but certain drop, a twenty-case suite) or from sliders, and shows the
+  gate's verdict, every paired case as a grid, the coin-flip distribution behind the exact
+  McNemar p-value, and the suite size at which the same drop would become significant.
+  *The recorded run* replays the committed `examples/support-qa` runs: select any of the
+  twelve changed answers to read both versions side by side, add a latency budget, and
+  calibrate the judge on a gold sample of chosen size. It runs the library from `src/`
+  through the same `compare_runs` and `decide` calls as the CLI; CI installs the app's own
+  requirements and drives every scenario.
 
 ### Fixed
 

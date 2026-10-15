@@ -1,4 +1,5 @@
-"""The app renders, and its defaults reproduce the recorded run's published verdict.
+"""The app renders, its defaults reproduce the recorded run's verdict, and each scenario
+lands on the gate outcome it is there to show.
 
 Run with the app's own dependencies, as Streamlit Community Cloud installs them:
 ``uv pip install -r app/requirements.txt pytest`` then ``python -m pytest app``.
@@ -8,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 APP = str(Path(__file__).with_name("streamlit_app.py"))
@@ -19,25 +21,46 @@ def run_app() -> AppTest:
     return at
 
 
+def text(at: AppTest) -> str:
+    return "\n".join([m.value for m in at.markdown] + [c.value for c in at.caption])
+
+
 def test_defaults_reproduce_the_recorded_verdict() -> None:
     at = run_app()
-    # Calculator defaults are the recorded run: 8 worse, 4 better of 83 → p = 0.388, warn.
+    # 8 worse, 4 better of 83 → exact McNemar p = 0.388, a warning and not a failure,
+    # in the calculator and in the replay of the committed runs alike.
     assert "0.388" in [m.value for m in at.metric]
-    warnings = [w.value for w in at.warning]
-    assert sum("**Gate: warn** (exit 0)" in w for w in warnings) == 2  # calculator + replay
-    assert any("12 answers that decided it" in s.value for s in at.subheader)
+    assert text(at).count("## Not distinguishable from noise") == 2
+    assert "comes up **39%** of the time" in text(at)
+    assert "exit 0 (warn)" in text(at)
+
+
+@pytest.mark.parametrize(
+    ("scenario", "headline", "exit_text"),
+    [
+        ("Same rates, 4× the cases", "## A real regression", "exit 1 (fail)"),
+        ("Small but certain", "## A real drop, inside your tolerance", "exit 0 (warn)"),
+        ("Twenty cases", "## Too few cases to gate", "exit 4 (fail)"),
+    ],
+)
+def test_each_scenario_shows_its_outcome(scenario: str, headline: str, exit_text: str) -> None:
+    at = run_app()
+    at.pills[0].set_value(scenario).run()
+    assert not at.exception
+    assert headline in text(at)
+    assert exit_text in text(at)
 
 
 def test_latency_budget_fails_the_recorded_run_with_exit_3() -> None:
     at = run_app()
     at.toggle[0].set_value(True).run()
     assert not at.exception
-    assert any("**Gate: fail** (exit 3)" in e.value for e in at.error)
-    assert any("p95 latency 4422 ms exceeds 2500 ms" in e.value for e in at.error)
+    assert "## Over budget; the quality drop is noise" in text(at)
+    assert "p95 latency 4422 ms exceeds 2500 ms" in text(at)
 
 
-def test_counts_that_cannot_happen_are_refused() -> None:
+def test_a_changed_answer_is_shown_side_by_side() -> None:
     at = run_app()
-    at.number_input[2].set_value(70).run()  # more regressions than baseline passes
-    assert not at.exception
-    assert any("cannot exceed" in e.value for e in at.error)
+    assert "q08 · Is there a discount" in text(at)
+    assert "**Before: grounded prompt**" in text(at)
+    assert "**After: friendly prompt**" in text(at)

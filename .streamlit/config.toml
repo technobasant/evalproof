@@ -1,0 +1,16 @@
+# How the Streamlit app in app/ looks. Streamlit Community Cloud runs the app from the
+# repository root, so this is the config it reads. The primary colour is the portfolio's
+# AI-systems colour, in its light and dark values.
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+baseRadius = "0.6rem"
+headingFontWeights = [700, 650, 600, 600, 600, 600]
+
+[theme.light]
+primaryColor = "#5a43a6"
+
+[theme.dark]
+primaryColor = "#b3a1f0"
