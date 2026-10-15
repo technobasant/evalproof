@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "evalproof"
-version = "0.1.1"
+version = "0.1.2"
 description = "Treat LLM evaluation as measurement: calibrate the judge, correct the pass rate, gate CI on significant regressions."
 readme = "README.md"
 license = "Apache-2.0"
