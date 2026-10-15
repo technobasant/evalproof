@@ -25,6 +25,18 @@ import altair as alt  # noqa: E402
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
+# Community Cloud pulls each push into the running process and re-reads this script on
+# every run, but imported modules and st.cache_data results outlive the push: the app
+# would keep serving the previous library while saying it runs this repository's code.
+# Fingerprint the code and data it runs, and start afresh when they change.
+_inputs = [*(ROOT / "src" / "evalproof").rglob("*.py"), *(ROOT / "examples").rglob("*.json*")]
+_stamp = max(p.stat().st_mtime_ns for p in _inputs)
+if getattr(sys.modules.get("evalproof"), "app_stamp", None) != _stamp:
+    for _name in [m for m in sys.modules if m.split(".")[0] == "evalproof"]:
+        del sys.modules[_name]
+    st.cache_data.clear()
+
+import evalproof  # noqa: E402
 from evalproof import __version__  # noqa: E402
 from evalproof.calibration import CalibrationReport, calibrate  # noqa: E402
 from evalproof.compare import Comparison, MetricComparison, compare_runs  # noqa: E402
@@ -38,6 +50,8 @@ from evalproof.gate import (  # noqa: E402
 )
 from evalproof.models import CaseResult, Run, RunInfo, Score, SystemOutput  # noqa: E402
 from evalproof.stats import mcnemar_exact, z_for  # noqa: E402
+
+evalproof.app_stamp = _stamp  # type: ignore[attr-defined]
 
 REPO = "https://github.com/technobasant/evalproof"
 POST = "https://basantbhattarai.com.np/writing/eval-score-drop-twelve-answers/"
