@@ -3,9 +3,14 @@
 [![ci](https://github.com/technobasant/evalproof/actions/workflows/ci.yml/badge.svg)](https://github.com/technobasant/evalproof/actions/workflows/ci.yml)
 [![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
 ![python](https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://evalproof.streamlit.app)
 
 **Treat LLM evaluation as measurement.** Calibrate the judge, correct its pass rate, and
 gate CI on regressions that are real rather than noise.
+
+**Try it in the browser: [evalproof.streamlit.app](https://evalproof.streamlit.app).** Check whether
+a drop between two runs is real, or replay the run below and read the twelve answers that
+changed. It runs this repository's code; after a quiet spell it takes about half a minute to wake.
 
 An LLM judge is a classifier with error rates. If it passes bad answers at rate FPR and
 good answers at rate TPR, its pass rate converges to `FPR + (TPR − FPR) · p`, not to the
@@ -65,6 +70,9 @@ With Ollama installed, the LLM example is
 `ollama pull qwen3:8b`; about 6–10 minutes per run on an Apple M5).
 
 To install the CLI elsewhere: `uv tool install git+https://github.com/technobasant/evalproof`.
+
+The browser app in [`app/`](app) runs locally too:
+`uv run --with-requirements app/requirements.txt streamlit run app/streamlit_app.py`.
 
 ## Concepts
 
