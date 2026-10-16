@@ -5,8 +5,6 @@ Documents are hardcoded for reproducibility. Relevance is graded 0-3.
 
 from __future__ import annotations
 
-import random
-
 # Tiny corpus: id -> text
 CORPUS = {
     "doc1": "introduction to machine learning and neural networks",
@@ -54,7 +52,7 @@ def good_retriever(query: str) -> dict:
 
 
 def noisy_retriever(query: str) -> dict:
-    """Like good_retriever but demotes the top relevant doc on even-length queries (simulating regression)."""
+    """good_retriever with a regression: on even-length queries the top hit drops to rank 5."""
     ranked = sorted(CORPUS.items(), key=lambda item: -_score(query, item[1]))
     retrieved = [doc_id for doc_id, _ in ranked[:10]]
     # Deterministic "noise": if query length even, move first doc to position 5
