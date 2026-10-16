@@ -118,6 +118,22 @@ jobs:
           check regressed 1
           check noisy 0
           check refactored 0
+      - name: the retrieval example gates on nDCG@5
+        run: |
+          set +e
+          for v in good noisy; do
+            uv run evalproof run examples/retrieval/suite.yaml \
+              --system "python:retrievers:${v}_retriever" --out "/tmp/retrieval-$v.json" --quiet > /dev/null
+          done
+          check() {
+            uv run evalproof compare /tmp/retrieval-good.json "/tmp/retrieval-$1.json" \
+              --suite examples/retrieval/suite.yaml --gate > /dev/null
+            got=$?
+            if [ "$got" != "$2" ]; then echo "::error::retrieval $1: expected exit $2, got $got"; exit 1; fi
+            echo "retrieval $1 → exit $got (expected $2)"
+          }
+          check noisy 1
+          check good 0
 
   # The Streamlit app imports src/ directly, so a library change can break it without
   # failing the tests above. Install the app's own requirements, as Streamlit Community

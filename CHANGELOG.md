@@ -2,6 +2,14 @@
 
 All notable changes are listed here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `examples/retrieval`: an offline retrieval example for recall@k, MRR and nDCG, with a
+  regression that recall@5 cannot see and MRR and nDCG@5 can. Contributed by
+  @HarshRajSinghania in #5. CI asserts its gate exits 1 on the regression and 0 on no change.
+
 ## [0.2.1] — 2026-10-16
 
 ### Fixed
@@ -104,6 +112,7 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a support assistant for
   a fictional product judged by a local model, with measurements.
 
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/technobasant/evalproof/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/technobasant/evalproof/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/technobasant/evalproof/compare/v0.1.1...v0.1.2

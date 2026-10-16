@@ -79,6 +79,11 @@ uv run evalproof compare runs/baseline.json runs/noisy.json \
   --suite examples/deterministic/suite.yaml --gate; echo "exit $?"   # 0: 2 of 60 is noise
 ```
 
+[`examples/retrieval`](examples/retrieval) runs the same gate on a retrieval change: recall@5
+does not move when the top hit drops to rank 5, while MRR and nDCG@5 do, and the gate fails
+it. It was contributed by [@HarshRajSinghania](https://github.com/HarshRajSinghania), and CI
+checks its exit codes too.
+
 With Ollama installed, the LLM example is
 [`examples/support-qa`](examples/support-qa) (`ollama pull qwen3:1.7b` and
 `ollama pull qwen3:8b`; about 6–10 minutes per run on an Apple M5).
