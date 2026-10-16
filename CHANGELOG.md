@@ -2,6 +2,36 @@
 
 All notable changes are listed here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-10-16
+
+The first release on PyPI: `pip install evalproof`.
+
+### Added
+
+- A supported Python API: `from evalproof import compare_runs, decide, calibrate, ...`.
+  The names in `evalproof.__all__` are the public surface; other modules are internal.
+- Python 3.14 support, tested in CI alongside 3.11 to 3.13.
+- Releases publish to PyPI from GitHub Actions with trusted publishing, so no token is
+  stored anywhere. Each file on PyPI carries a PEP 740 attestation, and the GitHub release
+  carries the same files with a build-provenance attestation.
+- `SECURITY.md` with private vulnerability reporting and the trust boundaries, backed by a
+  test that runs both hosted providers with a fake key and finds it in no file written.
+- `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), issue and pull-request templates,
+  `CITATION.cff`, `CODEOWNERS`, Dependabot for actions and Python dependencies with a
+  three-day cooldown, and a pre-commit configuration.
+
+### Changed
+
+- The version is written once, in `src/evalproof/_version.py`; the build reads it.
+- The README published to PyPI rewrites relative links to GitHub and replaces the Mermaid
+  diagram with a link, so the PyPI page has no broken links. CI checks this on every
+  commit, along with `twine check --strict` and a clean install of the built wheel.
+- CI pins every action to a commit SHA, checks out without persisted credentials, sets
+  timeouts and cancels superseded pull-request runs, and audits the workflows with zizmor.
+  The composite action pins `setup-uv` the same way.
+- Package metadata: documentation, source, changelog and live-demo links; classifiers for
+  typing, Python 3.14 and beta status.
+
 ## [0.1.2] — 2026-10-15
 
 ### Added
@@ -62,3 +92,8 @@ First release.
 - Markdown reports for GitHub step summaries, JSON reports, and a composite GitHub Action.
 - Two examples: an offline ticket router (CI's gate contract) and a support assistant for
   a fictional product judged by a local model, with measurements.
+
+[0.2.0]: https://github.com/technobasant/evalproof/compare/v0.1.2...v0.2.0
+[0.1.2]: https://github.com/technobasant/evalproof/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/technobasant/evalproof/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/technobasant/evalproof/releases/tag/v0.1.0
