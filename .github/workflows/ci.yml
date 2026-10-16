@@ -4,61 +4,100 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Actions are pinned to full commit SHAs, with the release in a comment; Dependabot
+# keeps both current. uv is pinned to the version that wrote uv.lock; bump both together.
+env:
+  UV_VERSION: "0.12.23"
+
 jobs:
   lint:
+    name: Lint, types and workflow audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: "0.12.23"  # the uv that wrote uv.lock; bump both together
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: ${{ env.UV_VERSION }}
       - run: uv sync --locked
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run mypy src
+      - name: Audit the workflows (zizmor)
+        run: uvx zizmor@1.30.1 --offline --persona=regular .github/workflows action.yml
 
   test:
+    name: Tests (Python ${{ matrix.python }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11", "3.12", "3.13"]
+        python: ["3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: "0.12.23"  # the uv that wrote uv.lock; bump both together
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: ${{ env.UV_VERSION }}
           python-version: ${{ matrix.python }}
       - run: uv sync --locked
       - run: uv run pytest --cov --cov-report=term-missing --cov-fail-under=85
 
-  build:
+  # Builds exactly what the release workflow publishes and checks it the way PyPI and a
+  # user would: strict metadata check, no relative links left in the PyPI README, and a
+  # clean install whose CLI and public API work.
+  package:
+    name: Package as published
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: "0.12.23"  # the uv that wrote uv.lock; bump both together
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: ${{ env.UV_VERSION }}
       - run: uv build
-      - name: wheel installs and runs
+      - run: uvx twine check --strict dist/*
+      - name: The PyPI README has no relative links or Mermaid
+        run: |
+          unzip -p dist/*.whl '*.dist-info/METADATA' > /tmp/METADATA
+          if grep -nE '\]\((\./)?[A-Za-z][^:)]*\)|```mermaid' /tmp/METADATA; then
+            echo "::error::the PyPI long description still has relative links or Mermaid"; exit 1
+          fi
+      - name: The wheel installs and works
         run: |
           uv venv /tmp/wheel-check
           uv pip install --python /tmp/wheel-check dist/*.whl
           /tmp/wheel-check/bin/evalproof --version
+          /tmp/wheel-check/bin/python -c "import evalproof; assert all(hasattr(evalproof, n) for n in evalproof.__all__)"
 
   # The gate has to fail when it should and pass when it should. No model needed:
   # the offline example is a keyword router with known regressions.
   gate-contract:
+    name: Gate exit codes
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: "0.12.23"  # the uv that wrote uv.lock; bump both together
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: ${{ env.UV_VERSION }}
       - run: uv sync --locked
       - name: run the four routers
         run: |
@@ -84,12 +123,16 @@ jobs:
   # failing the tests above. Install the app's own requirements, as Streamlit Community
   # Cloud does, and drive both views.
   app:
+    name: Streamlit app
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: "0.12.23"  # the uv that wrote uv.lock; bump both together
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: ${{ env.UV_VERSION }}
           python-version: "3.12"
       - name: install what Streamlit Community Cloud installs
         run: |
