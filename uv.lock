@@ -236,7 +236,6 @@ toml = [
 
 [[package]]
 name = "evalproof"
-version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

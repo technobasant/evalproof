@@ -1,8 +1,9 @@
 # evalproof
 
+[![PyPI](https://img.shields.io/pypi/v/evalproof)](https://pypi.org/project/evalproof/)
+[![Python](https://img.shields.io/pypi/pyversions/evalproof)](https://pypi.org/project/evalproof/)
 [![ci](https://github.com/technobasant/evalproof/actions/workflows/ci.yml/badge.svg)](https://github.com/technobasant/evalproof/actions/workflows/ci.yml)
 [![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
-![python](https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue)
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://evalproof.streamlit.app)
 
 **Treat LLM evaluation as measurement.** Calibrate the judge, correct its pass rate, and
@@ -33,6 +34,17 @@ evalproof:
 It is local-first: Ollama is the default provider, Anthropic and OpenAI are optional, and
 every model call is cached by content so re-runs are free and reproducible.
 
+## Install
+
+```bash
+pip install evalproof          # or: uv add evalproof
+uv tool install evalproof      # just the CLI
+```
+
+Python 3.11 to 3.14. `compare`, `calibrate` and `report` work on run files and need no
+model. `run` needs a system to evaluate: a Python function, an HTTP endpoint, a local
+Ollama model, or an Anthropic or OpenAI key.
+
 ## What it found on a real run
 
 A local `qwen3:1.7b` support assistant for a fictional product, judged by `qwen3:8b`, 83
@@ -49,6 +61,8 @@ questions, one Apple M5. Full method and every table in [MEASUREMENTS.md](MEASUR
 | Is it reproducible? | 20/20 identical outputs and verdicts with the cache off; a warm-cache re-run took 0.05 s instead of 363 s |
 
 ## Five-minute quickstart
+
+The offline example lives in the repository:
 
 ```bash
 git clone https://github.com/technobasant/evalproof && cd evalproof
@@ -68,8 +82,6 @@ uv run evalproof compare runs/baseline.json runs/noisy.json \
 With Ollama installed, the LLM example is
 [`examples/support-qa`](examples/support-qa) (`ollama pull qwen3:1.7b` and
 `ollama pull qwen3:8b`; about 6–10 minutes per run on an Apple M5).
-
-To install the CLI elsewhere: `uv tool install git+https://github.com/technobasant/evalproof`.
 
 The browser app in [`app/`](app) runs locally too:
 `uv run --with-requirements app/requirements.txt streamlit run app/streamlit_app.py`.
@@ -126,6 +138,28 @@ orders and reports order-dependent verdicts as ties.
 | 4 | cannot gate: fewer than `min_cases` paired cases, or the runs used different data |
 | 2 | usage or configuration error |
 
+## From Python
+
+The CLI is a thin layer over the same functions:
+
+```python
+from evalproof import GateConfig, calibrate, compare_runs, decide, load_run
+
+baseline = load_run("runs/baseline.json")
+candidate = load_run("runs/candidate.json")
+
+cmp = compare_runs(baseline, candidate)  # paired cases: exact McNemar, bootstrap intervals
+decision = decide(cmp, GateConfig(metric="judge", max_drop=0.03))
+print(decision.status, decision.exit_code, decision.warnings)
+
+report = calibrate(baseline, "judge", gold_scorer="answer_key", gold_sample=30)
+for est in report.estimates:  # raw judge rate, gold only, ACC, PPI
+    print(est.method, est.point, est.low, est.high)
+```
+
+The names in `evalproof.__all__` are the supported API. Other modules are internal and may
+change between minor versions; see the [changelog](CHANGELOG.md).
+
 ## Architecture
 
 ```mermaid
@@ -165,7 +199,7 @@ The composite action runs `compare --gate`, appends the report to the job summar
 fails the job on exit codes 1, 3 or 4:
 
 ```yaml
-- uses: technobasant/evalproof@v0.1.2
+- uses: technobasant/evalproof@v0.2.0
   with:
     baseline: eval/baseline.json     # produced on main, e.g. as a build artifact
     candidate: eval/candidate.json   # produced on this branch
@@ -211,7 +245,14 @@ however you like, then calibrate and gate here.
 * Multiple-comparison correction when more than one metric is gated.
 * A reasoning judge (`think: true`) measured against the same answer key.
 * Importers for other harnesses' per-case results.
-* Publishing to PyPI.
+
+## Project
+
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) ·
+[Security policy](SECURITY.md) · [Code of conduct](CODE_OF_CONDUCT.md) ·
+[How to cite](CITATION.cff). Releases are published to PyPI from GitHub Actions with
+[trusted publishing](https://docs.pypi.org/trusted-publishers/), and each file carries a
+signed provenance attestation.
 
 ## Licence
 

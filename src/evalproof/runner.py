@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 
-from evalproof import __version__
+from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.config import SuiteConfig, TargetConfig
 from evalproof.dataset import dataset_hash, load_dataset

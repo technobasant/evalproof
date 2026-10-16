@@ -8,7 +8,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from evalproof import __version__
+from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.calibration import calibrate
 from evalproof.compare import compare_runs

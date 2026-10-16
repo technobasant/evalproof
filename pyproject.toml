@@ -1,27 +1,32 @@
 [build-system]
-requires = ["hatchling>=1.25"]
+requires = ["hatchling>=1.27", "hatch-fancy-pypi-readme>=24.1"]
 build-backend = "hatchling.build"
 
 [project]
 name = "evalproof"
-version = "0.1.2"
+dynamic = ["version", "readme"]
 description = "Treat LLM evaluation as measurement: calibrate the judge, correct the pass rate, gate CI on significant regressions."
-readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Basant Bhattarai" }]
 requires-python = ">=3.11"
 keywords = ["llm", "evaluation", "llm-as-a-judge", "calibration", "ci", "statistics"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Quality Assurance",
     "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
 ]
 dependencies = [
     "httpx>=0.27",
@@ -32,8 +37,12 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/technobasant/evalproof"
+Documentation = "https://github.com/technobasant/evalproof#readme"
+Source = "https://github.com/technobasant/evalproof"
 Issues = "https://github.com/technobasant/evalproof/issues"
-Background = "https://basantbhattarai.com.np/writing/count-prevalence-not-classifications/"
+Changelog = "https://github.com/technobasant/evalproof/blob/main/CHANGELOG.md"
+"Live demo" = "https://evalproof.streamlit.app"
+"Write-up" = "https://basantbhattarai.com.np/writing/eval-score-drop-twelve-answers/"
 
 [project.scripts]
 evalproof = "evalproof.cli:main"
@@ -47,11 +56,38 @@ dev = [
     "types-PyYAML>=6.0",
 ]
 
+[tool.hatch.version]
+path = "src/evalproof/_version.py"
+
+# PyPI renders the README but cannot follow relative links or draw Mermaid, so the copy
+# published there points both at GitHub. The README in the repository stays as written.
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '(?s)```mermaid\n.*?```'
+replacement = "The architecture diagram is in the [README on GitHub](https://github.com/technobasant/evalproof#architecture)."
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\((?!https?://|#)([^)]+)\)'
+replacement = '](https://github.com/technobasant/evalproof/blob/main/\1)'
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/evalproof"]
 
 [tool.hatch.build.targets.sdist]
-include = ["/src/evalproof", "/tests", "/README.md", "/LICENSE", "/NOTICE", "/CHANGELOG.md"]
+include = [
+    "/src/evalproof",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+    "/NOTICE",
+    "/CHANGELOG.md",
+    "/CITATION.cff",
+]
 
 [tool.ruff]
 line-length = 100
