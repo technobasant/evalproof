@@ -67,6 +67,12 @@ content-type = "text/markdown"
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
 path = "README.md"
 
+# The PyPI page shows its own version and supported Pythons, and a badge rendered there
+# from a just-uploaded release can be cached as "not found" for a day.
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\[!\[(PyPI|Python)\]\(https://img\.shields\.io/pypi/[^)]+\)\]\([^)]+\)\n'
+replacement = ''
+
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
 pattern = '(?s)```mermaid\n.*?```'
 replacement = "The architecture diagram is in the [README on GitHub](https://github.com/technobasant/evalproof#architecture)."

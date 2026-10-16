@@ -1,7 +1,7 @@
 # evalproof
 
-[![PyPI](https://img.shields.io/pypi/v/evalproof)](https://pypi.org/project/evalproof/)
-[![Python](https://img.shields.io/pypi/pyversions/evalproof)](https://pypi.org/project/evalproof/)
+[![PyPI](https://img.shields.io/pypi/v/evalproof?label=PyPI)](https://pypi.org/project/evalproof/)
+[![Python](https://img.shields.io/pypi/pyversions/evalproof?label=Python)](https://pypi.org/project/evalproof/)
 [![ci](https://github.com/technobasant/evalproof/actions/workflows/ci.yml/badge.svg)](https://github.com/technobasant/evalproof/actions/workflows/ci.yml)
 [![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://evalproof.streamlit.app)

@@ -72,11 +72,11 @@ jobs:
           version: ${{ env.UV_VERSION }}
       - run: uv build
       - run: uvx twine check --strict dist/*
-      - name: The PyPI README has no relative links or Mermaid
+      - name: The PyPI README has no relative links, Mermaid or PyPI-data badges
         run: |
           unzip -p dist/*.whl '*.dist-info/METADATA' > /tmp/METADATA
-          if grep -nE '\]\((\./)?[A-Za-z][^:)]*\)|```mermaid' /tmp/METADATA; then
-            echo "::error::the PyPI long description still has relative links or Mermaid"; exit 1
+          if grep -nE '\]\((\./)?[A-Za-z][^:)]*\)|```mermaid|img\.shields\.io/pypi/' /tmp/METADATA; then
+            echo "::error::the PyPI long description has a relative link, Mermaid or a PyPI-data badge"; exit 1
           fi
       - name: The wheel installs and works
         run: |
