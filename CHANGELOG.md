@@ -2,6 +2,17 @@
 
 All notable changes are listed here. The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] — 2026-10-16
+
+### Fixed
+
+- The PyPI and Python badges on the 0.2.0 PyPI page read "package or version not found".
+  PyPI's image proxy fetched them about a minute after the first upload, before the badge
+  service could see the package, and keeps that answer for 12 to 24 hours. The PyPI page
+  now leaves those two badges out, since it shows the version and supported Pythons
+  itself, and the README's copies use new URLs so no cache serves the old images. CI fails
+  if a PyPI-data badge reaches the PyPI description again.
+
 ## [0.2.0] — 2026-10-16
 
 The first release on PyPI: `pip install evalproof`.
@@ -93,6 +104,7 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a support assistant for
   a fictional product judged by a local model, with measurements.
 
+[0.2.1]: https://github.com/technobasant/evalproof/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/technobasant/evalproof/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/technobasant/evalproof/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/technobasant/evalproof/compare/v0.1.0...v0.1.1
