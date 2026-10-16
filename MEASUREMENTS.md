@@ -13,6 +13,7 @@ latency tables from them without a model.
 | Ollama | 0.23.2 |
 | System under test | `qwen3:1.7b`, digest `8f68893c685c` — temperature 0, seed 0, `think: false`, max 200 tokens |
 | Judge | `qwen3:8b`, digest `500a1f067a9f` — temperature 0, seed 0, `think: false`, max 256 tokens |
+| Reasoning judge (section 8) | the same model with `think: true` and max 4,096 tokens, in [`suite.reasoning-judge.yaml`](examples/support-qa/suite.reasoning-judge.yaml) |
 | evalproof / Python | 0.1.0 / 3.13.15 |
 | Golden set | 83 questions about a fictional product, dataset hash `c6f08ac201023363`; 9 are not answerable from the facts |
 | "Gold" | a per-question regex answer key, written before any model output was seen and not changed after. It stands in for human review; it is not human labelling. |
@@ -139,6 +140,64 @@ evalproof gates on pointwise verdicts and reports pairwise preference as a diagn
   identical verdicts, 20/20 identical judge reasons** (temperature 0, seed 0, Ollama 0.23.2).
 * Re-running the full baseline with a warm cache took 0.05 s instead of 363 s and produced
   results identical to the cold run, apart from the per-case `cached` flag.
+* Three days later, the full baseline judged again with the judge's cache entries removed
+  (system answers still cached) gave **83/83 identical verdicts** in 201 s
+  ([`baseline.think-off-rerun.json`](examples/support-qa/runs/baseline.think-off-rerun.json)).
+
+## 8. A reasoning judge
+
+The same `qwen3:8b` judge with thinking switched on (issue #3), on the same cached answers,
+so the only change is the judge. `measure.py` prints every table below from the committed
+runs.
+
+| | Thinking off | Thinking on |
+|---|---:|---:|
+| Judge time, 83 baseline verdicts (answers cached) | 201 s (2.4 s each) | 1,338 s (16.1 s each) |
+| Judge time, 83 candidate verdicts | — | 1,188 s |
+| Judge tokens per verdict, baseline / candidate | 306 / 369 | 590 / 607 |
+| Undecided verdicts | 0 | 0 |
+| Verdicts that changed, baseline / candidate | — | 7 / 6 |
+
+**Against the answer key, thinking looks worse**: κ falls from 0.779 to 0.676 on the
+baseline and from 0.781 to 0.727 on the candidate. That comparison is unfair, because
+section 4 showed the key is often the one that is wrong. So every case where the key and the
+two judges did not all agree (22, the 13 from section 4 and 9 that only the thinking judge
+disputes) was read case by case against the rubric and the product facts. The 9 new ones:
+
+| Case | Run | Key | Off | On | Right | Why |
+|---|---|---|---|---|---|---|
+| q28 which plans have trials | baseline | pass | pass | fail | **on** | the answer gives the Free plan a trial, the same invention section 4 found in the candidate |
+| q07 annual saving on Plus | candidate | pass | pass | fail | **on** | the answer states "$60 per year" before working its way to $12 |
+| q42 Linux desktop app | baseline | fail | fail | pass | **on** | "Yes, there is no Linux desktop app; the web app works on Linux": the facts are right; the key rejects any answer that starts with "Yes" |
+| q42 Linux desktop app | candidate | fail | fail | pass | **on** | the same facts; the off judge's reason contradicts itself |
+| q83 Plus in euros | baseline | pass | pass | fail | **off** | the answer gives the dollar price and says the euro price is not covered; correct extra detail, not an invented answer |
+| q21 SSO, q22 admin console | both | pass | pass | fail | **off** | the answer names Team. The reference adds Enterprise, which the product facts do not say; the thinking judge followed the reference |
+
+Against those audited labels (the key with every reading applied, q66 left out as ambiguous):
+
+| | Thinking off | Thinking on |
+|---|---:|---:|
+| Baseline TPR / FPR | 95.4% / 5.9% | 95.4% / **0.0%** |
+| Baseline Cohen's κ | 0.858 | **0.895** |
+| Candidate TPR / FPR | 96.6% / 8.7% | 96.6% / **0.0%** |
+| Candidate Cohen's κ | 0.879 | **0.941** |
+| Right on the 20 decided contested cases | 12 | **15** (the answer key: 9) |
+
+**What this shows.** Thinking made the judge better where it matters most for a gate: it
+passed no wrong answer in either run, against three for the judge without it, and it fixed
+all three cases where that judge penalised correct extra detail. It costs 6.7 times the judge
+time and about twice the tokens. It also reads the reference more literally, which cuts both
+ways: it caught an answer that states a wrong number before the right one, and it failed two
+correct answers because the golden set's reference claims more than the product facts do.
+That is a defect in two reference answers, now visible because a stricter judge tripped on it.
+
+The gate's decision did not change. With thinking on, the judge saw 6 cases get worse and 1
+get better (−6.0 points, 95% CI [−12.0, +0.0], exact McNemar p = 0.125) instead of 8 and 4
+(p = 0.388): cleaner evidence of the same small regression, still not distinguishable from
+noise at n = 83, so the gate still passes with a warning.
+
+The readings in sections 4 and 8 are careful case-by-case reads, not an independent human
+review; issue #4 tracks calibrating against human-reviewed labels.
 
 ## Limits
 
@@ -147,5 +206,8 @@ evalproof gates on pointwise verdicts and reports pairwise preference as a diagn
 * The answer key is a stand-in for human review, and section 4 shows it is wrong in
   predictable ways. A real deployment should calibrate against human labels.
 * Ollama's determinism with a fixed seed was checked on 20 cases on this backend only.
-* The judge ran with thinking disabled. A reasoning judge may be more accurate and slower;
-  that was not measured here.
+* Section 8 measures a reasoning judge on one model and one domain. Its literal reading
+  helped here and hurt where the reference itself was wrong; that balance will differ
+  elsewhere.
+* Two reference answers (q21, q22) name Enterprise, which the product facts do not; they
+  are left as recorded so the committed runs stay comparable.

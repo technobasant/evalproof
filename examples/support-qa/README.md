@@ -27,6 +27,12 @@ uv run evalproof compare examples/support-qa/runs/baseline.json \
   examples/support-qa/runs/candidate.json --suite examples/support-qa/suite.yaml --gate
 uv run evalproof calibrate examples/support-qa/runs/baseline.json \
   --judge-scorer judge --gold-scorer answer_key --gold-sample 30
+# The reasoning judge (MEASUREMENTS §8): same cached answers, judge thinking on
+uv run evalproof run examples/support-qa/suite.reasoning-judge.yaml \
+  --out examples/support-qa/runs/baseline.reasoning-judge.json
+uv run evalproof run examples/support-qa/suite.reasoning-judge.yaml \
+  --system-prompt-file examples/support-qa/prompt.candidate.md \
+  --label "qwen3:1.7b + friendly prompt" --out examples/support-qa/runs/candidate.reasoning-judge.json
 uv run python examples/support-qa/measure.py   # every figure in MEASUREMENTS.md, from runs/
 ```
 

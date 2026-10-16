@@ -1,0 +1,43 @@
+# LLM example with a reasoning judge: suite.yaml with the judge's thinking switched on.
+# Baseline and candidate differ only in the system prompt (see README).
+name: support-qa
+dataset: cases.jsonl
+seed: 0
+
+system:
+  target: ollama:qwen3:1.7b
+  label: "qwen3:1.7b + grounded prompt"
+  system_prompt_file: prompt.baseline.md
+  prompt_template: "{question}"
+  params: {temperature: 0, seed: 0, max_tokens: 200, think: false}
+  timeout_s: 180
+
+judge:
+  target: ollama:qwen3:8b
+  # Issue #3: the same judge with thinking on. Thinking tokens count against num_predict,
+  # so the budget is 4,096 instead of 256; the verdict is still read from the reply alone.
+  params: {temperature: 0, seed: 0, max_tokens: 4096, think: true}
+  timeout_s: 180
+
+scorers:
+  # The answer key: regexes written per question. It stands in for human review —
+  # it is not human labelling, and the measurements report where it disagrees.
+  - name: answer_key
+    type: regex
+    params: {any_of_field: accept, none_of_field: reject}
+  - name: judge
+    type: llm_judge
+    params: {rubric_file: rubric.md}
+
+calibration:
+  judge_scorer: judge
+  gold_scorer: answer_key
+  gold_sample: 30   # what a team could afford to review by hand each release
+
+gate:
+  metric: judge
+  max_drop: 0.03
+  alpha: 0.05
+  min_cases: 40
+
+cache_dir: .evalproof/cache

@@ -13,7 +13,13 @@ import random
 import statistics
 from pathlib import Path
 
-from evalproof.calibration import acc_estimate, calibrate, ppi_estimate, raw_estimate
+from evalproof.calibration import (
+    acc_estimate,
+    calibrate,
+    confusion,
+    ppi_estimate,
+    raw_estimate,
+)
 from evalproof.compare import compare_runs
 from evalproof.config import load_config
 from evalproof.gate import decide
@@ -24,6 +30,37 @@ from evalproof.stats import percentile
 HERE = Path(__file__).parent
 SEEDS = 200
 GOLD_N = 30
+
+# Every case where the answer key and the two judges (thinking off and on) did not all
+# agree, read by hand against the rubric and the product facts: section 4 read the first
+# 13, section 8 the 9 that only the thinking judge disputes. True is a pass, None is
+# ambiguous (excluded from the audited comparison).
+AUDITED = {
+    # section 4
+    ("q76", "baseline"): False,
+    ("q76", "candidate"): False,
+    ("q78", "baseline"): False,
+    ("q78", "candidate"): False,
+    ("q77", "baseline"): False,
+    ("q28", "candidate"): False,
+    ("q31", "candidate"): False,
+    ("q56", "baseline"): True,
+    ("q65", "baseline"): True,
+    ("q32", "candidate"): True,
+    ("q05", "candidate"): False,
+    ("q66", "baseline"): None,
+    ("q66", "candidate"): None,
+    # section 8
+    ("q28", "baseline"): False,
+    ("q07", "candidate"): False,
+    ("q42", "baseline"): True,
+    ("q42", "candidate"): True,
+    ("q83", "baseline"): True,
+    ("q21", "baseline"): True,
+    ("q22", "baseline"): True,
+    ("q21", "candidate"): True,
+    ("q22", "candidate"): True,
+}
 
 
 def verdicts(run, name):
@@ -81,6 +118,135 @@ def latency(run) -> str:
     )
 
 
+def audited(run, label: str) -> dict[str, bool]:
+    """The answer key with every hand-read verdict applied; ambiguous cases left out."""
+    out = {}
+    for c, v in verdicts(run, "answer_key").items():
+        truth = AUDITED.get((c, label), v)
+        if truth is not None:
+            out[c] = truth
+    return out
+
+
+def judge_row(run, truth: dict[str, bool]) -> str:
+    """Pass rate, agreement with ``truth`` and cost of one run's judge, as table cells."""
+    judge = verdicts(run, "judge")
+    ids = sorted(set(judge) & set(truth))
+    cm = confusion([judge[c] for c in ids], [truth[c] for c in ids])
+    undecided = sum(1 for r in run.results if r.scores["judge"].passed is None)
+    tokens = statistics.mean(r.scores["judge"].judge_tokens for r in run.results)
+    kappa = f"{cm.kappa:.3f}" if cm.kappa is not None else "—"
+    return (
+        f"{100 * sum(judge.values()) / len(judge):.1f}% | {cm.tp} / {cm.fp} / {cm.fn} / {cm.tn} | "
+        f"{100 * (cm.tpr or 0):.1f}% / {100 * (cm.fpr or 0):.1f}% | {kappa} | {undecided} | "
+        f"{tokens:.0f}"
+    )
+
+
+def reasoning_judge(cfg) -> list[str]:
+    """Section 8: the published judge against the same judge with thinking on (issue #3)."""
+    runs = HERE / "runs"
+    off = {
+        "baseline": load_run(runs / "baseline.json"),
+        "candidate": load_run(runs / "candidate.json"),
+    }
+    on = {
+        "baseline": load_run(runs / "baseline.reasoning-judge.json"),
+        "candidate": load_run(runs / "candidate.reasoning-judge.json"),
+    }
+    rerun = load_run(runs / "baseline.think-off-rerun.json")
+    head = (
+        "| Judge | Pass rate | TP / FP / FN / TN | TPR / FPR | κ | Undecided "
+        "| Judge tokens per case |"
+    )
+    out = ["## Reasoning judge (issue #3)", ""]
+    for truth_name in ("answer key", "audited labels"):
+        out += [f"### Against the {truth_name}", ""]
+        for label in ("baseline", "candidate"):
+            truth = (
+                verdicts(off[label], "answer_key")
+                if truth_name == "answer key"
+                else audited(off[label], label)
+            )
+            out += [f"#### {label}", "", head, "|---|---:|---:|---:|---:|---:|---:|"]
+            out.append(f"| thinking off | {judge_row(off[label], truth)} |")
+            out.append(f"| thinking on | {judge_row(on[label], truth)} |")
+            out.append("")
+    out += [
+        "### Every contested case",
+        "",
+        "| Case | Run | Key | Off | On | Audited |",
+        "|---|---|---|---|---|---|",
+    ]
+    fmt = {True: "pass", False: "fail", None: "undecided"}
+    right = {"key": 0, "off": 0, "on": 0}
+    decided = unaudited = 0
+    for label in ("baseline", "candidate"):
+        key = verdicts(off[label], "answer_key")
+        j_off, j_on = verdicts(off[label], "judge"), verdicts(on[label], "judge")
+        for c in sorted(key):
+            seen = {key[c], j_off.get(c), j_on.get(c)}
+            if len(seen) == 1:
+                continue
+            if (c, label) not in AUDITED:
+                unaudited += 1
+                truth_cell = "**not yet read**"
+            elif AUDITED[(c, label)] is None:
+                truth_cell = "ambiguous"
+            else:
+                t = AUDITED[(c, label)]
+                truth_cell = fmt[t]
+                decided += 1
+                right["key"] += key[c] == t
+                right["off"] += j_off.get(c) == t
+                right["on"] += j_on.get(c) == t
+            out.append(
+                f"| {c} | {label} | {fmt[key[c]]} | {fmt[j_off.get(c)]} | {fmt[j_on.get(c)]} "
+                f"| {truth_cell} |"
+            )
+    out += [
+        "",
+        f"Right on the {decided} decided contested cases: answer key {right['key']}, "
+        f"judge thinking off {right['off']}, thinking on {right['on']}."
+        + (f" {unaudited} contested cases are not yet read." if unaudited else ""),
+        "",
+    ]
+    flips = {
+        label: sum(
+            1
+            for c, v in verdicts(off[label], "judge").items()
+            if verdicts(on[label], "judge").get(c) not in (None, v)
+        )
+        for label in off
+    }
+    same = sum(
+        1
+        for c, v in verdicts(off["baseline"], "judge").items()
+        if verdicts(rerun, "judge").get(c) == v
+    )
+    out += [
+        f"- Verdicts that changed with thinking: baseline {flips['baseline']}, "
+        f"candidate {flips['candidate']}.",
+        f"- Judge wall time on the 83 baseline answers, system replies cached: thinking off "
+        f"{rerun.info.wall_time_s:.0f} s, thinking on {on['baseline'].info.wall_time_s:.0f} s; "
+        f"candidate, thinking on {on['candidate'].info.wall_time_s:.0f} s.",
+        f"- Determinism: the thinking-off re-run matched the published judge on {same} of 83 "
+        "verdicts.",
+        "",
+        "### The gate with each judge",
+        "",
+    ]
+    assert cfg.gate is not None
+    for name, pair in (("thinking off", off), ("thinking on", on)):
+        cmp = compare_runs(pair["baseline"], pair["candidate"])
+        out += [
+            f"#### {name}",
+            "",
+            comparison_markdown(cmp, decide(cmp, cfg.gate), cfg.gate.metric),
+        ]
+    return out
+
+
 def main() -> None:
     cfg = load_config(HERE / "suite.yaml")
     base = load_run(HERE / "runs" / "baseline.json")
@@ -101,6 +267,8 @@ def main() -> None:
     assert cfg.gate is not None
     lines += [comparison_markdown(cmp, decide(cmp, cfg.gate), cfg.gate.metric)]
     lines += ["## Latency", "", f"- baseline: {latency(base)}", f"- candidate: {latency(cand)}", ""]
+    if (HERE / "runs" / "candidate.reasoning-judge.json").exists():
+        lines += reasoning_judge(cfg)
     print("\n".join(lines))
 
 

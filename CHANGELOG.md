@@ -9,6 +9,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - `examples/retrieval`: an offline retrieval example for recall@k, MRR and nDCG, with a
   regression that recall@5 cannot see and MRR and nDCG@5 can. Contributed by
   @HarshRajSinghania in #5. CI asserts its gate exits 1 on the regression and 0 on no change.
+- MEASUREMENTS §8: the support-qa judge with thinking on (#3), with its runs, suite and
+  analysis in `measure.py`. Against labels audited case by case it passes no wrong answer
+  and κ rises, at 6.7× the judge time; the gate's decision does not change.
 
 ## [0.2.1] — 2026-10-16
 
