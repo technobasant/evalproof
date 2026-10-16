@@ -1,0 +1,42 @@
+name: Bug report
+description: Something evalproof computes, reports or exits with is wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Thanks for taking the time. For a security problem, use
+        [private reporting](https://github.com/technobasant/evalproof/security/advisories/new)
+        instead of this form.
+  - type: input
+    id: version
+    attributes:
+      label: evalproof version
+      description: Output of `evalproof --version`.
+      placeholder: evalproof 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Python version and OS
+      placeholder: Python 3.12, Ubuntu 24.04
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what you expected
+      description: >-
+        For a statistical result, include the counts or the two run files and the number
+        you expected, with how you worked it out.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The command or Python snippet, and a minimal suite or run file if one is needed.
+      render: shell
+    validations:
+      required: true

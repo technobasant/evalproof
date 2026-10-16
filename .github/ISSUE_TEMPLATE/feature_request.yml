@@ -1,0 +1,20 @@
+name: Feature request
+description: A measurement, scorer, provider or gate behaviour evalproof should have.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What decision are you trying to make with an evaluation, and where does evalproof get in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: >-
+        For a statistical method, a reference or a worked example helps. Changes to the
+        gate's behaviour need an ADR (see CONTRIBUTING.md).
+    validations:
+      required: true

@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use evalproof in research or a published evaluation, please cite it."
+title: "evalproof: LLM evaluation as measurement"
+abstract: >-
+  Calibrates an LLM judge against a small gold-labelled sample, corrects its pass rate with
+  adjusted classify-and-count and prediction-powered inference, compares runs on paired
+  cases with the exact McNemar test and a paired bootstrap, and gates CI only on
+  regressions that are both larger than a tolerance and statistically significant.
+type: software
+authors:
+  - family-names: Bhattarai
+    given-names: Basant
+    website: "https://basantbhattarai.com.np"
+version: 0.2.0
+date-released: "2026-10-16"
+license: Apache-2.0
+repository-code: "https://github.com/technobasant/evalproof"
+url: "https://pypi.org/project/evalproof/"
+keywords:
+  - llm-evaluation
+  - llm-as-a-judge
+  - calibration
+  - prediction-powered inference
+  - mcnemar test
+  - continuous integration

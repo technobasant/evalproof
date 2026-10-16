@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/technobasant/evalproof/security/advisories/new
+    about: Report privately; please do not open a public issue.
+  - name: Try the method in the browser
+    url: https://evalproof.streamlit.app
+    about: The paired comparison and gate on your own counts, before filing a question about them.
