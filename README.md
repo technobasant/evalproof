@@ -249,8 +249,6 @@ however you like, then calibrate and gate here.
 
 * Stratified gold sampling (by tag) and per-tag calibration.
 * Multiple-comparison correction when more than one metric is gated.
-* A revised golden set: two reference answers (q21, q22) name a plan the product facts do not
-  ([MEASUREMENTS §8](MEASUREMENTS.md)).
 * Importers for other harnesses' per-case results.
 
 ## Project

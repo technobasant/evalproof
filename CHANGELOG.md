@@ -13,6 +13,13 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   analysis in `measure.py`. Against labels audited case by case it passes no wrong answer
   and κ rises, at 6.7× the judge time; the gate's decision does not change.
 
+### Fixed
+
+- `examples/support-qa/cases.jsonl`: the q21 and q22 references named Enterprise, which the
+  product facts do not give SSO or an admin console (#7). The original set is kept as
+  `cases.v1.jsonl` so the recorded runs stay reproducible; the runs judged on the revised set
+  are in `runs/v2/`, and MEASUREMENTS §8 reports both.
+
 ## [0.2.1] — 2026-10-16
 
 ### Fixed

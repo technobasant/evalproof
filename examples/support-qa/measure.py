@@ -143,36 +143,9 @@ def judge_row(run, truth: dict[str, bool]) -> str:
     )
 
 
-def reasoning_judge(cfg) -> list[str]:
-    """Section 8: the published judge against the same judge with thinking on (issue #3)."""
-    runs = HERE / "runs"
-    off = {
-        "baseline": load_run(runs / "baseline.json"),
-        "candidate": load_run(runs / "candidate.json"),
-    }
-    on = {
-        "baseline": load_run(runs / "baseline.reasoning-judge.json"),
-        "candidate": load_run(runs / "candidate.reasoning-judge.json"),
-    }
-    rerun = load_run(runs / "baseline.think-off-rerun.json")
-    head = (
-        "| Judge | Pass rate | TP / FP / FN / TN | TPR / FPR | κ | Undecided "
-        "| Judge tokens per case |"
-    )
-    out = ["## Reasoning judge (issue #3)", ""]
-    for truth_name in ("answer key", "audited labels"):
-        out += [f"### Against the {truth_name}", ""]
-        for label in ("baseline", "candidate"):
-            truth = (
-                verdicts(off[label], "answer_key")
-                if truth_name == "answer key"
-                else audited(off[label], label)
-            )
-            out += [f"#### {label}", "", head, "|---|---:|---:|---:|---:|---:|---:|"]
-            out.append(f"| thinking off | {judge_row(off[label], truth)} |")
-            out.append(f"| thinking on | {judge_row(on[label], truth)} |")
-            out.append("")
-    out += [
+def contested(off: dict, on: dict) -> list[str]:
+    """Every case where the key and the two judges did not all agree, against the audit."""
+    out = [
         "### Every contested case",
         "",
         "| Case | Run | Key | Off | On | Audited |",
@@ -211,6 +184,39 @@ def reasoning_judge(cfg) -> list[str]:
         + (f" {unaudited} contested cases are not yet read." if unaudited else ""),
         "",
     ]
+    return out
+
+
+def reasoning_judge(cfg) -> list[str]:
+    """Section 8: the published judge against the same judge with thinking on (issue #3)."""
+    runs = HERE / "runs"
+    off = {
+        "baseline": load_run(runs / "baseline.json"),
+        "candidate": load_run(runs / "candidate.json"),
+    }
+    on = {
+        "baseline": load_run(runs / "baseline.reasoning-judge.json"),
+        "candidate": load_run(runs / "candidate.reasoning-judge.json"),
+    }
+    rerun = load_run(runs / "baseline.think-off-rerun.json")
+    head = (
+        "| Judge | Pass rate | TP / FP / FN / TN | TPR / FPR | κ | Undecided "
+        "| Judge tokens per case |"
+    )
+    out = ["## Reasoning judge (issue #3)", ""]
+    for truth_name in ("answer key", "audited labels"):
+        out += [f"### Against the {truth_name}", ""]
+        for label in ("baseline", "candidate"):
+            truth = (
+                verdicts(off[label], "answer_key")
+                if truth_name == "answer key"
+                else audited(off[label], label)
+            )
+            out += [f"#### {label}", "", head, "|---|---:|---:|---:|---:|---:|---:|"]
+            out.append(f"| thinking off | {judge_row(off[label], truth)} |")
+            out.append(f"| thinking on | {judge_row(on[label], truth)} |")
+            out.append("")
+    out += contested(off, on)
     flips = {
         label: sum(
             1
@@ -241,6 +247,30 @@ def reasoning_judge(cfg) -> list[str]:
         cmp = compare_runs(pair["baseline"], pair["candidate"])
         out += [
             f"#### {name}",
+            "",
+            comparison_markdown(cmp, decide(cmp, cfg.gate), cfg.gate.metric),
+        ]
+    v2 = runs / "v2"
+    if (v2 / "candidate.reasoning-judge.json").exists():
+        off2 = {label: load_run(v2 / f"{label}.json") for label in off}
+        on2 = {label: load_run(v2 / f"{label}.reasoning-judge.json") for label in on}
+        out += [
+            "### With the corrected q21 and q22 references (issue #7)",
+            "",
+            f"Dataset `{off2['baseline'].info.dataset_hash}`; the answers are the same cached "
+            "replies, so only verdicts that read the two references can move.",
+            "",
+        ]
+        for label in ("baseline", "candidate"):
+            truth = audited(off[label], label)
+            out += [f"#### {label}", "", head, "|---|---:|---:|---:|---:|---:|---:|"]
+            out.append(f"| thinking off | {judge_row(off2[label], truth)} |")
+            out.append(f"| thinking on | {judge_row(on2[label], truth)} |")
+            out.append("")
+        out += contested(off2, on2)
+        cmp = compare_runs(on2["baseline"], on2["candidate"])
+        out += [
+            "#### The gate, thinking on",
             "",
             comparison_markdown(cmp, decide(cmp, cfg.gate), cfg.gate.metric),
         ]

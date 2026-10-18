@@ -15,7 +15,7 @@ latency tables from them without a model.
 | Judge | `qwen3:8b`, digest `500a1f067a9f` — temperature 0, seed 0, `think: false`, max 256 tokens |
 | Reasoning judge (section 8) | the same model with `think: true` and max 4,096 tokens, in [`suite.reasoning-judge.yaml`](examples/support-qa/suite.reasoning-judge.yaml) |
 | evalproof / Python | 0.1.0 / 3.13.15 |
-| Golden set | 83 questions about a fictional product, dataset hash `c6f08ac201023363`; 9 are not answerable from the facts |
+| Golden set | 83 questions about a fictional product; 9 are not answerable from the facts. Every run in `runs/` used [`cases.v1.jsonl`](examples/support-qa/cases.v1.jsonl), dataset hash `c6f08ac201023363`; `cases.jsonl` is the revised set from section 8 (`55ba005be14c0f20`), whose runs are in `runs/v2/` |
 | "Gold" | a per-question regex answer key, written before any model output was seen and not changed after. It stands in for human review; it is not human labelling. |
 | Change under test | grounded system prompt → "friendly, always give a complete answer" prompt; same model |
 
@@ -196,6 +196,23 @@ get better (−6.0 points, 95% CI [−12.0, +0.0], exact McNemar p = 0.125) inst
 (p = 0.388): cleaner evidence of the same small regression, still not distinguishable from
 noise at n = 83, so the gate still passes with a warning.
 
+### After correcting the two references (issue #7)
+
+`cases.jsonl` now says Team only for q21 and q22, as the product facts do; `cases.v1.jsonl`
+keeps the original so the runs above stay reproducible. All four runs were judged again on
+the revised set ([`runs/v2/`](examples/support-qa/runs/v2)): every answer came from the cache,
+and the only verdicts that moved were the thinking judge's on q21 and q22, now passes.
+
+| Against the audited labels | Thinking off | Thinking on |
+|---|---:|---:|
+| Baseline TPR / FPR, κ | 95.4% / 5.9%, 0.858 | 98.5% / 0.0%, **0.964** |
+| Candidate TPR / FPR, κ | 96.6% / 8.7%, 0.879 | 100.0% / 0.0%, **1.000** |
+| Right on the 16 decided contested cases | 8 | **15** (the answer key: 5) |
+
+With the references fixed, the thinking judge's one remaining miss is q83, where it read a
+correct dollar price as an invented answer to a question about euros. The gate's decision is
+the same as before: 6 worse, 1 better, p = 0.125, pass with a warning.
+
 The readings in sections 4 and 8 are careful case-by-case reads, not an independent human
 review; issue #4 tracks calibrating against human-reviewed labels.
 
@@ -209,5 +226,5 @@ review; issue #4 tracks calibrating against human-reviewed labels.
 * Section 8 measures a reasoning judge on one model and one domain. Its literal reading
   helped here and hurt where the reference itself was wrong; that balance will differ
   elsewhere.
-* Two reference answers (q21, q22) name Enterprise, which the product facts do not; they
-  are left as recorded so the committed runs stay comparable.
+* The runs in `runs/` keep the original references, including two (q21, q22) that name a
+  plan the product facts do not; section 8 reports the corrected set separately.

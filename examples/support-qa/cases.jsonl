@@ -18,8 +18,8 @@
 {"id": "q18", "input": {"question": "How long is version history kept on Plus?"}, "reference": "90 days.", "accept": ["\\b90[\\s-]days?\\b", "\\bninety days\\b"], "tags": ["plans"]}
 {"id": "q19", "input": {"question": "How long is version history kept on Team?"}, "reference": "365 days.", "accept": ["\\b365[\\s-]days?\\b", "\\b(one|1)[ -]year\\b", "\\b12 months\\b"], "tags": ["plans"]}
 {"id": "q20", "input": {"question": "How long is version history kept on Enterprise?"}, "reference": "Unlimited.", "accept": ["\\bunlimited\\b", "\\bno limit\\b", "\\bindefinite"], "tags": ["plans"]}
-{"id": "q21", "input": {"question": "Which plan includes SSO?"}, "reference": "Team (through SAML), and Enterprise.", "accept": ["\\bteam\\b"], "tags": ["plans"]}
-{"id": "q22", "input": {"question": "Which plan has an admin console?"}, "reference": "Team (and Enterprise).", "accept": ["\\bteam\\b"], "tags": ["plans"]}
+{"id": "q21", "input": {"question": "Which plan includes SSO?"}, "reference": "Team, through SAML. The product facts do not list SSO for any other plan.", "accept": ["\\bteam\\b"], "tags": ["plans"]}
+{"id": "q22", "input": {"question": "Which plan has an admin console?"}, "reference": "Team. The product facts do not list an admin console for any other plan.", "accept": ["\\bteam\\b"], "tags": ["plans"]}
 {"id": "q23", "input": {"question": "Does Enterprise include audit log export?"}, "reference": "Yes.", "accept": ["\\byes\\b", "\\b(includes|included|available|offers)\\b"], "tags": ["plans"], "reject": ["^\\W*no\\b"]}
 {"id": "q24", "input": {"question": "Does Enterprise come with a dedicated support manager?"}, "reference": "Yes.", "accept": ["\\byes\\b", "\\b(includes|included|comes with|available|offers|get)\\b"], "tags": ["plans"], "reject": ["^\\W*no\\b"]}
 {"id": "q25", "input": {"question": "Does the Free plan include version history?"}, "reference": "Yes, 7 days.", "accept": ["\\b(7|seven)\\b"], "tags": ["plans"], "reject": ["^\\W*no\\b"]}
