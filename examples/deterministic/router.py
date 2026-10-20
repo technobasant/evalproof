@@ -1,4 +1,4 @@
-"""A toy support-ticket router: the system under test for the offline example.
+"""A simple support-ticket router: the system under test for the offline example.
 
 Four versions of the same function, chosen to exercise every branch of the gate:
 

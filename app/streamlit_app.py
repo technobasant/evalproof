@@ -537,7 +537,7 @@ with tab_run:
     base, cand, cases = load_recorded()
     st.markdown(
         f"A local **{base.info.system}** answered {len(base.results)} support questions about "
-        f"a fictional product; **{cand.info.system}** answered them again after the system "
+        f"a product; **{cand.info.system}** answered them again after the system "
         "prompt changed. qwen3:8b judged both, and a regex answer key per question stands in "
         f"for human review. Recorded {base.info.started_at[:10]}; this page replays the JSON."
     )

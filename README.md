@@ -47,7 +47,7 @@ Ollama model, or an Anthropic or OpenAI key.
 
 ## What it found on a real run
 
-A local `qwen3:1.7b` support assistant for a fictional product, judged by `qwen3:8b`, 83
+A local `qwen3:1.7b` product support assistant, judged by `qwen3:8b`, 83
 questions, one Apple M5. Full method and every table in [MEASUREMENTS.md](MEASUREMENTS.md).
 
 | Question | Measured |
@@ -233,7 +233,7 @@ however you like, then calibrate and gate here.
 
 ## Limits
 
-* The measurements cover one machine, two small local models, one fictional domain and
+* The measurements cover one machine, two small local models, one product domain and
   83 cases. They show the method; they are not a benchmark of those models.
 * Calibration is only as good as its gold labels — [MEASUREMENTS §4](MEASUREMENTS.md)
   shows a regex answer key being wrong more often than the judge. Use human labels when

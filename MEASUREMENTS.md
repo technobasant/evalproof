@@ -15,7 +15,7 @@ latency tables from them without a model.
 | Judge | `qwen3:8b`, digest `500a1f067a9f` — temperature 0, seed 0, `think: false`, max 256 tokens |
 | Reasoning judge (section 8) | the same model with `think: true` and max 4,096 tokens, in [`suite.reasoning-judge.yaml`](examples/support-qa/suite.reasoning-judge.yaml) |
 | evalproof / Python | 0.1.0 / 3.13.15 |
-| Golden set | 83 questions about a fictional product; 9 are not answerable from the facts. Every run in `runs/` used [`cases.v1.jsonl`](examples/support-qa/cases.v1.jsonl), dataset hash `c6f08ac201023363`; `cases.jsonl` is the revised set from section 8 (`55ba005be14c0f20`), whose runs are in `runs/v2/` |
+| Golden set | 83 questions about a product; 9 are not answerable from the facts. Every run in `runs/` used [`cases.v1.jsonl`](examples/support-qa/cases.v1.jsonl), dataset hash `c6f08ac201023363`; `cases.jsonl` is the revised set from section 8 (`55ba005be14c0f20`), whose runs are in `runs/v2/` |
 | "Gold" | a per-question regex answer key, written before any model output was seen and not changed after. It stands in for human review; it is not human labelling. |
 | Change under test | grounded system prompt → "friendly, always give a complete answer" prompt; same model |
 
@@ -218,7 +218,7 @@ review; issue #4 tracks calibrating against human-reviewed labels.
 
 ## Limits
 
-* One machine, one pair of small local models, one fictional domain, 83 cases. The numbers
+* One machine, one pair of small local models, one product domain, 83 cases. The numbers
   describe this setup; the method is what transfers.
 * The answer key is a stand-in for human review, and section 4 shows it is wrong in
   predictable ways. A real deployment should calibrate against human labels.

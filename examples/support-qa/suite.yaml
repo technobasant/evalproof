@@ -1,4 +1,4 @@
-# LLM example: a support assistant for a fictional product, judged by a local model.
+# LLM example: a product support assistant, judged by a local model.
 # Baseline and candidate differ only in the system prompt (see README).
 name: support-qa
 dataset: cases.jsonl

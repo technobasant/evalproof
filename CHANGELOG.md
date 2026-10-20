@@ -44,7 +44,7 @@ The first release on PyPI: `pip install evalproof`.
   stored anywhere. Each file on PyPI carries a PEP 740 attestation, and the GitHub release
   carries the same files with a build-provenance attestation.
 - `SECURITY.md` with private vulnerability reporting and the trust boundaries, backed by a
-  test that runs both hosted providers with a fake key and finds it in no file written.
+  test that runs both hosted providers with a placeholder key and finds it in no file written.
 - `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), issue and pull-request templates,
   `CITATION.cff`, `CODEOWNERS`, Dependabot for actions and Python dependencies with a
   three-day cooldown, and a pre-commit configuration.
@@ -119,8 +119,8 @@ First release.
   `alpha`, plus p95-latency and cost budgets, with distinct exit codes.
 - Content-addressed response cache; runs record the Ollama version and model digests.
 - Markdown reports for GitHub step summaries, JSON reports, and a composite GitHub Action.
-- Two examples: an offline ticket router (CI's gate contract) and a support assistant for
-  a fictional product judged by a local model, with measurements.
+- Two examples: an offline ticket router (CI's gate contract) and a product support
+  assistant judged by a local model, with measurements.
 
 [Unreleased]: https://github.com/technobasant/evalproof/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/technobasant/evalproof/compare/v0.2.0...v0.2.1

@@ -1,4 +1,4 @@
-# Support assistant for a fictional product, judged by a local model
+# Product support assistant, judged by a local model
 
 **Quillfox** and the **Larkspur Software Cooperative** do not exist. Every name, price and
 policy in [`knowledge_base.md`](knowledge_base.md) was invented for this example.
