@@ -1,7 +1,7 @@
 # Product support assistant, judged by a local model
 
-**Quillfox** and the **Larkspur Software Cooperative** do not exist. Every name, price and
-policy in [`knowledge_base.md`](knowledge_base.md) was invented for this example.
+**Quillfox** and the **Larkspur Software Cooperative** are the example's product and its
+maker; every name, price and policy in [`knowledge_base.md`](knowledge_base.md) was written for it.
 
 * **System under test:** `qwen3:1.7b` on Ollama, answering customer questions with the
   knowledge base in its system prompt.
