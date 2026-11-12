@@ -14,7 +14,13 @@ from tests.fakecli import FakeCLI, claude_auth, claude_ok, codex_ok, install
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    for var in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "CODEX_API_KEY"):
+    for var in (
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+        "OPENAI_API_KEY",
+        "CODEX_API_KEY",
+        "EVALPROOF_CLI_AUTH",
+    ):
         monkeypatch.delenv(var, raising=False)
 
 
@@ -65,6 +71,7 @@ def test_doctor_without_a_suite_checks_both_clis(both: tuple[FakeCLI, FakeCLI]) 
     assert "auth: Logged in using ChatGPT" in text
     assert "isolation: claude-code/1" in text and "isolation: codex/1" in text
     assert "--tools ''" in text and "--disable shell_tool" in text
+    assert "--disable sleep_tool --disable view_image" in text
     assert "--dangerously-skip-permissions" not in text
     assert text.rstrip().endswith("ok")
     # A free check: nothing was asked of a model.
@@ -85,6 +92,83 @@ def test_doctor_mentions_a_key_variable_it_will_strip(
     assert "ANTHROPIC_API_KEY is set and is removed" in text
     assert "OPENAI_API_KEY is set and is removed" in text
     assert "synthetic" not in text.replace("is set and is removed", "")
+
+
+def test_doctor_prints_the_auth_mode_in_login_mode(
+    both: tuple[FakeCLI, FakeCLI], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("EVALPROOF_CLI_AUTH", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "synthetic")
+    code, text = doctor()
+    assert code == 0
+    assert text.count("auth mode: login (EVALPROOF_CLI_AUTH not set)") == 2
+    # a set key variable is still mentioned: it is removed, and the note says how to use it
+    assert "ANTHROPIC_API_KEY is set and is removed for this call" in text
+    assert "EVALPROOF_CLI_AUTH=api-key" in text
+    monkeypatch.setenv("EVALPROOF_CLI_AUTH", "login")
+    _, text = doctor()
+    assert text.count("auth mode: login (from EVALPROOF_CLI_AUTH)") == 2
+
+
+def test_doctor_prints_the_auth_mode_in_api_key_mode(
+    both: tuple[FakeCLI, FakeCLI], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("EVALPROOF_CLI_AUTH", "api-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "synthetic-secret")
+    code, text = doctor()
+    assert text.count("auth mode: api-key (from EVALPROOF_CLI_AUTH)") == 2
+    assert "key: ANTHROPIC_API_KEY is passed to the CLI" in text
+    assert "removed" not in text and "synthetic-secret" not in text
+    # codex has no key set: a warning, not a failure
+    assert (
+        "warning: EVALPROOF_CLI_AUTH=api-key but OPENAI_API_KEY and CODEX_API_KEY is not set"
+        in text
+    )
+    assert code == 0
+
+
+def test_doctor_does_not_need_a_login_when_a_key_is_in_use(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install(
+        tmp_path,
+        monkeypatch,
+        "codex",
+        version="codex-cli 0.167.2",
+        responses=[codex_ok()],
+        auth_stdout="Not logged in\n",
+        auth_exit=1,
+    )
+    code, text = doctor(write_suite(tmp_path, "python:x:y", "codex:gpt-6-luna"))
+    assert code == 1 and "auth mode: login" in text  # a login is needed in login mode
+    monkeypatch.setenv("EVALPROOF_CLI_AUTH", "api-key")
+    code, text = doctor(write_suite(tmp_path, "python:x:y", "codex:gpt-6-luna"))
+    assert code == 1 and "warning: EVALPROOF_CLI_AUTH=api-key" in text  # no key either
+    monkeypatch.setenv("CODEX_API_KEY", "synthetic")
+    code, text = doctor(write_suite(tmp_path, "python:x:y", "codex:gpt-6-luna"))
+    assert code == 0 and "key: CODEX_API_KEY is passed to the CLI" in text
+
+
+def test_doctor_reports_an_invalid_auth_mode(
+    both: tuple[FakeCLI, FakeCLI], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("EVALPROOF_CLI_AUTH", "token")
+    code, text = doctor()
+    assert code == 1
+    assert "EVALPROOF_CLI_AUTH must be one of login, api-key, got 'token'" in text
+
+
+def test_doctor_api_key_env_wins_in_api_key_mode(
+    both: tuple[FakeCLI, FakeCLI], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("EVALPROOF_CLI_AUTH", "api-key")
+    monkeypatch.setenv("MY_TEAM_KEY", "synthetic")
+    suite = write_suite(tmp_path, "python:x:y", "claude-code:haiku", ", api_key_env: MY_TEAM_KEY")
+    code, text = doctor(suite)
+    assert code == 0
+    assert "auth mode: api-key" in text
+    assert "$MY_TEAM_KEY is passed to the CLI as ANTHROPIC_API_KEY" in text
+    assert "warning" not in text
 
 
 def test_doctor_reads_a_suite_and_names_the_roles(

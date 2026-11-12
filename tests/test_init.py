@@ -379,12 +379,15 @@ def test_api_key_workflow_pins_the_cli_found_at_init_time(
     install = next(s for s in steps if s.get("name") == "Install claude")
     assert install["run"] == "npm install -g @anthropic-ai/claude-code@2.1.322"
     run = next(s for s in steps if s.get("name") == "Run the suite")
-    assert run["env"] == {"ANTHROPIC_API_KEY": "${{ secrets.ANTHROPIC_API_KEY }}"}
-    assert 'uvx evalproof@0.4.0 run evals/.suite.ci.yaml --out "$RUNNER_TEMP/' in run["run"]
+    assert run["env"] == {
+        "EVALPROOF_CLI_AUTH": "api-key",
+        "ANTHROPIC_API_KEY": "${{ secrets.ANTHROPIC_API_KEY }}",
+    }
+    assert 'uvx evalproof@0.4.0 run evals/suite.yaml --out "$RUNNER_TEMP/' in run["run"]
     assert "judge_cli_version" in (tmp_path / WORKFLOW).read_text(encoding="utf-8")
 
 
-def test_api_key_workflow_for_codex_maps_the_openai_key(
+def test_api_key_workflow_for_codex_sets_the_auth_mode_and_the_openai_key(
     tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     fake_cli(bin_dir, "codex", "codex-cli 0.167.2", models=CODEX_MODELS)
@@ -393,7 +396,10 @@ def test_api_key_workflow_for_codex_maps_the_openai_key(
     install = next(s for s in steps if s.get("name") == "Install codex")
     assert install["run"] == "npm install -g @openai/codex@0.167.2"
     run = next(s for s in steps if s.get("name") == "Run the suite")
-    assert run["env"] == {"OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}"}
+    assert run["env"] == {
+        "EVALPROOF_CLI_AUTH": "api-key",
+        "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
+    }
     assert "the workflow installs codex 0.167.2" in out
     assert "add the repository secret OPENAI_API_KEY" in out
 
@@ -415,7 +421,7 @@ def test_api_key_workflow_for_a_hosted_api_judge_has_no_cli_steps(
     steps = _steps(tmp_path / WORKFLOW)
     assert not any("npm install" in str(s.get("run", "")) for s in steps)
     run = next(s for s in steps if s.get("name") == "Run the suite")
-    assert run["env"] == {"OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}"}
+    assert run["env"] == {"OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}"}  # no CLI: no mode
     assert "evals/suite.yaml --out" in run["run"] and "pyyaml" not in run["run"]
 
 
@@ -443,26 +449,48 @@ def test_api_key_ci_refuses_a_local_judge_before_writing_anything(
     assert not (tmp_path / "p").exists()
 
 
-def test_the_ci_overlay_points_only_cli_targets_at_the_key(
+@pytest.mark.parametrize(
+    ("binary", "version", "judge", "key_var"),
+    [
+        ("claude", "2.1.322 (Claude Code)", "claude-code:sonnet", "ANTHROPIC_API_KEY"),
+        ("codex", "codex-cli 0.167.2", "codex:gpt-6-luna", "OPENAI_API_KEY"),
+    ],
+)
+def test_api_key_workflow_has_no_ci_suite_overlay(
     tmp_path: Path,
     bin_dir: Path,
     capsys: pytest.CaptureFixture[str],
-    monkeypatch: pytest.MonkeyPatch,
+    binary: str,
+    version: str,
+    judge: str,
+    key_var: str,
 ) -> None:
-    """Run the workflow's own Python heredoc on the suite init wrote."""
-    fake_cli(bin_dir, "claude", "2.1.322 (Claude Code)")
-    run_init(tmp_path, capsys, "--ci", "api-key")
-    run_step = next(s for s in _steps(tmp_path / WORKFLOW) if s.get("name") == "Run the suite")
-    code = re.search(r"<<'PY'\n(.*?)\nPY\n", run_step["run"], re.DOTALL)
-    assert code is not None
-    monkeypatch.chdir(tmp_path)
-    exec(compile(code.group(1), "overlay", "exec"), {})
-    ci_suite = tmp_path / "evals" / ".suite.ci.yaml"
-    cfg = load_config(ci_suite)
-    assert cfg.judge is not None
-    assert cfg.system.api_key_env == cfg.judge.api_key_env == "ANTHROPIC_API_KEY"
-    assert cfg.system.system_prompt and cfg.gate is not None  # the rest survives the round trip
-    assert load_config(tmp_path / "evals" / "suite.yaml").system.api_key_env is None
+    """A CLI judge is switched to its key by one env var, not by a rewritten copy of the suite."""
+    fake_cli(bin_dir, binary, version, models=CODEX_MODELS)
+    run_init(tmp_path, capsys, "--ci", "api-key", "--judge", judge)
+    text = (tmp_path / WORKFLOW).read_text(encoding="utf-8")
+    run = next(s for s in _steps(tmp_path / WORKFLOW) if s.get("name") == "Run the suite")
+    assert run["env"]["EVALPROOF_CLI_AUTH"] == "api-key"
+    assert run["env"][key_var] == f"${{{{ secrets.{key_var} }}}}"
+    assert ".suite.ci.yaml" not in text and "pyyaml" not in text and "<<'PY'" not in text
+    assert 'run evals/suite.yaml --out "$RUNNER_TEMP/' in run["run"]
+    written = {p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file()}
+    assert not any("suite.ci" in name for name in written)
+    # The suite is the one a developer runs on a login: it names no key.
+    cfg = load_config(tmp_path / "evals" / "suite.yaml")
+    assert cfg.judge is not None and cfg.judge.api_key_env is None
+
+
+def test_the_evals_readme_explains_the_cli_auth_mode_for_a_cli_judge(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys, "--ci", "api-key", "--judge", "claude-code:sonnet")
+    readme = (tmp_path / "evals" / "README.md").read_text(encoding="utf-8")
+    assert "EVALPROOF_CLI_AUTH=api-key" in readme and "overlay" not in readme
+    run_init(tmp_path / "hosted", capsys, "--ci", "api-key", "--judge", "openai:gpt-5")
+    assert "EVALPROOF_CLI_AUTH" not in (tmp_path / "hosted" / "evals" / "README.md").read_text(
+        encoding="utf-8"
+    )
 
 
 # --- the keyless workflow, run for real ---------------------------------------------------

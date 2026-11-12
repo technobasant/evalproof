@@ -55,26 +55,15 @@ jobs:
       - name: Run the suite
         if: steps.baseline.outputs.found == 'true'
         env:
+#@@IF cli
+          # The suite is written for a developer's own login and names no key. This tells the
+          # @@CLI_BINARY@@ CLI to use the key below instead of a login.
+          EVALPROOF_CLI_AUTH: api-key
+#@@END
           @@KEY_VAR@@: ${{ secrets.@@KEY_VAR@@ }}
         run: |
           set -euo pipefail
-#@@IF cli
-          # The suite is written for a developer's own login, so it names no key. For this run
-          # only, tell each @@CLI_BINARY@@ target to read its key from @@KEY_VAR@@ (api_key_env).
-          uv run --no-project --with pyyaml python - <<'PY'
-          import yaml
-
-          with open("evals/suite.yaml", encoding="utf-8") as fh:
-              suite = yaml.safe_load(fh)
-          for block in ("system", "judge"):
-              target = suite.get(block, {}).get("target", "")
-              if target.startswith("@@CLI_PROVIDER@@:"):
-                  suite[block]["api_key_env"] = "@@KEY_VAR@@"
-          with open("evals/.suite.ci.yaml", "w", encoding="utf-8") as fh:
-              yaml.safe_dump(suite, fh, sort_keys=False)
-          PY
-#@@END
-          uvx evalproof@@@PIP_VERSION@@ run @@SUITE_FILE@@ --out "$RUNNER_TEMP/evalproof-candidate.json" --quiet
+          uvx evalproof@@@PIP_VERSION@@ run evals/suite.yaml --out "$RUNNER_TEMP/evalproof-candidate.json" --quiet
 
       - name: Compare with the baseline and gate
         if: steps.baseline.outputs.found == 'true'

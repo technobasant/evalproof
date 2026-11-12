@@ -247,13 +247,19 @@ def render_ci_text(ci: str, judge: Judge) -> str:
             "`latest.json` did not."
         )
     if ci == "api-key":
-        return (
+        text = (
             "Commit `evals/runs/latest.json` on the main branch to set the baseline. "
             "`.github/workflows/evalproof.yml` runs the suite on each pull request with the "
             f"`{_key_env(judge)}` repository secret and compares the result with that file; "
             "it fails on a regression that is both large enough to matter and statistically "
             "significant (exit 1; exit 3 over a budget; exit 4 when it cannot decide)."
         )
+        if judge.provider in AGENT_CLIS:
+            text += (
+                " The run step sets `EVALPROOF_CLI_AUTH=api-key`, so the CLI uses that key "
+                "instead of a login; locally it keeps using your login."
+            )
+        return text
     return (
         "No CI workflow was written. To gate by hand, run the suite on the base and on your "
         "branch and compare: `uvx evalproof compare base.json candidate.json "
@@ -270,8 +276,6 @@ def render_workflow(ci: str, judge: Judge, pinned: str | None) -> str:
         "ACTION_REF": ACTION_REF,
         "PIP_VERSION": ACTION_REF.removeprefix("v"),
         "KEY_VAR": key_var,
-        "SUITE_FILE": "evals/.suite.ci.yaml" if cli else "evals/suite.yaml",
-        "CLI_PROVIDER": judge.provider,
         "CLI_BINARY": cli.binary if cli else "",
         "NPM_SPEC": "",
         "CLI_PIN_NOTE": "",

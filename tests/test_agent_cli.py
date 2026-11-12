@@ -20,7 +20,13 @@ from evalproof.providers import (
     ProviderError,
     make_provider,
 )
-from evalproof.providers.agent_cli import NEUTRAL_SYSTEM, cli_facts, render_prompt
+from evalproof.providers.agent_cli import (
+    AUTH_ENV,
+    CODEX_ALLOWED_ITEMS,
+    NEUTRAL_SYSTEM,
+    cli_facts,
+    render_prompt,
+)
 from tests.fakecli import (
     FakeCLI,
     claude_array,
@@ -50,6 +56,7 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "CLAUDE_CODE_OAUTH_TOKEN",
         "OPENAI_API_KEY",
         "CODEX_API_KEY",
+        "EVALPROOF_CLI_AUTH",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -130,6 +137,10 @@ def test_codex_command_line_and_stdin(codex: FakeCLI) -> None:
         "project_doc_max_bytes=0",
         "-c",
         instructions,
+        "-c",
+        "skills.include_instructions=false",
+        "-c",
+        "skills.bundled.enabled=false",
         "--disable",
         "shell_tool",
         "--disable",
@@ -140,6 +151,10 @@ def test_codex_command_line_and_stdin(codex: FakeCLI) -> None:
         "hooks",
         "--disable",
         "multi_agent",
+        "--disable",
+        "sleep_tool",
+        "--disable",
+        "view_image",
         "-",
     ]
     assert not any(flag in call["argv"] for flag in BYPASS)
@@ -246,6 +261,85 @@ def test_api_key_env_is_passed_under_the_cli_key_name(
 def test_api_key_env_must_be_set(claude: FakeCLI) -> None:
     with pytest.raises(ProviderError, match="set MISSING_KEY"):
         claude_provider(api_key_env="MISSING_KEY")
+
+
+KEY_VARS = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "CODEX_API_KEY")
+
+
+@pytest.fixture
+def all_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    for var in KEY_VARS:
+        monkeypatch.setenv(var, "synthetic-" + var)
+
+
+@pytest.mark.parametrize("value", [None, "", "  ", "login"])
+def test_cli_auth_login_is_the_default(
+    claude: FakeCLI,
+    codex: FakeCLI,
+    all_keys: None,
+    monkeypatch: pytest.MonkeyPatch,
+    value: str | None,
+) -> None:
+    if value is None:
+        monkeypatch.delenv(AUTH_ENV, raising=False)
+    else:
+        monkeypatch.setenv(AUTH_ENV, value)
+    claude_provider().chat(USER, PARAMS)
+    codex_provider().chat(USER, PARAMS)
+    assert claude_provider().auth_mode == "login"
+    assert all(claude.last()["env"][v] is None for v in KEY_VARS[:2])
+    assert all(codex.last()["env"][v] is None for v in KEY_VARS[2:])
+
+
+def test_cli_auth_api_key_keeps_the_cli_key_variables(
+    claude: FakeCLI, codex: FakeCLI, all_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(AUTH_ENV, "api-key")
+    claude_provider().chat(USER, PARAMS)
+    codex_provider().chat(USER, PARAMS)
+    seen = claude.last()["env"]
+    assert seen["ANTHROPIC_API_KEY"] == "synthetic-ANTHROPIC_API_KEY"
+    assert seen["ANTHROPIC_AUTH_TOKEN"] == "synthetic-ANTHROPIC_AUTH_TOKEN"
+    seen = codex.last()["env"]
+    assert seen["OPENAI_API_KEY"] == "synthetic-OPENAI_API_KEY"
+    assert seen["CODEX_API_KEY"] == "synthetic-CODEX_API_KEY"
+
+
+def test_cli_auth_rejects_any_other_value(
+    claude: FakeCLI, codex: FakeCLI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(AUTH_ENV, "subscription")
+    for make in (claude_provider, codex_provider):
+        with pytest.raises(ProviderError) as err:
+            make()
+        assert AUTH_ENV in str(err.value) and "login, api-key" in str(err.value)
+        assert "'subscription'" in str(err.value)
+    assert claude.calls() == [] and codex.calls() == []
+
+
+def test_api_key_env_wins_over_the_auth_mode(
+    claude: FakeCLI, codex: FakeCLI, all_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MY_TEAM_KEY", "synthetic-team-key")
+    for mode in ("login", "api-key"):
+        monkeypatch.setenv(AUTH_ENV, mode)
+        claude_provider(api_key_env="MY_TEAM_KEY").chat(USER, PARAMS)
+        codex_provider(api_key_env="MY_TEAM_KEY").chat(USER, PARAMS)
+        assert claude.last()["env"]["ANTHROPIC_API_KEY"] == "synthetic-team-key"
+        assert codex.last()["env"]["CODEX_API_KEY"] == "synthetic-team-key"
+
+
+def test_the_auth_mode_is_not_part_of_the_fingerprint_or_cache_key(
+    claude: FakeCLI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(AUTH_ENV, "login")
+    login = claude_provider()
+    login_fingerprint, login_salt = login.fingerprint(), login.cache_salt(PARAMS)
+    monkeypatch.setenv(AUTH_ENV, "api-key")
+    keyed = claude_provider()
+    assert keyed.fingerprint() == login_fingerprint
+    assert keyed.cache_salt(PARAMS) == login_salt
+    assert not any("auth" in k for k in login_salt)
 
 
 def test_a_key_in_a_cli_message_is_masked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -424,27 +518,73 @@ def test_codex_turn_failed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
         codex_provider().chat(USER, PARAMS)
 
 
-def test_codex_command_execution_means_isolation_broke(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    events = [
-        {"type": "turn.started"},
-        {
-            "type": "item.completed",
-            "item": {"type": "command_execution", "command": "ls", "exit_code": 0},
-        },
+def codex_stream(*items: tuple[str, dict[str, object]]) -> dict[str, object]:
+    """A codex JSONL reply: the given (event type, item) pairs, then a normal final message."""
+    events: list[dict[str, object]] = [{"type": "turn.started"}]
+    events += [{"type": kind, "item": item} for kind, item in items]
+    events += [
         {"type": "item.completed", "item": {"type": "agent_message", "text": "done"}},
         {"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}},
     ]
+    return reply("\n".join(json.dumps(e) for e in events))
+
+
+@pytest.mark.parametrize("event", ["item.started", "item.completed"])
+@pytest.mark.parametrize(
+    "item_type",
+    ["command_execution", "collab_tool_call", "mcp_tool_call", "file_change", "web_search"],
+)
+def test_codex_any_tool_item_means_isolation_broke(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, event: str, item_type: str
+) -> None:
     install(
         tmp_path,
         monkeypatch,
         "codex",
         version="v",
-        responses=[reply("\n".join(json.dumps(e) for e in events))],
+        responses=[codex_stream((event, {"id": "item_1", "type": item_type}))],
     )
-    with pytest.raises(ProviderError, match="isolation broken"):
+    with pytest.raises(ProviderError) as err:
         codex_provider().chat(USER, PARAMS)
+    assert f"codex used a tool ({item_type}); isolation broken" in str(err.value)
+    assert "done" not in str(err.value)  # the reply text is discarded
+
+
+def test_codex_item_allowlist_is_exactly_the_tool_free_types() -> None:
+    assert {"agent_message", "reasoning", "error", "todo_list"} == CODEX_ALLOWED_ITEMS
+
+
+def test_codex_allowlisted_items_are_not_a_tool_use(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    items = [
+        ("item.started", {"id": "i0", "type": "reasoning", "text": "thinking"}),
+        ("item.completed", {"id": "i0", "type": "reasoning", "text": "thinking"}),
+        ("item.completed", {"id": "i1", "type": "todo_list", "items": []}),
+        ("item.completed", {"id": "i2", "type": "error", "message": "a warning"}),
+        ("item.completed", {"id": "i3", "type": "agent_message", "text": "first"}),
+    ]
+    install(tmp_path, monkeypatch, "codex", version="v", responses=[codex_stream(*items)])
+    assert codex_provider().chat(USER, PARAMS).text == "done"  # the last agent message
+
+
+def test_codex_unknown_feature_flag_asks_for_an_upgrade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = install(
+        tmp_path,
+        monkeypatch,
+        "codex",
+        version="codex-cli 0.100.0",
+        responses=[reply("", stderr="Error: Unknown feature flag: sleep_tool\n", exit=1)],
+    )
+    with pytest.raises(ProviderError) as err:
+        codex_provider().chat(USER, PARAMS)
+    text = str(err.value)
+    assert "lacks a feature evalproof disables (sleep_tool)" in text
+    assert "tested with codex-cli 0.167.2" in text and "upgrade codex" in text
+    assert "npm install -g @openai/codex" in text
+    assert len(fake.calls()) == 1  # not retried
 
 
 def test_codex_failure_exit_without_events_and_without_a_message(

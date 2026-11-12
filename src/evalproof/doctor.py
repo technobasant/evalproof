@@ -14,7 +14,7 @@ from typing import TextIO
 
 from evalproof.config import GenerationParams, TargetConfig, load_config
 from evalproof.providers import parse_target
-from evalproof.providers.agent_cli import CLI_PROVIDERS, cli_version
+from evalproof.providers.agent_cli import AUTH_ENV, CLI_PROVIDERS, cli_version
 from evalproof.providers.base import ProviderError
 
 # What to check when no suite is given: one target per CLI, so the model is only a placeholder.
@@ -60,21 +60,34 @@ def check_target(cfg: TargetConfig, roles: list[str], out: TextIO) -> bool:
     except ProviderError as exc:
         out.write(f"  problem: {exc}\n")
         ok = False
+    key_vars = [v for v in provider.strip_vars if v in os.environ]
+    # A key reaches the CLI when the suite names one, or in api-key mode when one is set.
+    key_in_use = bool(cfg.api_key_env) or (provider.auth_mode == "api-key" and bool(key_vars))
     auth = provider.auth_status()
     out.write(f"  auth: {auth.detail}\n")
-    ok = ok and auth.ok
+    # With a key in use the CLI need not be logged in, so a failed login check is not a problem.
+    ok = ok and (auth.ok or key_in_use)
     command = provider.command(provider.binary, "<tmp>/system.txt", GenerationParams())
     out.write(f"  isolation: {provider.isolation}\n")
     out.write(f"  flags: {shlex.join(command[1:])}\n")
+    source = f"from {AUTH_ENV}" if os.environ.get(AUTH_ENV, "").strip() else f"{AUTH_ENV} not set"
+    out.write(f"  auth mode: {provider.auth_mode} ({source})\n")
     if cfg.api_key_env:
         out.write(f"  key: ${cfg.api_key_env} is passed to the CLI as {provider.key_var}\n")
-    else:
-        stripped = [v for v in provider.strip_vars if v in os.environ]
-        if stripped:
+    elif provider.auth_mode == "api-key":
+        if key_vars:
+            out.write(f"  key: {', '.join(key_vars)} is passed to the CLI\n")
+        else:
             out.write(
-                f"  note: {', '.join(stripped)} is set and is removed for this call, so the "
-                f"{kind} login is used (name the variable in api_key_env to use a key)\n"
+                f"  warning: {AUTH_ENV}=api-key but {' and '.join(provider.strip_vars)} "
+                f"is not set, so the {kind} CLI has no key to use\n"
             )
+    elif key_vars:
+        out.write(
+            f"  note: {', '.join(key_vars)} is set and is removed for this call, so the "
+            f"{kind} login is used (name the variable in api_key_env, or set "
+            f"{AUTH_ENV}=api-key, to use a key)\n"
+        )
     return ok
 
 

@@ -10,9 +10,16 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   Codex CLI as a judge or a system under test, with no API key. Each call runs in a fresh
   empty directory with the agent's tools, settings, MCP servers, skills and memory switched
   off and no permission-bypass flag; API-key variables are removed from the child's
-  environment unless `api_key_env` names one. Neither CLI takes a temperature, seed or token
-  limit, so those params are ignored (Codex maps `think` to its reasoning effort). ADR 0004
-  has the reasoning.
+  environment unless `api_key_env` names one or `EVALPROOF_CLI_AUTH=api-key` keeps them.
+  Neither CLI takes a temperature, seed or token limit, so those params are ignored (Codex
+  maps `think` to its reasoning effort). Claude Code runs with no tools; Codex still offers a
+  JavaScript isolate, sub-agents and a question to the user, so any item in its output other
+  than a message, reasoning, an error or a plan fails the call as an isolation break, and a
+  codex too old for the flags evalproof sets gets a message to upgrade. ADR 0004 has the
+  reasoning.
+- `EVALPROOF_CLI_AUTH` (`login`, the default, or `api-key`) chooses whether a CLI provider
+  uses the subscription login or its own API key variable; `evalproof doctor` prints the mode
+  in effect and warns when `api-key` has no key to use. `api_key_env` still wins.
 - `evalproof doctor [suite.yaml]`: reports each CLI's path, version, login mode and the
   isolation flags it will use, without a model call, and exits 1 when a target is not usable.
   It prints no account details.
@@ -34,6 +41,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   The judge is the first of `claude`, `codex`, `ollama` found on `PATH`, else a hosted
   Anthropic model. The keyless workflow makes no model calls and gates the committed
   `evals/runs/latest.json` against the base branch; the api-key workflow runs the suite in CI
+  (with `EVALPROOF_CLI_AUTH: api-key` for a CLI judge, so no second suite file is written)
   and pins the judge CLI to the version found at init time. Existing files are kept unless
   `--force` is passed, nothing is written outside `--dir`, and no model is called.
 
