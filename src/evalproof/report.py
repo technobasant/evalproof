@@ -45,6 +45,17 @@ def comparison_markdown(
         lines += [f"- ⚠️ {w}" for w in decision.warnings]
         if decision.reasons or decision.warnings:
             lines.append("")
+    else:
+        # With a gate these are already among its reasons and warnings.
+        if cmp.judge_changes:
+            lines += [
+                f"- ⚠️ The judge changed, so the scores may not be comparable: {c}"
+                for c in cmp.judge_changes
+            ]
+        if cmp.system_changes:
+            lines += [f"- ⚠️ The system under test changed: {c}" for c in cmp.system_changes]
+        if cmp.judge_changes or cmp.system_changes:
+            lines.append("")
     lines += [
         f"Baseline `{cmp.baseline_label}` vs candidate `{cmp.candidate_label}` on "
         f"{len(cmp.paired_ids)} paired cases.",

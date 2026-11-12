@@ -4,6 +4,41 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+### Added
+
+- `claude-code:<model>` and `codex:<model>` providers: run your own logged-in Claude Code or
+  Codex CLI as a judge or a system under test, with no API key. Each call runs in a fresh
+  empty directory with the agent's tools, settings, MCP servers, skills and memory switched
+  off and no permission-bypass flag; API-key variables are removed from the child's
+  environment unless `api_key_env` names one. Neither CLI takes a temperature, seed or token
+  limit, so those params are ignored (Codex maps `think` to its reasoning effort). ADR 0004
+  has the reasoning.
+- `evalproof doctor [suite.yaml]`: reports each CLI's path, version, login mode and the
+  isolation flags it will use, without a model call, and exits 1 when a target is not usable.
+  It prints no account details.
+- Run facts for CLI targets in `runner.environment`: `{judge,system}_cli`,
+  `{judge,system}_cli_version`, `{judge,system}_isolation` and `{judge,system}_model_resolved`
+  (the model ids that answered, sorted, cached replies included). The response cache keys on
+  the CLI fingerprint, so a CLI upgrade is a cache miss.
+- `compare` reports `same_judge`, `judge_changes` and `system_changes`, and the gate refuses
+  to decide (exit 4) when the judge changed between the runs. `--allow-judge-change` or
+  `gate.allow_judge_change: true` accepts the change and keeps a warning.
+- `evalproof.providers.TransientError`, a `ProviderError` that `with_retries` retries; the CLI
+  providers raise it for rate limits and server errors.
+- `tests/test_live_agent_cli.py`: one real call per installed CLI, skipped unless
+  `EVALPROOF_LIVE=1`.
+
+### Changed
+
+- A gate that passed in 0.3.0 can now exit 4 when the judge's target, CLI version, isolation
+  or resolved model differs between two runs that both carry these keys. Runs written before
+  this release carry none and compare as before.
+- A changed system target or CLI version between two runs now adds a warning, so the status
+  is `warn` instead of `pass` (the exit code stays 0).
+- `runner.environment` records `judge_target` and `system_target` for every model target (not
+  only CLI ones), and the system target it records is the one in effect, with any override
+  applied.
+
 ## [0.3.0] — 2026-11-12
 
 ### Added

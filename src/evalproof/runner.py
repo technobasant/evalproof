@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import platform
 import sys
+import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -14,12 +15,20 @@ import httpx
 
 from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
-from evalproof.config import SuiteConfig, TargetConfig
+from evalproof.config import GenerationParams, SuiteConfig, TargetConfig
 from evalproof.dataset import dataset_hash, load_dataset
 from evalproof.models import Case, CaseResult, Run, RunInfo
-from evalproof.providers import Provider, make_provider, parse_target
+from evalproof.providers import (
+    LLM_PROVIDERS,
+    ChatResponse,
+    Message,
+    Provider,
+    make_provider,
+    parse_target,
+)
+from evalproof.providers.agent_cli import cli_facts
 from evalproof.scorers import Scorer, make_scorer
-from evalproof.systems import System, make_system
+from evalproof.systems import LLMSystem, System, make_system
 
 Progress = Callable[[int, int, CaseResult], None]
 
@@ -42,16 +51,59 @@ def _ollama_facts(cfg: TargetConfig, client: httpx.Client | None) -> dict[str, s
     return facts
 
 
-def environment(cfg: SuiteConfig, client: httpx.Client | None = None) -> dict[str, str]:
+class ResolvedModels:
+    """A thin wrapper that remembers which model ids a provider reported, cached replies
+    included, so the run artifact can say which model actually answered."""
+
+    def __init__(self, inner: Provider) -> None:
+        self.inner = inner
+        self.name = inner.name
+        self.model = inner.model
+        self.seen: set[str] = set()
+        self._lock = threading.Lock()
+
+    def chat(self, messages: list[Message], params: GenerationParams) -> ChatResponse:
+        resp = self.inner.chat(messages, params)
+        if resp.model:
+            with self._lock:
+                self.seen.add(resp.model)
+        return resp
+
+
+def _target_facts(role: str, cfg: TargetConfig) -> dict[str, str]:
+    """What identifies a judge or system target: its target string and, for a coding-agent CLI,
+    the CLI, its version and the isolation scheme (a version lookup, never a model call)."""
+    facts = {f"{role}_target": cfg.target}
+    facts.update({f"{role}_{key}": value for key, value in cli_facts(cfg).items()})
+    return facts
+
+
+def environment(
+    cfg: SuiteConfig,
+    client: httpx.Client | None = None,
+    *,
+    system: TargetConfig | None = None,
+    resolved: dict[str, set[str]] | None = None,
+) -> dict[str, str]:
+    """The facts a run needs to be reproducible and comparable. ``system`` is the target that
+    actually ran when it is not ``cfg.system``; ``resolved`` maps a role (``judge``,
+    ``system``) to the model ids its provider reported."""
+    system_cfg = system or cfg.system
     env = {
         "python": sys.version.split()[0],
         "platform": platform.platform(),
         "machine": platform.machine(),
         "processor": platform.processor() or "",
     }
-    env.update(_ollama_facts(cfg.system, client))
+    env.update(_ollama_facts(system_cfg, client))
+    if system_cfg.kind in LLM_PROVIDERS:
+        env.update(_target_facts("system", system_cfg))
     if cfg.judge:
         env.update(_ollama_facts(cfg.judge, client))
+        env.update(_target_facts("judge", cfg.judge))
+    for role, models in (resolved or {}).items():
+        if models:
+            env[f"{role}_model_resolved"] = ",".join(sorted(models))
     return env
 
 
@@ -84,10 +136,16 @@ def run_suite(
     )
 
     judge: Provider | None = None
+    judge_models: ResolvedModels | None = None
     if cfg.judge is not None:
         judge = make_provider(cfg.judge, client=client)
         if cache is not None:
             judge = CachedProvider(judge, cache, base_url=cfg.judge.base_url)
+        judge = judge_models = ResolvedModels(judge)
+    system_models: ResolvedModels | None = None
+    if isinstance(system, LLMSystem):
+        system_models = ResolvedModels(system.provider)
+        system.provider = system_models
     scorers = [make_scorer(s, cfg, judge) for s in cfg.scorers]
 
     started = datetime.now(UTC)
@@ -119,7 +177,16 @@ def run_suite(
         wall_time_s=round(wall, 3),
         evalproof_version=__version__,
         seed=cfg.seed,
-        environment=environment(cfg, client),
+        environment=environment(
+            cfg,
+            client,
+            system=system_cfg,
+            resolved={
+                role: rec.seen
+                for role, rec in (("judge", judge_models), ("system", system_models))
+                if rec is not None
+            },
+        ),
     )
     return Run(info=info, results=results)
 
