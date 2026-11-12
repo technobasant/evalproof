@@ -99,7 +99,9 @@ The target is `<provider>:<model>`; the model name is everything after the first
 `openrouter:anthropic/claude-sonnet-4.5` and `ollama:qwen3:8b` both work. Two native adapters
 (`ollama`, `anthropic`) and one OpenAI-compatible adapter driven by a table of provider
 profiles ([`providers/profiles.py`](src/evalproof/providers/profiles.py), each row cites the
-provider's documentation). Plain HTTP throughout, no vendor SDK.
+provider's documentation). Plain HTTP throughout, no vendor SDK. Two more targets run a coding
+agent you already have logged in, `claude-code` and `codex`: see
+[Use your Claude Code or Codex login](#use-your-claude-code-or-codex-login).
 
 | Provider | Example target | Key variable | Where |
 |---|---|---|---|
@@ -120,6 +122,8 @@ provider's documentation). Plain HTTP throughout, no vendor SDK.
 | `openrouter` | `openrouter:anthropic/claude-sonnet-4.5` | `OPENROUTER_API_KEY` | hosted |
 | `cerebras` | `cerebras:gpt-oss-120b` | `CEREBRAS_API_KEY` | hosted |
 | `openai-compatible` | `openai-compatible:<model>` | optional, via `api_key_env` | any server, needs `base_url` |
+| `claude-code` | `claude-code:haiku` | none: your Claude Code login | local CLI, see below |
+| `codex` | `codex:gpt-6-luna` | none: your ChatGPT login | local CLI, see below |
 
 ```yaml
 system:
@@ -150,6 +154,63 @@ system:
 * AWS Bedrock and Google Vertex AI sign requests with cloud credentials, which evalproof does
   not implement. Use a gateway's OpenAI-compatible endpoint through `openai-compatible`.
 
+## Use your Claude Code or Codex login
+
+If Claude Code or Codex is already logged in on your machine, either can be the judge or the
+system under test, with no API key:
+
+```yaml
+judge:
+  target: claude-code:haiku        # an alias (haiku, sonnet, opus) or a full model id
+system:
+  target: codex:gpt-6-luna
+concurrency: 4
+```
+
+Run `evalproof doctor suite.yaml` first (without a suite it checks both CLIs). It prints each
+CLI's path, version, login mode and the isolation flags it will pass, and exits 1 if a target
+is not usable. It makes no model call.
+
+evalproof runs your own `claude` or `codex` binary as a subprocess, sends the prompt on stdin
+and reads the JSON it prints. It never reads a token file or the keychain. If
+`ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is set it is removed for the call, so the login is
+what gets used; name a variable in `api_key_env` to use a key instead, which is the route for
+CI.
+
+* **Isolation is a requirement, not an option.** A coding agent is not a model endpoint. Left
+  alone it loads the project's `CLAUDE.md` or `AGENTS.md`, your memory, plugins, MCP servers
+  and skills into the prompt, and it can run commands. A judge that has read your project's
+  instructions is not a judge. So every call runs in a fresh empty directory, with the
+  agent's own system prompt replaced by yours (or one neutral line), its tools, settings, MCP
+  servers and skills switched off, and no permission-bypass flag. Codex also runs with its
+  shell disabled in a read-only sandbox, and a command in its output fails the call. Its
+  bundled skill list and some tool descriptions still reach the prompt, because the CLI has
+  no feature flag to remove them. `evalproof doctor` prints the exact flags.
+* **No temperature, seed or token limit.** Neither CLI exposes one, so `temperature`, `seed`
+  and `max_tokens` are ignored. `think` maps to Codex's reasoning effort (`false` is `low`,
+  `true` is `medium`; `params.extra.reasoning_effort` sets it directly). A run is therefore
+  not repeatable the way a seeded local run is, so the run records the CLI, its version, the
+  isolation scheme and the model id that actually answered, and the cache keys on the CLI
+  version. To see how much a judge wobbles, score the same outputs twice with `--no-cache`, or
+  [calibrate](#concepts) it against labels.
+* **A changed judge is not comparable.** `compare` and the gate refuse (exit 4) when the judge's
+  target, CLI version, isolation or resolved model differs between the two runs, because the
+  scores then come from a different instrument. Pass `--allow-judge-change` or set
+  `gate.allow_judge_change: true` to accept it. A changed system target or CLI version only
+  warns, since that is usually the change under test. Runs written before 0.4.0 carry none of
+  these keys and compare as before.
+* **Latency and cost.** A call takes about 1.4 s on `claude-code:haiku` and about 4 s on
+  Codex, mostly start-up, so set `concurrency`. There is no API bill; the calls count against
+  your subscription's usage limits.
+* **Terms.** OpenAI documents Codex CLI use on a ChatGPT plan, including automation.
+  Anthropic's terms allow a user to run the unmodified Claude Code binary on their own
+  subscription; its plan limits assume ordinary individual use, and it forbids third-party
+  products from routing other users' requests through subscription credentials. evalproof
+  never touches credentials: it runs your own `claude` binary, on your machine, for your own
+  evals. For CI or team-wide use, use an API key (`api_key_env`). See Anthropic's
+  [legal and compliance page](https://code.claude.com/docs/en/legal-and-compliance). Nothing
+  uses a CLI unless a suite names a `claude-code:` or `codex:` target.
+
 ## Concepts
 
 **Suite** — one YAML file: a JSONL golden set, the system under test, scorers, an optional
@@ -174,7 +235,8 @@ gate: {metric: judge, max_drop: 0.03, alpha: 0.05, min_cases: 40, max_p95_latenc
 
 **Run** — `evalproof run suite.yaml` writes one self-describing JSON file: every case's
 output, latency, tokens and scores, plus the dataset hash, seed, Ollama version and model
-digests.
+digests, and for a `claude-code` or `codex` target the CLI, its version and the model that
+answered.
 
 **Scorers** — `exact_match`, `contains`, `regex` (accept/reject answer keys),
 `json_schema`, `numeric_tolerance`, `recall_at_k`, `mrr`, `ndcg`, and `llm_judge`: a strict
@@ -199,7 +261,7 @@ orders and reports order-dependent verdicts as ties.
 | 0 | pass — possibly with warnings (a big drop that is not significant; a significant drop within tolerance) |
 | 1 | quality regression: drop ≥ `max_drop` **and** p < `alpha` |
 | 3 | budget breach: candidate p95 latency or cost over the limit |
-| 4 | cannot gate: fewer than `min_cases` paired cases, or the runs used different data |
+| 4 | cannot gate: fewer than `min_cases` paired cases, the runs used different data, or the judge changed (unless `--allow-judge-change`) |
 | 2 | usage or configuration error |
 
 The gate checks one metric by default. To gate several, repeat `--metric` or list them in
@@ -304,6 +366,7 @@ flowchart LR
 | Local Ollama by default, HTTP-only providers, content-addressed cache | Hosted APIs and vendor SDKs | Reproducible, free to re-run, tied to a model digest; no SDK dependency | [0002](docs/adr/0002-local-first-providers.md) |
 | Gate on "large AND significant", on paired cases | "Fail if the score dropped by X" | On a few dozen cases, X-point drops are mostly noise, and a noisy gate gets switched off | [0003](docs/adr/0003-gate-on-significance-not-delta.md) |
 | One metric by default; several with Holm correction | Gate every metric at α each | Testing many metrics at α = 0.05 each inflates false failures | 0003 |
+| Run a coding-agent CLI as a provider only in isolation, and gate on its fingerprint | Pass the CLI's defaults through, or ignore its version | A CLI that reads your project's instructions is not a judge, and a silent upgrade changes the instrument | [0004](docs/adr/0004-agent-clis-as-providers.md) |
 | Pointwise verdicts for gating; pairwise as a diagnostic | Pairwise preference for gating | Measured: 42% of pairwise verdicts flipped with answer order, with a strong length preference | [MEASUREMENTS §6](MEASUREMENTS.md) |
 | numpy and the standard library for statistics | SciPy, statsmodels | Small enough to read and to test against hand-worked values | — |
 

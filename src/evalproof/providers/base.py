@@ -22,6 +22,11 @@ class ProviderError(RuntimeError):
     pass
 
 
+class TransientError(ProviderError):
+    """A failure the provider knows is temporary (a CLI reporting a rate limit), so
+    ``with_retries`` tries again. Anything else a provider raises is final."""
+
+
 class Message(BaseModel):
     role: str  # "system" | "user" | "assistant"
     content: str
@@ -51,7 +56,8 @@ def with_retries(
     sleep: Callable[[float], None] = time.sleep,
     rng: random.Random | None = None,
 ) -> T:
-    """Retry transport errors and retryable HTTP statuses with jittered exponential backoff."""
+    """Retry transport errors, retryable HTTP statuses and ``TransientError`` with jittered
+    exponential backoff."""
     rng = rng or random.Random(0)
     last: Exception | None = None
     for attempt in range(attempts):
@@ -63,7 +69,7 @@ def with_retries(
                     f"HTTP {exc.response.status_code}: {exc.response.text[:300]}"
                 ) from exc
             last = exc
-        except httpx.TransportError as exc:
+        except (httpx.TransportError, TransientError) as exc:
             last = exc
         if attempt < attempts - 1:
             sleep(base_delay * (2**attempt) * (0.5 + rng.random()))

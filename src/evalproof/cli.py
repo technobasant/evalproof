@@ -14,6 +14,7 @@ from evalproof.calibration import calibrate
 from evalproof.compare import compare_runs
 from evalproof.config import ConfigError, GateConfig, load_config
 from evalproof.dataset import DatasetError, load_dataset
+from evalproof.doctor import run_doctor
 from evalproof.gate import EXIT_PASS, EXIT_USAGE, decide
 from evalproof.importers import EPOCHS, FORMATS, import_run
 from evalproof.models import CaseResult
@@ -85,6 +86,7 @@ def _gate_config(args: argparse.Namespace) -> GateConfig | None:
             "min_cases": args.min_cases,
             "max_p95_latency_ms": args.max_p95_ms,
             "max_cost_usd": args.max_cost,
+            "allow_judge_change": args.allow_judge_change,
         }.items()
         if v is not None
     }
@@ -114,6 +116,10 @@ def cmd_compare(args: argparse.Namespace) -> int:
     if args.gate and decision is not None:
         return decision.exit_code
     return EXIT_PASS
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    return run_doctor(args.suite)
 
 
 def cmd_import(args: argparse.Namespace) -> int:
@@ -273,6 +279,14 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--min-cases", type=int)
     c.add_argument("--max-p95-ms", type=float)
     c.add_argument("--max-cost", type=float)
+    c.add_argument(
+        "--allow-judge-change",
+        action="store_const",
+        const=True,
+        default=None,
+        help="gate even if the judge (target, CLI version, isolation or resolved model) differs "
+        "between the runs; it is refused otherwise",
+    )
     c.add_argument("--gate", action="store_true", help="exit non-zero when the gate fails")
     c.add_argument("--seed", type=int, default=0)
     c.add_argument("--markdown")
@@ -298,6 +312,15 @@ def build_parser() -> argparse.ArgumentParser:
     rep.add_argument("run")
     rep.add_argument("--markdown")
     rep.set_defaults(func=cmd_report)
+
+    dr = sub.add_parser(
+        "doctor",
+        help="check the claude-code and codex targets, without calling a model",
+        description="Check each claude-code and codex target: binary, version, login and the "
+        "isolation flags. Makes no model call.",
+    )
+    dr.add_argument("suite", nargs="?", help="check the targets this suite uses (default: both)")
+    dr.set_defaults(func=cmd_doctor)
 
     pw = sub.add_parser("pairwise", help="judge baseline vs candidate outputs head to head")
     pw.add_argument("baseline")

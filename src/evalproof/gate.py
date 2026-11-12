@@ -7,7 +7,8 @@ from a setup problem:
 * ``1``  quality regression: drop >= ``max_drop`` and p < ``alpha`` (Holm-adjusted p when
   several metrics are gated)
 * ``3``  budget breach: candidate p95 latency or total cost over the limit
-* ``4``  cannot gate: too few paired cases, metric missing, or the runs used different data
+* ``4``  cannot gate: too few paired cases, metric missing, the runs used different data, or the
+  judge changed (unless the gate sets ``allow_judge_change``)
 * ``2``  usage or configuration error (raised by the CLI, not here)
 """
 
@@ -40,12 +41,24 @@ def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
     reasons: list[str] = []
     warnings: list[str] = []
 
+    refused: list[str] = []
     if not cmp.same_dataset:
-        return GateDecision(
-            "fail",
-            EXIT_CANNOT_GATE,
-            ["baseline and candidate were run on different datasets (dataset hash differs)"],
+        refused.append(
+            "baseline and candidate were run on different datasets (dataset hash differs)"
         )
+    if not cmp.same_judge:
+        changes = "; ".join(cmp.judge_changes) or "unrecorded"
+        if gate.allow_judge_change:
+            warnings.append(f"the judge changed between the runs (allowed): {changes}")
+        else:
+            refused.append(
+                f"the judge changed between the runs, so the scores are not comparable: {changes}"
+                " (pass --allow-judge-change or set gate.allow_judge_change to accept it)"
+            )
+    if refused:
+        return GateDecision("fail", EXIT_CANNOT_GATE, refused)
+    if cmp.system_changes:
+        warnings.append(f"the system under test changed: {'; '.join(cmp.system_changes)}")
     names = gate.gated
     if not names:  # a config built without validation must not pass by gating nothing
         return GateDecision("fail", EXIT_CANNOT_GATE, ["no metric to gate"])

@@ -119,6 +119,9 @@ class GateConfig(BaseModel):
     max_p95_latency_ms: float | None = None
     max_cost_usd: float | None = None
     n_boot: int = 5000
+    # A changed judge (target, CLI version, isolation or resolved model) makes two runs'
+    # scores incomparable, so the gate refuses unless told to accept it.
+    allow_judge_change: bool = False
 
     @model_validator(mode="after")
     def _name_a_metric(self) -> GateConfig:
