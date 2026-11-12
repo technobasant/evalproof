@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-11-12
+
 ### Added
 
 - `evalproof import` and `evalproof.import_run`: per-case results from promptfoo (JSON and
@@ -166,7 +168,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/technobasant/evalproof/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/technobasant/evalproof/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/technobasant/evalproof/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/technobasant/evalproof/compare/v0.1.1...v0.1.2
