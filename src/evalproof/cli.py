@@ -15,6 +15,7 @@ from evalproof.compare import compare_runs
 from evalproof.config import ConfigError, GateConfig, load_config
 from evalproof.dataset import DatasetError, load_dataset
 from evalproof.gate import EXIT_PASS, EXIT_USAGE, decide
+from evalproof.importers import EPOCHS, FORMATS, import_run
 from evalproof.models import CaseResult
 from evalproof.providers import ProviderError, make_provider
 from evalproof.report import (
@@ -76,7 +77,9 @@ def _gate_config(args: argparse.Namespace) -> GateConfig | None:
     overrides = {
         k: v
         for k, v in {
-            "metric": args.metric,
+            # --metric may repeat: the first fills ``metric``, the rest ``metrics`` (Holm).
+            "metric": args.metric[0] if args.metric else None,
+            "metrics": args.metric[1:] if args.metric else None,
             "max_drop": args.max_drop,
             "alpha": args.alpha,
             "min_cases": args.min_cases,
@@ -100,7 +103,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
     decision = decide(cmp, gate) if gate else None
     if args.gate and decision is None:
         raise ConfigError("--gate needs a gate: pass --suite with a gate block, or --metric")
-    _emit(comparison_markdown(cmp, decision, gate.metric if gate else None), args.markdown)
+    _emit(comparison_markdown(cmp, decision, gate.gated if gate else None), args.markdown)
     if args.json:
         payload = {"comparison": json.loads(to_json(cmp))}
         if decision:
@@ -108,6 +111,31 @@ def cmd_compare(args: argparse.Namespace) -> int:
         Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
     if args.gate and decision is not None:
         return decision.exit_code
+    return EXIT_PASS
+
+
+def cmd_import(args: argparse.Namespace) -> int:
+    fields = {
+        name: value
+        for name in ("id", "metric", "score", "passed", "system")
+        if (value := getattr(args, f"{name}_field")) is not None
+    }
+
+    def warn(message: str) -> None:
+        sys.stderr.write(f"evalproof: warning: {message}\n")
+
+    run = import_run(
+        args.format,
+        args.file,
+        system=args.system,
+        epochs=args.epochs,
+        warn=warn,
+        fields=fields,
+        wide=args.wide,
+    )
+    save_run(run, args.out)
+    sys.stderr.write(f"wrote {args.out}\n")
+    _emit(run_markdown(run), args.markdown)
     return EXIT_PASS
 
 
@@ -200,13 +228,44 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--quiet", action="store_true")
     r.set_defaults(func=cmd_run)
 
+    im = sub.add_parser(
+        "import", help="turn another tool's results into a run artifact you can compare and gate"
+    )
+    im.add_argument("format", choices=FORMATS, help="the tool (or table layout) the file is from")
+    im.add_argument("file")
+    im.add_argument("--out", required=True, help="where to write the run artifact")
+    im.add_argument(
+        "--system",
+        help="pick one system out of a file that holds several; otherwise the run's label",
+    )
+    im.add_argument(
+        "--epochs",
+        choices=EPOCHS,
+        default="mean",
+        help="how repeats of one case collapse: mean (default), first, all (every repeat must "
+        "pass) or any",
+    )
+    im.add_argument("--markdown", help="also append the report to this file")
+    tab = im.add_argument_group("jsonl and csv only")
+    tab.add_argument("--id-field", help="column holding the case id (default: id)")
+    tab.add_argument("--metric-field", help="column holding the metric name (default: metric)")
+    tab.add_argument("--score-field", help="column holding the continuous score (default: score)")
+    tab.add_argument("--passed-field", help="column holding pass/fail (default: passed)")
+    tab.add_argument("--system-field", help="column holding the system (default: system)")
+    tab.add_argument("--wide", action="store_true", help="one row per case, one column per metric")
+    im.set_defaults(func=cmd_import)
+
     c = sub.add_parser(
         "compare", help="compare two runs; --gate turns the result into an exit code"
     )
     c.add_argument("baseline")
     c.add_argument("candidate")
     c.add_argument("--suite", help="take gate settings from this suite")
-    c.add_argument("--metric")
+    c.add_argument(
+        "--metric",
+        action="append",
+        help="scorer to gate on; repeat to gate several (Holm-corrected)",
+    )
     c.add_argument("--max-drop", type=float)
     c.add_argument("--alpha", type=float)
     c.add_argument("--min-cases", type=int)

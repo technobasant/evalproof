@@ -139,6 +139,26 @@ def mcnemar_exact(b: int, c: int) -> float:
     return min(1.0, 2 * binom_cdf(min(b, c), n))
 
 
+def holm(pvalues: Sequence[float]) -> list[float]:
+    """Holm–Bonferroni adjusted p-values, in the order given.
+
+    Step-down: sort ascending, multiply the i-th smallest (0-based) by ``m - i``, carry the
+    running maximum so the adjusted values never decrease with the raw ones, cap at 1.
+    Rejecting every hypothesis whose adjusted p is below alpha keeps the family-wise error
+    rate at alpha under any dependence between the tests, and is never less powerful than
+    plain Bonferroni (``min(1, m * p)``).
+    """
+    if any(math.isnan(p) or not 0.0 <= p <= 1.0 for p in pvalues):
+        raise ValueError("p-values must be in [0, 1]")
+    m = len(pvalues)
+    adjusted = [0.0] * m
+    running = 0.0
+    for rank, i in enumerate(sorted(range(m), key=lambda j: pvalues[j])):
+        running = max(running, min(1.0, (m - rank) * pvalues[i]))
+        adjusted[i] = running
+    return adjusted
+
+
 def percentile(values: Sequence[float], q: float) -> float:
     if not values:
         return 0.0

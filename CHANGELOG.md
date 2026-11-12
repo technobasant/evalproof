@@ -6,6 +6,18 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ### Added
 
+- `evalproof import` and `evalproof.import_run`: per-case results from promptfoo (JSON and
+  JSONL), Inspect (`.json` and `.eval` logs), DeepEval, lm-evaluation-harness
+  (`samples_*.jsonl`) and generic long or wide `jsonl` and `csv` files become a run that
+  `compare` and the gate read. Case ids are stable across runs, system errors score as
+  failures, repeats collapse by `--epochs`, and NaN or infinite scores are refused with the
+  case and metric named. Raises `evalproof.ImportFormatError` (a `ValueError`; exit 2 on the
+  command line).
+- Gating several metrics: `gate.metrics` in the suite or `--metric` repeated on
+  `compare`, with Holm-adjusted p-values (`evalproof.holm`). The decision carries
+  `adjusted_p`, the report gains a Holm-adjusted p column, and a single metric behaves as
+  before. ADR 0003 has the reasoning.
+- The composite action's `metric` input takes several names, separated by newlines or commas.
 - `examples/retrieval`: an offline retrieval example for recall@k, MRR and nDCG, with a
   regression that recall@5 cannot see and MRR and nDCG@5 can. Contributed by
   @HarshRajSinghania in #5. CI asserts its gate exits 1 on the regression and 0 on no change.

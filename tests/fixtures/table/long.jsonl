@@ -1,0 +1,8 @@
+{"id": "t1", "system": "a", "metric": "correct", "input": "q1", "output": "x", "latency_ms": 120, "passed": true, "score": 1.0}
+{"id": "t1", "system": "a", "metric": "tone", "input": "q1", "output": "x", "latency_ms": 120, "score": 0.8}
+{"id": "t2", "system": "a", "metric": "correct", "input": "q2", "output": "y", "latency_ms": 90, "passed": false, "score": 0.0}
+{"id": "t2", "system": "a", "metric": "tone", "input": "q2", "output": "y", "latency_ms": 90, "score": 0.4}
+{"id": "t3", "system": "a", "metric": "correct", "input": "q3", "output": "", "latency_ms": 0, "passed": true, "error": "timeout"}
+{"id": "t1", "system": "b", "metric": "correct", "input": "q1", "output": "x2", "latency_ms": 100, "passed": true}
+{"id": "t2", "system": "b", "metric": "correct", "input": "q2", "output": "y2", "latency_ms": 80, "passed": true}
+{"id": "t3", "system": "b", "metric": "correct", "input": "q3", "output": "z2", "latency_ms": 70, "passed": false}

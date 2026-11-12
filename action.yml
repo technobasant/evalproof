@@ -19,7 +19,9 @@ inputs:
     required: false
     default: ""
   metric:
-    description: Scorer to gate on, if not taken from the suite.
+    description: >-
+      Scorer to gate on, if not taken from the suite. Several, separated by newlines or
+      commas, are all gated with a Holm correction for the number of metrics.
     required: false
     default: ""
   max-drop:
@@ -53,7 +55,12 @@ runs:
       run: |
         args=(compare "$EP_BASELINE" "$EP_CANDIDATE" --gate --markdown "$GITHUB_STEP_SUMMARY")
         [ -n "$EP_SUITE" ] && args+=(--suite "$EP_SUITE")
-        [ -n "$EP_METRIC" ] && args+=(--metric "$EP_METRIC")
+        # One --metric per name: split on commas and newlines, trim, skip blanks.
+        while IFS= read -r metric; do
+          metric="${metric#"${metric%%[![:space:]]*}"}"
+          metric="${metric%"${metric##*[![:space:]]}"}"
+          if [ -n "$metric" ]; then args+=(--metric "$metric"); fi
+        done <<< "$(printf '%s' "$EP_METRIC" | tr ',' '\n')"
         [ -n "$EP_MAX_DROP" ] && args+=(--max-drop "$EP_MAX_DROP")
         [ -n "$EP_ALPHA" ] && args+=(--alpha "$EP_ALPHA")
         set +e
