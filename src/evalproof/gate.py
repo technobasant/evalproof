@@ -69,7 +69,8 @@ def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
             unusable.append(f"metric {name!r} has no paired scores")
         elif found.n_paired < gate.min_cases:
             unusable.append(
-                f"only {found.n_paired} paired cases for {name!r}; the gate needs {gate.min_cases}"
+                f"only {found.n_paired} paired cases for {name!r}; the gate needs "
+                f"{gate.min_cases} (add cases to the dataset, or lower gate.min_cases)"
             )
     if unusable:
         return GateDecision("fail", EXIT_CANNOT_GATE, unusable)

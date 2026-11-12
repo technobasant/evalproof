@@ -55,8 +55,9 @@ scorers:
     params:
       rubric: |
         Pass if the response states the same facts as the reference answer (the same numbers,
-        plans and yes or no), even if the wording differs. Fail if it contradicts the
-        reference, invents details the reference does not support, or does not answer.
+        plans and yes or no), even if the wording differs. Extra details are fine when they
+        do not contradict the reference. Fail if it contradicts the reference, gets a number
+        or plan wrong, or does not answer the question.
 
 # Fail CI only when the judge score drops by more than 3 points AND the drop is unlikely to
 # be chance. The gate needs 20 paired cases before it will decide; with fewer it exits 4
