@@ -347,11 +347,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     dr = sub.add_parser(
         "doctor",
-        help="check the claude-code and codex targets, without calling a model",
-        description="Check each claude-code and codex target: binary, version, login and the "
+        help="check the coding-agent CLI targets, without calling a model",
+        description="Check each coding-agent CLI target (claude-code, codex, and the "
+        "experimental opencode, cursor and copilot): binary, version, login and the "
         "isolation flags. Makes no model call.",
     )
-    dr.add_argument("suite", nargs="?", help="check the targets this suite uses (default: both)")
+    dr.add_argument(
+        "suite", nargs="?", help="check the targets this suite uses (default: every CLI found)"
+    )
     dr.set_defaults(func=cmd_doctor)
 
     pw = sub.add_parser("pairwise", help="judge baseline vs candidate outputs head to head")

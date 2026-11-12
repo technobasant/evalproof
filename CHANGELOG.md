@@ -23,6 +23,14 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - `compare` reports `same_judge`, `judge_changes` and `system_changes`, and the gate refuses
   to decide (exit 4) when the judge changed between the runs. `--allow-judge-change` or
   `gate.allow_judge_change: true` accepts the change and keeps a warning.
+- Experimental `opencode:<provider>/<model>`, `cursor:<model>` and `copilot:<model>`
+  providers, on the same footing as the CLI providers above (fresh empty directory, the CLI's
+  key variable removed unless `api_key_env` names one, bounded runtime, CLI fingerprint with the
+  isolation tags `opencode/0`, `cursor/0`, `copilot/0`). Each prints one warning on stderr the
+  first time it is used. Only OpenCode was exercised for real, and only against a local ollama
+  model; Cursor (not logged in) and Copilot (not installed) follow their documentation, and the
+  README's "Experimental providers" says what was and was not verified. `evalproof doctor`
+  without a suite now also lists whichever of these CLIs are on `PATH`.
 - `evalproof.providers.TransientError`, a `ProviderError` that `with_retries` retries; the CLI
   providers raise it for rate limits and server errors.
 - `tests/test_live_agent_cli.py`: one real call per installed CLI, skipped unless

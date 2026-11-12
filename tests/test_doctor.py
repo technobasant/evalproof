@@ -18,6 +18,13 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(var, raising=False)
 
 
+@pytest.fixture(autouse=True)
+def no_experimental_clis(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A machine that has OpenCode, Cursor or Copilot installed must not change what these see;
+    # the experimental providers have their own doctor tests in test_agent_cli_experimental.py.
+    monkeypatch.setattr("evalproof.doctor.installed_experimental", lambda: [])
+
+
 @pytest.fixture
 def both(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[FakeCLI, FakeCLI]:
     claude = install(
