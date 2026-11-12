@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict
 from typing import Any
 
@@ -30,8 +31,13 @@ def _delta(mc: MetricComparison) -> str:
 
 
 def comparison_markdown(
-    cmp: Comparison, decision: GateDecision | None = None, gate_metric: str | None = None
+    cmp: Comparison,
+    decision: GateDecision | None = None,
+    gate_metric: str | Sequence[str] | None = None,
 ) -> str:
+    gated = [gate_metric] if isinstance(gate_metric, str) else list(gate_metric or [])
+    # With several gated metrics the decision carries Holm-adjusted p-values; show them.
+    adjusted = decision.adjusted_p if decision is not None and len(gated) > 1 else {}
     lines = ["## evalproof", ""]
     if decision is not None:
         lines += [f"**Gate: {STATUS_ICON[decision.status]}** (exit {decision.exit_code})", ""]
@@ -43,15 +49,19 @@ def comparison_markdown(
         f"Baseline `{cmp.baseline_label}` vs candidate `{cmp.candidate_label}` on "
         f"{len(cmp.paired_ids)} paired cases.",
         "",
-        "| Metric | Baseline | Candidate | Δ (95% CI) | Test | p |",
-        "|---|---:|---:|---:|---|---:|",
+        "| Metric | Baseline | Candidate | Δ (95% CI) | Test | p |"
+        + (" Holm-adjusted p |" if adjusted else ""),
+        "|---|---:|---:|---:|---|---:|" + ("---:|" if adjusted else ""),
     ]
     for name, mc in cmp.metrics.items():
-        label = f"**{name}**" if name == gate_metric else name
-        lines.append(
+        label = f"**{name}**" if name in gated else name
+        row = (
             f"| {label} | {_rate_or_mean(mc, mc.baseline)} | {_rate_or_mean(mc, mc.candidate)} | "
             f"{_delta(mc)} | {mc.test} | {mc.p_value:.4f} |"
         )
+        if adjusted:
+            row += f" {adjusted[name]:.4f} |" if name in adjusted else " — |"
+        lines.append(row)
     lines += [
         "",
         "| Run | Cases | Errors | p50 latency | p95 latency | Cost |",
@@ -62,13 +72,14 @@ def comparison_markdown(
             f"| {label} | {st.cases} | {st.errors} | {st.p50_latency_ms:.0f} ms | "
             f"{st.p95_latency_ms:.0f} ms | ${st.cost_usd:.4f} |"
         )
-    focus = cmp.metrics.get(gate_metric) if gate_metric else None
-    if focus and focus.regressed:
-        shown = ", ".join(f"`{c}`" for c in focus.regressed[:20])
-        more = f" and {len(focus.regressed) - 20} more" if len(focus.regressed) > 20 else ""
-        lines += ["", f"Regressed on **{focus.name}** ({len(focus.regressed)}): {shown}{more}"]
-    if focus and focus.improved:
-        lines.append(f"Improved on **{focus.name}**: {len(focus.improved)} case(s)")
+    for name in gated:
+        focus = cmp.metrics.get(name)
+        if focus and focus.regressed:
+            shown = ", ".join(f"`{c}`" for c in focus.regressed[:20])
+            more = f" and {len(focus.regressed) - 20} more" if len(focus.regressed) > 20 else ""
+            lines += ["", f"Regressed on **{focus.name}** ({len(focus.regressed)}): {shown}{more}"]
+        if focus and focus.improved:
+            lines.append(f"Improved on **{focus.name}**: {len(focus.improved)} case(s)")
     return "\n".join(lines) + "\n"
 
 

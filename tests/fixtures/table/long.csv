@@ -1,0 +1,9 @@
+id,system,metric,passed,score,repeat,error,input,output,latency_ms
+t1,a,correct,true,1.0,,,q1,x,120
+t1,a,tone,,0.8,,,q1,x,120
+t2,a,correct,false,0.0,,,q2,y,90
+t2,a,tone,,0.4,,,q2,y,90
+t3,a,correct,yes,,,timeout,q3,,0
+t1,b,correct,true,,,,q1,x2,100
+t2,b,correct,true,,,,q2,y2,80
+t3,b,correct,no,,,,q3,z2,70

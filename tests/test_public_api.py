@@ -14,6 +14,20 @@ def test_every_public_name_resolves() -> None:
     assert missing == []
 
 
+def test_importers_and_holm_are_public() -> None:
+    for name in ("import_run", "ImportFormatError", "holm"):
+        assert name in evalproof.__all__ and hasattr(evalproof, name)
+    assert issubclass(evalproof.ImportFormatError, ValueError)  # the CLI turns it into exit 2
+    assert evalproof.holm([0.01, 0.04, 0.03]) == [0.03, 0.06, 0.06]
+
+
+def test_the_import_example_runs() -> None:
+    # What the README's "Import results from other tools" shows, on a committed fixture.
+    fixture = ROOT / "tests" / "fixtures" / "table" / "long.csv"
+    run = evalproof.import_run("csv", fixture, system="a")
+    assert run.info.system == "a" and {r.case_id for r in run.results} == {"t1", "t2", "t3"}
+
+
 def test_version_has_one_source() -> None:
     # pyproject.toml reads the version from _version.py at build time; nothing else
     # may write it down.

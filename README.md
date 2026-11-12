@@ -202,6 +202,55 @@ orders and reports order-dependent verdicts as ties.
 | 4 | cannot gate: fewer than `min_cases` paired cases, or the runs used different data |
 | 2 | usage or configuration error |
 
+The gate checks one metric by default. To gate several, repeat `--metric` or list them in
+the suite; each metric's p-value is then Holm-adjusted for the number of metrics gated, so
+the chance of failing a build on noise stays at `alpha` for the set as a whole, and the
+report shows the raw and the adjusted p-value side by side. Metrics that are not gated are
+still reported.
+
+```yaml
+gate:
+  metrics: [judge, answer_key]   # one metric: `metric: judge`
+  max_drop: 0.03
+  alpha: 0.05
+  min_cases: 40
+```
+
+```bash
+evalproof compare baseline.json candidate.json --gate --metric judge --metric answer_key
+```
+
+## Import results from other tools
+
+You do not have to run your evals with evalproof to gate them. `evalproof import` turns the
+per-case results another tool wrote into a run file that `compare` and the gate read:
+
+```bash
+evalproof import promptfoo output.json --system openai:gpt-5 --out runs/candidate.json
+evalproof import inspect logs/task.eval --out runs/candidate.json
+evalproof import deepeval .deepeval/.latest_test_run.json --out runs/candidate.json
+evalproof import lm-eval results/gpt2/samples_hellaswag_2026-11-12T10-20-30.jsonl --out runs/gpt2.json
+evalproof import csv results.csv --system a --out runs/a.json       # id,metric,passed,score,...
+evalproof import jsonl results.jsonl --wide --id-field case --out runs/a.json  # one column per metric
+```
+
+Import each side with the same importer, then gate as usual, for example
+`evalproof compare runs/baseline.json runs/candidate.json --gate --metric pass`. What to know:
+
+* Case ids are stable between runs of the same dataset (they come from the test's inputs, or
+  the tool's own sample id, never from its position), which is what lets two files pair.
+  The dataset hash covers the ids and inputs as the tool recorded them, so runs imported by
+  different importers refuse to gate (exit 4) instead of pairing on a coincidence.
+* A system error counts as a failure on every metric, as in a native run. Repeats of one case
+  (epochs, repeated tests) collapse by `--epochs`: `mean` (the default), `first`, `all`
+  or `any`.
+* A NaN or infinite score is refused at import, naming the case and metric, because it would
+  make the bootstrap report a significant difference that is not there.
+* promptfoo files can hold several providers and `--system` picks one. Inspect `.eval` logs
+  compressed with zstd need Python 3.14 or newer; otherwise run
+  `inspect log convert --to json <file>` first. DeepEval's conversational cases are skipped
+  with a warning.
+
 ## From Python
 
 The CLI is a thin layer over the same functions:
@@ -253,7 +302,7 @@ flowchart LR
 | Treat the judge as a classifier to be calibrated | Trust the judge's pass rate | Its count is biased by its own error rates, and the bias moves with the true rate | [0001](docs/adr/0001-judge-is-a-classifier.md) |
 | Local Ollama by default, HTTP-only providers, content-addressed cache | Hosted APIs and vendor SDKs | Reproducible, free to re-run, tied to a model digest; no SDK dependency | [0002](docs/adr/0002-local-first-providers.md) |
 | Gate on "large AND significant", on paired cases | "Fail if the score dropped by X" | On a few dozen cases, X-point drops are mostly noise, and a noisy gate gets switched off | [0003](docs/adr/0003-gate-on-significance-not-delta.md) |
-| Gate one metric; report the rest | Gate every metric | Testing many metrics at α = 0.05 each inflates false failures | 0003 |
+| One metric by default; several with Holm correction | Gate every metric at α each | Testing many metrics at α = 0.05 each inflates false failures | 0003 |
 | Pointwise verdicts for gating; pairwise as a diagnostic | Pairwise preference for gating | Measured: 42% of pairwise verdicts flipped with answer order, with a strong length preference | [MEASUREMENTS §6](MEASUREMENTS.md) |
 | numpy and the standard library for statistics | SciPy, statsmodels | Small enough to read and to test against hand-worked values | — |
 
@@ -268,6 +317,7 @@ fails the job on exit codes 1, 3 or 4:
     baseline: eval/baseline.json     # produced on main, e.g. as a build artifact
     candidate: eval/candidate.json   # produced on this branch
     suite: eval/suite.yaml
+    # metric: "judge, answer_key"    # optional: gate several metrics, newline- or comma-separated
 ```
 
 This repository's own CI runs the offline example on every commit and asserts that the
@@ -287,7 +337,8 @@ frameworks.
 evalproof is deliberately narrow: it is the measurement layer — how much a judge's verdict
 is worth, and whether a difference between two runs is real. Its run file is plain,
 documented JSON, so it can sit beside an existing harness: produce the per-case verdicts
-however you like, then calibrate and gate here.
+however you like, then calibrate and gate here. For promptfoo, Inspect, DeepEval and
+lm-eval you do not even need to do that: evalproof [imports their results](#import-results-from-other-tools).
 
 ## Limits
 
@@ -306,8 +357,6 @@ however you like, then calibrate and gate here.
 ## Roadmap
 
 * Stratified gold sampling (by tag) and per-tag calibration.
-* Multiple-comparison correction when more than one metric is gated.
-* Importers for other harnesses' per-case results.
 
 ## Project
 

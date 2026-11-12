@@ -104,15 +104,36 @@ class CalibrationConfig(BaseModel):
 
 
 class GateConfig(BaseModel):
-    """Fail only when a drop is both larger than ``max_drop`` and statistically significant."""
+    """Fail only when a drop is both larger than ``max_drop`` and statistically significant.
 
-    metric: str
+    ``metric`` gates one scorer. Add ``metrics`` to gate several; their p-values are then
+    Holm-corrected so the chance of a false failure across the set stays at ``alpha``.
+    Either may be omitted as long as one scorer is named; ``gated`` is the full list.
+    """
+
+    metric: str | None = None
+    metrics: list[str] = Field(default_factory=list)
     max_drop: float = 0.02
     alpha: float = 0.05
     min_cases: int = 20
     max_p95_latency_ms: float | None = None
     max_cost_usd: float | None = None
     n_boot: int = 5000
+
+    @model_validator(mode="after")
+    def _name_a_metric(self) -> GateConfig:
+        names = self.gated
+        if not names:
+            raise ValueError("a gate needs 'metric' or 'metrics'")
+        # Keep ``gate.metric`` set for code that gates a single scorer.
+        self.metric, self.metrics = names[0], names[1:]
+        return self
+
+    @property
+    def gated(self) -> list[str]:
+        """The scorers to gate on, ``metric`` first, without repeats."""
+        names = [self.metric] if self.metric else []
+        return list(dict.fromkeys([*names, *self.metrics]))
 
 
 class SuiteConfig(BaseModel):
@@ -135,8 +156,11 @@ class SuiteConfig(BaseModel):
             raise ValueError(f"scorer names must be unique, got {names}")
         if any(s.type == "llm_judge" for s in self.scorers) and self.judge is None:
             raise ValueError("an llm_judge scorer needs a 'judge' target")
-        if self.gate and self.gate.metric not in names:
-            raise ValueError(f"gate.metric {self.gate.metric!r} is not a scorer name")
+        if self.gate:
+            for i, name in enumerate(self.gate.gated):
+                if name not in names:
+                    where = "gate.metric" if i == 0 else "gate.metrics"
+                    raise ValueError(f"{where} {name!r} is not a scorer name")
         if self.calibration:
             for field in ("judge_scorer", "gold_scorer"):
                 ref = getattr(self.calibration, field)
