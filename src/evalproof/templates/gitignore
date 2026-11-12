@@ -1,0 +1,3 @@
+# The response cache is local; the run files in runs/ are meant to be committed.
+.evalproof/
+!runs/

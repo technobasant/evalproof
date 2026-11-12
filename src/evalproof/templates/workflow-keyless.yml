@@ -1,0 +1,67 @@
+# Written by `evalproof init --ci keyless`.
+#
+# The evals run on a developer's machine, on their own login, and the pull request commits the
+# result (evals/runs/latest.json). This job makes no model calls and needs no secret: it
+# compares that file with the one on the base branch and fails the pull request on a
+# regression that is both large enough to matter and statistically significant.
+name: evalproof
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: evalproof gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the base branch has to be in the clone
+          persist-credentials: false
+
+      - name: Take the baseline from the base branch
+        id: baseline
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BASELINE: ${{ runner.temp }}/evalproof-baseline.json
+        run: |
+          set -euo pipefail
+          if ! git cat-file -e "origin/$BASE_REF:evals/runs/latest.json" 2>/dev/null; then
+            echo "::notice title=evalproof::$BASE_REF has no evals/runs/latest.json yet, so there is nothing to compare with. Merge it and later pull requests are gated."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ ! -f evals/runs/latest.json ]; then
+            echo "::error title=evalproof::evals/runs/latest.json is missing from this branch. Run the suite and commit the file."
+            exit 1
+          fi
+          git show "origin/$BASE_REF:evals/runs/latest.json" > "$BASELINE"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Warn when the run file is stale
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          # Space-separated paths whose change should come with a fresh run file. Add the
+          # files that hold your system prompt or retrieval settings.
+          WATCH: evals/
+        run: |
+          set -euo pipefail
+          read -r -a watch <<< "$WATCH"
+          range="origin/$BASE_REF...HEAD"
+          changed="$(git diff --name-only "$range" -- "${watch[@]}" ':(exclude)evals/runs/')"
+          refreshed="$(git diff --name-only "$range" -- evals/runs/latest.json)"
+          if [ -n "$changed" ] && [ -z "$refreshed" ]; then
+            echo "::warning title=evalproof run file is stale::These files changed but evals/runs/latest.json did not, so the gate compares results that predate the change: $(printf '%s' "$changed" | tr '\n' ' ')"
+          fi
+
+      - name: Compare with the baseline and gate
+        if: steps.baseline.outputs.found == 'true'
+        uses: technobasant/evalproof@@@ACTION_REF@@
+        with:
+          baseline: ${{ runner.temp }}/evalproof-baseline.json
+          candidate: evals/runs/latest.json
+          suite: evals/suite.yaml
