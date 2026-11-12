@@ -7,6 +7,18 @@ from dataclasses import dataclass, field
 from evalproof.models import Run
 from evalproof.stats import mcnemar_exact, paired_bootstrap, percentile, wilson
 
+# Recorded in ``RunInfo.environment``. A judge key counts only when both runs have it, so runs
+# written before these keys existed still compare as they did.
+JUDGE_KEYS = (
+    "judge_target",
+    "judge_cli",
+    "judge_cli_version",
+    "judge_isolation",
+    "judge_model_resolved",
+)
+# The system under test is usually the thing being changed, so these only warn.
+SYSTEM_KEYS = ("system_target", "system_cli", "system_cli_version", "system_isolation")
+
 
 @dataclass
 class MetricComparison:
@@ -48,6 +60,19 @@ class Comparison:
     candidate: RunStats
     baseline_label: str = "baseline"
     candidate_label: str = "candidate"
+    same_judge: bool = True
+    judge_changes: list[str] = field(default_factory=list)  # "key: before -> after"
+    system_changes: list[str] = field(default_factory=list)
+
+
+def environment_changes(baseline: Run, candidate: Run, keys: tuple[str, ...]) -> list[str]:
+    """``"key: before -> after"`` for each key both runs recorded with different values."""
+    before, after = baseline.info.environment, candidate.info.environment
+    return [
+        f"{k}: {before[k]} -> {after[k]}"
+        for k in keys
+        if k in before and k in after and before[k] != after[k]
+    ]
 
 
 def run_stats(run: Run) -> RunStats:
@@ -156,6 +181,7 @@ def compare_runs(
         )
         if mc is not None:
             out[name] = mc
+    judge_changes = environment_changes(baseline, candidate, JUDGE_KEYS)
     return Comparison(
         paired_ids=paired,
         only_baseline=sorted(b_ids - c_ids),
@@ -166,4 +192,7 @@ def compare_runs(
         candidate=run_stats(candidate),
         baseline_label=baseline.info.system,
         candidate_label=candidate.info.system,
+        same_judge=not judge_changes,
+        judge_changes=judge_changes,
+        system_changes=environment_changes(baseline, candidate, SYSTEM_KEYS),
     )

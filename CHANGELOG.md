@@ -4,6 +4,71 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-11-13
+
+### Added
+
+- `claude-code:<model>` and `codex:<model>` providers: run your own logged-in Claude Code or
+  Codex CLI as a judge or a system under test, with no API key. Each call runs in a fresh
+  empty directory with the agent's tools, settings, MCP servers, skills and memory switched
+  off and no permission-bypass flag; API-key variables are removed from the child's
+  environment unless `api_key_env` names one or `EVALPROOF_CLI_AUTH=api-key` keeps them.
+  Neither CLI takes a temperature, seed or token limit, so those params are ignored (Codex
+  maps `think` to its reasoning effort). Claude Code runs with no tools; Codex still offers a
+  JavaScript isolate, sub-agents and a question to the user, so any item in its output other
+  than a message, reasoning, an error or a plan fails the call as an isolation break, and a
+  codex too old for the flags evalproof sets gets a message to upgrade. ADR 0004 has the
+  reasoning.
+- `EVALPROOF_CLI_AUTH` (`login`, the default, or `api-key`) chooses whether a CLI provider
+  uses the subscription login or its own API key variable; `evalproof doctor` prints the mode
+  in effect and warns when `api-key` has no key to use. `api_key_env` still wins.
+- `evalproof doctor [suite.yaml]`: reports each CLI's path, version, login mode and the
+  isolation flags it will use, without a model call, and exits 1 when a target of the suite
+  is not usable. Without a suite it surveys the installed CLIs and exits 1 only when none is
+  usable. It prints no account details.
+- Run facts for CLI targets in `runner.environment`: `{judge,system}_cli`,
+  `{judge,system}_cli_version`, `{judge,system}_isolation` and `{judge,system}_model_resolved`
+  (the model ids that answered, sorted, cached replies included). The response cache keys on
+  the CLI fingerprint, so a CLI upgrade is a cache miss.
+- `compare` reports `same_judge`, `judge_changes` and `system_changes`, and the gate refuses
+  to decide (exit 4) when the judge changed between the runs. `--allow-judge-change` or
+  `gate.allow_judge_change: true` accepts the change and keeps a warning.
+- Experimental `opencode:<provider>/<model>`, `cursor:<model>` and `copilot:<model>`
+  providers, on the same footing as the CLI providers above (fresh empty directory, the CLI's
+  key variable removed unless `api_key_env` names one, bounded runtime, CLI fingerprint with the
+  isolation tags `opencode/0`, `cursor/0`, `copilot/0`). Each prints one warning on stderr the
+  first time it is used. Only OpenCode was exercised for real, and only against a local ollama
+  model; Cursor (not logged in) and Copilot (not installed) follow their documentation, and the
+  README's "Experimental providers" says what was and was not verified. `evalproof doctor`
+  without a suite now also lists whichever of these CLIs are on `PATH`.
+- `evalproof.providers.TransientError`, a `ProviderError` that `with_retries` retries; the CLI
+  providers raise it for rate limits and server errors.
+- `tests/test_live_agent_cli.py`: one real call per installed CLI, skipped unless
+  `EVALPROOF_LIVE=1`.
+- `evalproof init [--dir PATH] [--judge TARGET] [--ci keyless|api-key|none] [--no-skill]
+  [--force]`: writes `evals/suite.yaml`, three sample cases in `evals/cases.jsonl`, an
+  `evals/README.md`, a GitHub Actions workflow at `.github/workflows/evalproof.yml` and an
+  agent skill at `.agents/skills/evalproof/SKILL.md` and `.claude/skills/evalproof/SKILL.md`.
+  The judge is the first of `claude`, `codex`, `ollama` found on `PATH`, else a hosted
+  Anthropic model. The keyless workflow makes no model calls and gates the committed
+  `evals/runs/latest.json` against the base branch; the api-key workflow runs the suite in CI
+  (with `EVALPROOF_CLI_AUTH: api-key` for a CLI judge, so no second suite file is written)
+  and pins the judge CLI to the version found at init time. Existing files are kept unless
+  `--force` is passed, nothing is written outside `--dir`, and no model is called.
+
+### Changed
+
+- A gate that passed in 0.3.0 can now exit 4 when the judge's target, CLI version, isolation
+  or resolved model differs between two runs that both carry these keys. Runs written before
+  this release carry none and compare as before.
+- A changed system target or CLI version between two runs now adds a warning, so the status
+  is `warn` instead of `pass` (the exit code stays 0).
+- `runner.environment` records `judge_target` and `system_target` for every model target (not
+  only CLI ones), and the system target it records is the one in effect, with any override
+  applied.
+- The gate's "too few paired cases" reason now says how to fix it (add cases, or lower
+  `gate.min_cases`).
+
 ## [0.3.0] — 2026-11-12
 
 ### Added
@@ -179,7 +244,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/technobasant/evalproof/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/technobasant/evalproof/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/technobasant/evalproof/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/technobasant/evalproof/compare/v0.1.2...v0.2.0

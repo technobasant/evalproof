@@ -1,0 +1,3 @@
+{"id": "pro-price", "input": {"question": "How much does Pro cost per month?"}, "reference": "Pro costs $8 per month.", "accept": ["$8", "8 dollars", "eight dollars"], "tags": ["pricing"]}
+{"id": "refund-window", "input": {"question": "I bought Pro three weeks ago and changed my mind. Can I get my money back?"}, "reference": "Yes. Refunds are available within 30 days of purchase.", "accept": ["30 days", "30-day", "thirty days"], "tags": ["refunds"]}
+{"id": "free-export", "input": {"question": "Can I export my notes on the Free plan?"}, "reference": "Yes. Export is available on every plan, as Markdown or PDF.", "accept": ["markdown", "pdf"], "tags": ["export"]}

@@ -1,0 +1,74 @@
+# Written by `evalproof init --ci api-key`.
+#
+# CI runs the suite itself with an API key kept in a repository secret, then compares the new
+# run with evals/runs/latest.json on the base branch. Every case is a model call, so the job
+# only runs when something under evals/ changes: add the paths that hold your system prompt.
+# Pull requests from forks get no secrets, so the run step fails for them.
+name: evalproof
+
+on:
+  pull_request:
+    paths:
+      - evals/**
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: evalproof run and gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the base branch has to be in the clone
+          persist-credentials: false
+
+      - name: Take the baseline from the base branch
+        id: baseline
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BASELINE: ${{ runner.temp }}/evalproof-baseline.json
+        run: |
+          set -euo pipefail
+          if ! git cat-file -e "origin/$BASE_REF:evals/runs/latest.json" 2>/dev/null; then
+            echo "::notice title=evalproof::$BASE_REF has no evals/runs/latest.json yet, so there is nothing to compare with. Run the suite, commit the file, and later pull requests are gated."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git show "origin/$BASE_REF:evals/runs/latest.json" > "$BASELINE"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        if: steps.baseline.outputs.found == 'true'
+
+#@@IF cli
+      # The judge's CLI version is part of the run file, and the gate exits 4 when it differs
+      # from the baseline's, so keep this equal to the judge_cli_version in your run file.
+@@CLI_PIN_NOTE@@
+      - name: Install @@CLI_BINARY@@
+        if: steps.baseline.outputs.found == 'true'
+        run: npm install -g @@NPM_SPEC@@
+
+#@@END
+      - name: Run the suite
+        if: steps.baseline.outputs.found == 'true'
+        env:
+#@@IF cli
+          # The suite is written for a developer's own login and names no key. This tells the
+          # @@CLI_BINARY@@ CLI to use the key below instead of a login.
+          EVALPROOF_CLI_AUTH: api-key
+#@@END
+          @@KEY_VAR@@: ${{ secrets.@@KEY_VAR@@ }}
+        run: |
+          set -euo pipefail
+          uvx evalproof@@@PIP_VERSION@@ run evals/suite.yaml --out "$RUNNER_TEMP/evalproof-candidate.json" --quiet
+
+      - name: Compare with the baseline and gate
+        if: steps.baseline.outputs.found == 'true'
+        uses: technobasant/evalproof@@@ACTION_REF@@
+        with:
+          baseline: ${{ runner.temp }}/evalproof-baseline.json
+          candidate: ${{ runner.temp }}/evalproof-candidate.json
+          suite: evals/suite.yaml
