@@ -24,14 +24,20 @@ def cache_key(
     base_url: str | None,
     messages: list[Message],
     params: GenerationParams,
+    extra: dict[str, object] | None = None,
 ) -> str:
-    material = {
+    """``extra`` is what a provider adds when its request differs from what the same
+    params meant before (a hosted call that now omits ``temperature``). It joins the key only
+    when present, so every key that existed before it was added is unchanged."""
+    material: dict[str, object] = {
         "provider": provider,
         "model": model,
         "base_url": base_url,
         "messages": [m.model_dump() for m in messages],
         "params": params.model_dump(mode="json"),
     }
+    if extra:
+        material["extra"] = extra
     blob = json.dumps(material, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(blob.encode()).hexdigest()
 
@@ -78,7 +84,9 @@ class CachedProvider:
         self.misses = 0
 
     def chat(self, messages: list[Message], params: GenerationParams) -> ChatResponse:
-        key = cache_key(self.name, self.model, self.base_url, messages, params)
+        salt = getattr(self.inner, "cache_salt", None)
+        extra: dict[str, object] | None = salt(params) if callable(salt) else None
+        key = cache_key(self.name, self.model, self.base_url, messages, params, extra)
         hit = self.cache.get(key)
         if hit is not None:
             self.hits += 1

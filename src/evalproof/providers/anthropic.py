@@ -67,6 +67,13 @@ class AnthropicProvider:
         body.update(params.extra)
         return body
 
+    def cache_salt(self, params: GenerationParams) -> dict[str, object] | None:
+        """Before 0.3.0 temperature was always sent, so a reply cached then must not be
+        reused for a request that leaves it to the model."""
+        if "temperature" in params.model_fields_set:
+            return None
+        return {"omitted": ["temperature"]}
+
     def chat(self, messages: list[Message], params: GenerationParams) -> ChatResponse:
         body = self.payload(messages, params)
 

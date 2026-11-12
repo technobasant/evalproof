@@ -195,10 +195,13 @@ def test_promptfoo_repeat_with_one_error_merges_outputs(tmp_path: Path) -> None:
         _pf_row(0, "q", True, repeatGroupId="g", repeatIndex=0),
         _pf_row(1, "q", False, repeatGroupId="g", repeatIndex=1, failure=2, error="boom"),
     ]
-    run = import_run("promptfoo", _jsonl(tmp_path / "m.jsonl", rows))
-    result = run.results[0]
-    assert result.output.error == "1 of 2 repeats errored: boom"
-    assert result.scores["pass"].value == 0.5  # the errored repeat counts as a fail
+    path = _jsonl(tmp_path / "m.jsonl", rows)
+    result = import_run("promptfoo", path).results[0]
+    # Under the default mean, one good repeat means the case ran; the errored one is a fail.
+    assert result.output.error is None
+    assert result.scores["pass"].value == 0.5
+    strict = import_run("promptfoo", path, epochs="all").results[0]
+    assert strict.output.error == "1 of 2 repeats errored: boom"
 
 
 def test_promptfoo_named_scores_and_non_finite(tmp_path: Path) -> None:

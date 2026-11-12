@@ -47,6 +47,8 @@ def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
             ["baseline and candidate were run on different datasets (dataset hash differs)"],
         )
     names = gate.gated
+    if not names:  # a config built without validation must not pass by gating nothing
+        return GateDecision("fail", EXIT_CANNOT_GATE, ["no metric to gate"])
     unusable: list[str] = []
     for name in names:
         found = cmp.metrics.get(name)

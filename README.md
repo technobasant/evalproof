@@ -243,7 +243,8 @@ Import each side with the same importer, then gate as usual, for example
   different importers refuse to gate (exit 4) instead of pairing on a coincidence.
 * A system error counts as a failure on every metric, as in a native run. Repeats of one case
   (epochs, repeated tests) collapse by `--epochs`: `mean` (the default), `first`, `all`
-  or `any`.
+  or `any`. Under `mean`, `first` and `any`, a case with at least one repeat that ran is not
+  counted as a system error; its errored repeats still score as failures.
 * A NaN or infinite score is refused at import, naming the case and metric, because it would
   make the bootstrap report a significant difference that is not there.
 * promptfoo files can hold several providers and `--system` picks one. Inspect `.eval` logs

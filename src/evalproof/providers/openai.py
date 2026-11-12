@@ -91,6 +91,17 @@ class OpenAICompatibleProvider:
         body.update(params.extra)
         return body
 
+    def cache_salt(self, params: GenerationParams) -> dict[str, object] | None:
+        """Defaults this request leaves out. Before 0.3.0 they were always sent, so a reply
+        cached then for the same params came from temperature 0 and must not be reused."""
+        if self.profile.local:
+            return None
+        explicit = params.model_fields_set
+        omitted = [] if "temperature" in explicit else ["temperature"]
+        if params.seed is not None and "seed" not in explicit:
+            omitted.append("seed")
+        return {"omitted": omitted} if omitted else None
+
     def chat(self, messages: list[Message], params: GenerationParams) -> ChatResponse:
         body = self.payload(messages, params)
 

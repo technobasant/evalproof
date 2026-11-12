@@ -231,10 +231,15 @@ def _merge_scores(scores: list[Score], epochs: str, repeated: bool) -> Score:
     return Score(value=min(values) if epochs == "all" else max(values))
 
 
-def _merge_output(repeats: list[CaseResult]) -> SystemOutput:
+def _merge_output(repeats: list[CaseResult], epochs: str) -> SystemOutput:
     outputs = [r.output for r in repeats]
     ok = [o for o in outputs if not o.error]
     errors = [o.error for o in outputs if o.error]
+    # The case is an error when no repeat answered, or under ``all``, where one failed repeat
+    # fails the case. Under ``any`` and ``mean`` a case with a good repeat is not an error;
+    # its failed repeats already count as failures in the scores.
+    if ok and epochs != "all":
+        errors = []
     return SystemOutput(
         output=(ok or outputs)[0].output,
         retrieved=(ok or outputs)[0].retrieved,
@@ -256,7 +261,7 @@ def _collapse(sample: Sample, epochs: str, repeated: bool) -> CaseResult:
         name: _merge_scores([r.scores[name] for r in repeats if name in r.scores], epochs, repeated)
         for name in names
     }
-    return CaseResult(case_id=sample.case_id, output=_merge_output(repeats), scores=scores)
+    return CaseResult(case_id=sample.case_id, output=_merge_output(repeats, epochs), scores=scores)
 
 
 def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Options) -> Run:

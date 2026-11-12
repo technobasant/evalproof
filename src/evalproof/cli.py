@@ -92,7 +92,9 @@ def _gate_config(args: argparse.Namespace) -> GateConfig | None:
         return None
     if base is None:
         return GateConfig(**overrides)
-    return base.model_copy(update=overrides)
+    # Validate the merged config: model_copy would skip the check that a metric is named,
+    # and an empty --metric (an unset variable in CI) would then gate nothing and pass.
+    return GateConfig.model_validate({**base.model_dump(), **overrides})
 
 
 def cmd_compare(args: argparse.Namespace) -> int:

@@ -55,7 +55,16 @@ def read(path: Path, opts: Options) -> Run:
     system = pick_system(list(dict.fromkeys(labels)), opts.system)
     mine = [r for r, label in zip(rows, labels, strict=True) if label == system]
     meta.system = system
-    return build_run(FORMAT, path, _samples(mine), meta, opts)
+    samples = _samples(mine)
+    twins = sum(1 for s in samples if "#" in s.case_id)
+    if twins:
+        opts.warn(
+            f"{twins} test(s) repeat the vars and description of an earlier test and were kept as "
+            "separate cases. If this file came from --repeat and its rows carry no repeatIndex, "
+            "those cases are repeats, not independent pairs, and the gate will overstate "
+            "significance: re-export with a promptfoo that records repeatIndex."
+        )
+    return build_run(FORMAT, path, samples, meta, opts)
 
 
 def _load(path: Path) -> tuple[list[dict[str, Any]], Meta]:
@@ -96,6 +105,9 @@ def _check_rows(rows: list[Any], path: Path) -> list[dict[str, Any]]:
 def _labels(rows: list[dict[str, Any]]) -> list[str]:
     """The system each row belongs to: its provider, plus the prompt if the file has several."""
     prompts = {_prompt_label(r) for r in rows}
+    # Two different prompts (promptIdx) on one provider must not share a label, or their
+    # rows would merge into one system and the gate would compare a blend of both.
+    seen: dict[tuple[str, str], set[int]] = {}
     labels = []
     for row in rows:
         provider = row.get("provider")
@@ -103,7 +115,17 @@ def _labels(rows: list[dict[str, Any]]) -> list[str]:
             label = str(provider.get("label") or provider.get("id") or "unknown provider")
         else:
             label = str(provider or "unknown provider")
-        labels.append(f"{label} · {_prompt_label(row)}" if len(prompts) > 1 else label)
+        prompt = _prompt_label(row)
+        idx = row.get("promptIdx")
+        if isinstance(idx, int):
+            seen.setdefault((label, prompt), set()).add(idx)
+        labels.append(f"{label} · {_short(prompt)}" if len(prompts) > 1 else label)
+    for (provider_label, prompt), idxs in seen.items():
+        if len(idxs) > 1:
+            raise ImportFormatError(
+                f"prompts {sorted(idxs)} on {provider_label!r} share the label "
+                f"{_short(prompt)!r}; give each prompt a distinct label in promptfoo"
+            )
     return labels
 
 
@@ -111,8 +133,17 @@ def _prompt_label(row: dict[str, Any]) -> str:
     """The prompt template. ``raw`` is the prompt rendered for one test, so it differs per row."""
     prompt = row.get("prompt")
     if not isinstance(prompt, dict):
-        return str(prompt or "")[:60]
-    return str(prompt.get("label") or prompt.get("raw") or "")[:60]
+        return str(prompt or "")
+    return str(prompt.get("label") or prompt.get("raw") or "")
+
+
+def _short(label: str) -> str:
+    """A readable system name. A long template keeps a hash of the whole text, so two
+    prompts that share their opening words still name two systems."""
+    flat = " ".join(label.split())
+    if len(flat) <= 80:
+        return flat
+    return f"{flat[:60]}… {hashlib.sha256(label.encode()).hexdigest()[:8]}"
 
 
 def _test_key(row: dict[str, Any]) -> tuple[str, Any]:
@@ -133,7 +164,12 @@ def _occurrences(rows: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
     by_gid: dict[str, list[dict[str, Any]]] = {}
     open_group: dict[str, list[dict[str, Any]]] = {}
     last_index: dict[str, int] = {}
-    for row in sorted(rows, key=lambda r: (r.get("testIdx", 0), r.get("repeatIndex") or 0)):
+
+    def order(r: dict[str, Any]) -> tuple[int, int]:
+        t, i = r.get("testIdx"), r.get("repeatIndex")
+        return (t if isinstance(t, int) else 0, i if isinstance(i, int) else 0)
+
+    for row in sorted(rows, key=order):
         gid, idx, h = row.get("repeatGroupId"), row.get("repeatIndex"), _test_key(row)[0]
         if isinstance(gid, str):
             if gid not in by_gid:

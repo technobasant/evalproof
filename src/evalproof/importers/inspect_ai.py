@@ -74,9 +74,19 @@ def read(path: Path, opts: Options) -> Run:
     for raw in log["samples"]:
         cid = str(raw["id"])
         result = _result(cid, raw, lambda name: _skip(name, skipped, opts))
-        sample = by_id.setdefault(cid, Sample(cid, raw.get("input"), []))
+        sample = by_id.setdefault(cid, Sample(cid, _stable_input(raw.get("input")), []))
         sample.repeats.append(result)
     return build_run(FORMAT, path, list(by_id.values()), meta, opts)
+
+
+def _stable_input(value: Any) -> Any:
+    """The sample input without per-run noise. Inspect gives every chat message a fresh
+    random ``id``, so hashing it would make two runs of one dataset look different."""
+    if isinstance(value, list):
+        return [
+            {k: v for k, v in m.items() if k != "id"} if isinstance(m, dict) else m for m in value
+        ]
+    return value
 
 
 def _read_json(path: Path) -> dict[str, Any]:

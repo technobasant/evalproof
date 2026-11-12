@@ -49,7 +49,10 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   `seed: 0` on every call, which reasoning models reject; now an unset value is left to the
   provider's default. A hosted run that relied on the implicit `temperature: 0` should set
   it in `params`. Ollama and the local servers still send both, so local runs repeat as
-  before, and `GenerationParams` defaults and cache keys are unchanged.
+  before and keep their cache keys; `GenerationParams` defaults are unchanged. A hosted call
+  that now leaves a value out gets a new cache key, so a reply cached at the old implicit
+  `temperature: 0` is not reused for it. To point `openai` at an older local server through
+  `base_url`, use `openai-compatible` or a local profile instead, which send both values.
 - `openai` sends the token limit as `max_completion_tokens`, which OpenAI's reasoning models
   require (they reject `max_tokens`), and `mistral` sends its seed as `random_seed`. The
   default limit is still 512.
@@ -61,6 +64,14 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Anthropic calls to current Claude models failed with HTTP 400, because `temperature` was
   sent on every request. It goes out only when the suite sets it, and no seed is sent, since
   the Messages API has none.
+- A gate built without validation and given no metric passed by gating nothing; it now
+  cannot gate (exit 4), and `compare --metric ""` is a usage error (exit 2).
+- Found in review before release, in the new importers: two promptfoo prompts whose first 60
+  characters matched merged into one system (the label is no longer truncated, and two
+  prompts that share a label are an error), promptfoo output with repeated tests but no
+  `repeatIndex` now warns that it reads as separate cases, Inspect message ids no longer
+  change the dataset hash, a `null` promptfoo `testIdx` no longer crashes, and under
+  `--epochs any` or `mean` a case with one good repeat is no longer marked as an error.
 - `examples/support-qa/cases.jsonl`: the q21 and q22 references named Enterprise, which the
   product facts do not give SSO or an admin console (#7). The original set is kept as
   `cases.v1.jsonl` so the recorded runs stay reproducible; the runs judged on the revised set
