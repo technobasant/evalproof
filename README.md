@@ -189,20 +189,38 @@ CLI's path, version, login mode and the isolation flags it will pass, and exits 
 is not usable. It makes no model call.
 
 evalproof runs your own `claude` or `codex` binary as a subprocess, sends the prompt on stdin
-and reads the JSON it prints. It never reads a token file or the keychain. If
-`ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is set it is removed for the call, so the login is
-what gets used; name a variable in `api_key_env` to use a key instead, which is the route for
-CI.
+and reads the JSON it prints. It never reads a token file or the keychain. The environment
+variable `EVALPROOF_CLI_AUTH` says which credentials the CLI uses:
+
+* `login` (the default, also when it is unset or empty) removes the CLI's key variables from
+  the call (`ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` for Claude Code, `OPENAI_API_KEY`
+  and `CODEX_API_KEY` for Codex), so the login is what gets used.
+* `api-key` leaves them in place, so the CLI uses its own key. This is the route for CI.
+* Any other value is an error.
+
+`api_key_env` in the suite works in either mode and wins: it passes that variable to the CLI as
+its own key variable. The mode is not part of the run's fingerprint or the cache key, because
+it is the same model either way. `evalproof doctor` prints the mode in effect and warns when
+`api-key` is chosen but the CLI's key variable is not set.
 
 * **Isolation is a requirement, not an option.** A coding agent is not a model endpoint. Left
   alone it loads the project's `CLAUDE.md` or `AGENTS.md`, your memory, plugins, MCP servers
   and skills into the prompt, and it can run commands. A judge that has read your project's
   instructions is not a judge. So every call runs in a fresh empty directory, with the
   agent's own system prompt replaced by yours (or one neutral line), its tools, settings, MCP
-  servers and skills switched off, and no permission-bypass flag. Codex also runs with its
-  shell disabled in a read-only sandbox, and a command in its output fails the call. Its
-  bundled skill list and some tool descriptions still reach the prompt, because the CLI has
-  no feature flag to remove them. `evalproof doctor` prints the exact flags.
+  servers and skills switched off, and no permission-bypass flag. `evalproof doctor` prints
+  the exact flags. The two CLIs do not isolate equally well:
+  * Claude Code is run with **no tools at all** (`--tools ''`).
+  * Codex runs in a read-only sandbox with its shell, plugins, apps, hooks, multi-agent mode,
+    sleep and image tools, bundled skills and your user config and rules switched off, but
+    codex-cli 0.167.2 has no flag that removes every tool. Still offered are a JavaScript
+    isolate (`exec`: no Node, no file system, no network, with a few built-in helpers such as
+    the current time, MCP resource listing and `apply_patch`), sub-agents that get the same
+    restricted tools, and a question to the user, which cannot be answered in exec mode. **Any
+    tool use fails the call**: if the output holds an item that is not a message, reasoning,
+    an error or a plan, evalproof raises `codex used a tool (<type>); isolation broken` and
+    discards the reply. A codex too old to know a flag evalproof sets exits with `Unknown
+    feature flag`, and evalproof says to upgrade it (it was tested with codex-cli 0.167.2).
 * **No temperature, seed or token limit.** Neither CLI exposes one, so `temperature`, `seed`
   and `max_tokens` are ignored. `think` maps to Codex's reasoning effort (`false` is `low`,
   `true` is `medium`; `params.extra.reasoning_effort` sets it directly). A run is therefore
@@ -224,7 +242,8 @@ CI.
   subscription; its plan limits assume ordinary individual use, and it forbids third-party
   products from routing other users' requests through subscription credentials. evalproof
   never touches credentials: it runs your own `claude` binary, on your machine, for your own
-  evals. For CI or team-wide use, use an API key (`api_key_env`). See Anthropic's
+  evals. For CI or team-wide use, use an API key (`EVALPROOF_CLI_AUTH=api-key`, or
+  `api_key_env`). See Anthropic's
   [legal and compliance page](https://code.claude.com/docs/en/legal-and-compliance). Nothing
   uses a CLI unless a suite names a `claude-code:` or `codex:` target.
 
@@ -403,6 +422,14 @@ fails the job on exit codes 1, 3 or 4:
 
 This repository's own CI runs the offline example on every commit and asserts that the
 gate returns 1 for the real regression and 0 for the noisy and refactored candidates.
+
+If the judge is a Claude Code or Codex CLI, `evalproof init --ci api-key` writes a workflow that
+installs the CLI at the version found at init time and runs `evals/suite.yaml` as it is. The run
+step sets `EVALPROOF_CLI_AUTH: api-key` and the repository secret (`ANTHROPIC_API_KEY` for
+Claude Code, `OPENAI_API_KEY` for Codex), so the CLI uses that key instead of a login. The
+suite names no key and there is no second suite file; a suite with an `api_key_env` still uses
+that variable. Keep the pinned CLI version equal to the one in your baseline run, because the
+gate exits 4 when the judge's CLI version differs.
 
 ## How it relates to other tools
 

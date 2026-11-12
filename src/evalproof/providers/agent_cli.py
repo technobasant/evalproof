@@ -23,6 +23,7 @@ import contextlib
 import functools
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -50,6 +51,28 @@ MAX_ERROR_CHARS = 500
 REASONING_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 VERSION_TIMEOUT_S = 30.0
 AUTH_TIMEOUT_S = 30.0
+
+# How the CLI authenticates. ``login`` (the default) uses the subscription login and removes the
+# CLI's API-key variables from the child's environment; ``api-key`` leaves them, so a CI job
+# can hand the CLI a key from a secret. Either way it is the same model, so the mode is not part
+# of the fingerprint or the cache key.
+AUTH_ENV = "EVALPROOF_CLI_AUTH"
+AUTH_MODES = ("login", "api-key")
+
+# The codex release the isolation flags were verified against.
+CODEX_TESTED_VERSION = "codex-cli 0.167.2"
+# The only item types a codex turn may contain when it used no tool.
+CODEX_ALLOWED_ITEMS = frozenset({"agent_message", "reasoning", "error", "todo_list"})
+
+
+def cli_auth_mode() -> str:
+    """The auth mode from ``EVALPROOF_CLI_AUTH``: ``login`` when it is unset or empty."""
+    value = os.environ.get(AUTH_ENV, "").strip()
+    if not value:
+        return "login"
+    if value not in AUTH_MODES:
+        raise ProviderError(f"{AUTH_ENV} must be one of {', '.join(AUTH_MODES)}, got {value!r}")
+    return value
 
 
 def clip(text: str, limit: int = MAX_ERROR_CHARS) -> str:
@@ -156,7 +179,8 @@ class AgentCLIProvider:
     install_hint: str
     isolation: str  # bump when the flag set changes: it is part of the cache key and the gate
     key_var: str  # the variable the CLI reads its API key from
-    strip_vars: tuple[str, ...]  # key variables removed so the CLI uses the subscription login
+    strip_vars: tuple[str, ...]  # key variables removed in login mode (the subscription login)
+    key_alias: ClassVar[str | None] = None  # in api-key mode, copied into key_var when unset
     extra_env: ClassVar[dict[str, str]]
 
     def __init__(
@@ -177,6 +201,7 @@ class AgentCLIProvider:
         self.model = model
         self.timeout_s = timeout_s
         self._sleep = sleep
+        self.auth_mode = cli_auth_mode()
         self._api_key = read_key(
             self.name, api_key_env, required=api_key_env is not None, api_key=api_key
         )
@@ -208,9 +233,17 @@ class AgentCLIProvider:
         return path
 
     def child_env(self) -> dict[str, str]:
-        """The caller's environment minus the CLI's API-key variables, so the CLI uses the
-        subscription login. A key named by ``api_key_env`` goes in under the CLI's own name."""
-        env = {k: v for k, v in os.environ.items() if k not in self.strip_vars}
+        """The caller's environment. In ``login`` mode the CLI's API-key variables are removed,
+        so the CLI uses the subscription login; in ``api-key`` mode they stay. A key named by
+        ``api_key_env`` goes in under the CLI's own name in either mode and wins."""
+        if self.auth_mode == "login":
+            env = {k: v for k, v in os.environ.items() if k not in self.strip_vars}
+        else:
+            env = dict(os.environ)
+            # A key set under the vendor's usual name also reaches a CLI that reads another one.
+            alias = self.key_alias
+            if alias and not env.get(self.key_var) and env.get(alias):
+                env[self.key_var] = env[alias]
         env.update(self.extra_env)
         if self._api_key:
             env[self.key_var] = self._api_key
@@ -379,10 +412,15 @@ class ClaudeCodeProvider(AgentCLIProvider):
 
 
 class CodexProvider(AgentCLIProvider):
-    """``codex exec`` read-only, with the shell and other tools disabled, project docs and
-    user config ignored and the agent's base instructions replaced (verified: canary not seen,
-    no command execution). A ``command_execution`` item in the output is still treated as an
-    isolation failure."""
+    """``codex exec`` read-only, with the shell and other tools disabled, project docs, user
+    config and skills ignored and the agent's base instructions replaced (verified: canary not
+    seen, no command execution).
+
+    Codex still offers a few tools that no flag removes in codex-cli 0.167.2: a JavaScript
+    isolate (``exec``: no file system, no network), sub-agents that get the same restricted
+    tools, and a question to the user that exec mode cannot answer. So the guard is an
+    allowlist: any item in the output that is not a message, reasoning, an error or a plan means
+    a tool was used, the call fails and the reply is discarded."""
 
     name = "codex"
     binary = "codex"
@@ -390,6 +428,8 @@ class CodexProvider(AgentCLIProvider):
     isolation = "codex/1"
     key_var = "CODEX_API_KEY"
     strip_vars = ("OPENAI_API_KEY", "CODEX_API_KEY")
+    # `codex exec` reads CODEX_API_KEY; CI secrets are usually named OPENAI_API_KEY.
+    key_alias = "OPENAI_API_KEY"
     extra_env: ClassVar[dict[str, str]] = {}
 
     def reasoning_effort(self, params: GenerationParams) -> str | None:
@@ -429,6 +469,10 @@ class CodexProvider(AgentCLIProvider):
             "project_doc_max_bytes=0",
             "-c",
             f"model_instructions_file={system_file}",
+            "-c",
+            "skills.include_instructions=false",
+            "-c",
+            "skills.bundled.enabled=false",
             "--disable",
             "shell_tool",
             "--disable",
@@ -439,6 +483,10 @@ class CodexProvider(AgentCLIProvider):
             "hooks",
             "--disable",
             "multi_agent",
+            "--disable",
+            "sleep_tool",
+            "--disable",
+            "view_image",
             "-",
         ]
 
@@ -459,11 +507,22 @@ class CodexProvider(AgentCLIProvider):
         return events
 
     def parse(self, returncode: int, stdout: str, stderr: str, latency_ms: float) -> ChatResponse:
+        if "Unknown feature flag" in stderr:
+            found = re.search(r"Unknown feature flag:\s*(\S+)", stderr)
+            name = f" ({found.group(1)})" if found else ""
+            raise self.fail(
+                f"this codex version lacks a feature evalproof disables{name}; evalproof was "
+                f"tested with {CODEX_TESTED_VERSION}, so upgrade codex ({self.install_hint})"
+            )
         events = self._events(stdout)
         for event in events:
             item = event.get("item")
-            if isinstance(item, dict) and item.get("type") == "command_execution":
-                raise self.fail("codex ran a tool; isolation broken")
+            if not isinstance(item, dict):
+                continue
+            kind = item.get("type")
+            if isinstance(kind, str) and kind not in CODEX_ALLOWED_ITEMS:
+                # The reply text is not read: a turn that used a tool is not isolated.
+                raise self.fail(f"codex used a tool ({kind}); isolation broken")
         failure = self._failure(events)
         if failure is not None:
             lowered = failure.lower()

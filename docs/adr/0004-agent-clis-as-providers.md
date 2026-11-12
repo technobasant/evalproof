@@ -24,11 +24,20 @@ changes with each CLI release, with nothing in the run to say so.
 * **Isolation is a requirement.** Every call runs in a fresh empty directory that is removed
   afterwards, with the agent's system prompt replaced by the case's own (or one neutral line)
   and its tools, settings, MCP servers, skills and memory switched off. No permission-bypass
-  flag is ever passed. Codex runs with its shell disabled in a read-only sandbox, and a
-  command in its output fails the call. The flags are listed by `evalproof doctor`. The CLI
-  has no switch that removes everything (Codex still lists its bundled skills and some tool
-  descriptions in the prompt), so the isolation is named, versioned (`claude-code/1`,
-  `codex/1`) and checked by canary tests, not claimed to be total.
+  flag is ever passed. The flags are listed by `evalproof doctor`.
+  * Claude Code runs with **zero tools** (`--tools ''`).
+  * Codex runs in a read-only sandbox with its shell, plugins, apps, hooks, multi-agent mode,
+    sleep and image tools, bundled skills, user config and rules switched off. It cannot be
+    made toolless: codex-cli 0.167.2 still offers a JavaScript isolate (`exec`, documented as
+    having no Node, no file system and no network), sub-agents that get the same restricted
+    tools, and `request_user_input`, which cannot be answered in exec mode. So the guard is an
+    allowlist, not a block list: any `item.started` or `item.completed` whose type is not
+    `agent_message`, `reasoning`, `error` or `todo_list` fails the call as `codex used a tool
+    (<type>); isolation broken`, and the reply is discarded. An unknown `--disable` name makes
+    codex exit with `Unknown feature flag`; evalproof turns that into a request to upgrade
+    codex (tested with codex-cli 0.167.2).
+  * The isolation is named, versioned (`claude-code/1`, `codex/1`) and checked by canary
+    tests, not claimed to be total.
 * **A CLI target has a fingerprint:** the CLI, its version, the isolation scheme and the
   sampling note (`cli-default`, since neither CLI takes a temperature, seed or token limit).
   The run records it, with the model id that actually answered, in `runner.environment`. The
@@ -37,10 +46,13 @@ changes with each CLI release, with nothing in the run to say so.
   (`same_judge`, `judge_changes`), and the gate refuses to decide (exit 4) unless
   `--allow-judge-change` or `gate.allow_judge_change` says the change is intended. A changed
   system target only warns, because that is usually the change under test.
-* Authentication stays with the CLI. evalproof does not read token files or the keychain. API
-  key variables that would switch the CLI from the login to a key are removed from the child's
-  environment; `api_key_env` names the variable that is passed on instead, which is the route
-  for CI.
+* Authentication stays with the CLI. evalproof does not read token files or the keychain. The
+  environment variable `EVALPROOF_CLI_AUTH` chooses the mode: `login` (the default) removes
+  the API key variables that would switch the CLI from the login to a key from the child's
+  environment; `api-key` keeps them, which is the route for CI (the generated workflow sets
+  it, so the suite needs no CI-only copy). Any other value is an error. `api_key_env` names a
+  variable that is passed on under the CLI's own name in either mode and wins. The mode is
+  not part of the fingerprint or the cache key: it is the same model either way.
 * The feature is opt-in: nothing runs a CLI unless a suite names one of the two targets.
   The README states the vendors' terms as they stand and says to use an API key for CI or
   shared use.
