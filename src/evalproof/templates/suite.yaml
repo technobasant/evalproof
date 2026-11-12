@@ -1,0 +1,69 @@
+# evalproof suite, written by `evalproof init`. Run it from the repository root:
+#   uvx evalproof run evals/suite.yaml --out evals/runs/latest.json
+name: starter
+dataset: cases.jsonl
+seed: 0
+concurrency: @@CONCURRENCY@@
+
+# To test your own code instead of a prompt, point the system at it. The suite's own folder
+# is on the import path, so a small wrapper next to this file is the simplest way
+# (see examples/deterministic and examples/retrieval in the evalproof repository):
+#
+#   system:
+#     target: python:answer:ask       # evals/answer.py, def ask(input) -> str
+#
+# or at an HTTP endpoint (POST {"id", "input"}, reply text or {"output": "..."}):
+#
+#   system:
+#     target: http://localhost:8000/answer
+
+# The system under test: the thing you change and measure again. This starter asks a model
+# a question under a system prompt, so the suite runs as soon as it is written.
+system:
+@@TARGET_NOTE@@
+  target: @@TARGET@@
+@@API_KEY_LINE@@
+  label: starter prompt
+  system_prompt: |
+    You are the support assistant for Notebird, a note-taking app. Answer using only
+    these facts:
+    - The Free plan includes 3 notebooks. Pro costs $8 per month and has unlimited notebooks.
+    - Refunds are available within 30 days of purchase.
+    - Export is available on every plan, as Markdown or PDF.
+    If the facts do not answer the question, say you do not know and suggest contacting
+    support. Keep answers to two sentences.
+  prompt_template: "{question}"
+  params: {max_tokens: 400}
+
+# The judge grades each answer against the rubric below. Where you can, use a different or
+# stronger model than the system's: a model grading its own answers tends to be lenient.
+judge:
+@@TARGET_NOTE@@
+  target: @@TARGET@@
+@@API_KEY_LINE@@
+  params: {max_tokens: 256}
+
+scorers:
+  # No model needed: the answer must contain one of the strings in the case's `accept` list.
+  - name: has_key_fact
+    type: contains
+    params: {any_of_field: accept}
+  # A model reads the answer and the case's `reference` and decides pass or fail.
+  # Once you have a few dozen human labels, `evalproof calibrate` measures how far to trust it.
+  - name: judge
+    type: llm_judge
+    params:
+      rubric: |
+        Pass if the response states the same facts as the reference answer (the same numbers,
+        plans and yes or no), even if the wording differs. Fail if it contradicts the
+        reference, invents details the reference does not support, or does not answer.
+
+# Fail CI only when the judge score drops by more than 3 points AND the drop is unlikely to
+# be chance. The gate needs 20 paired cases before it will decide; with fewer it exits 4
+# ("cannot gate") instead of passing. The three sample cases are a placeholder: replace
+# them with real questions.
+gate:
+  metric: judge
+  max_drop: 0.03
+  alpha: 0.05
+  min_cases: 20

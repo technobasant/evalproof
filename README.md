@@ -64,6 +64,23 @@ questions, one Apple M5. Full method and every table in [MEASUREMENTS.md](MEASUR
 
 ## Five-minute quickstart
 
+In your own repository, one command writes a starter suite, a CI workflow and an agent skill,
+and a second runs it:
+
+```bash
+uvx evalproof init
+uvx evalproof run evals/suite.yaml --out evals/runs/latest.json
+```
+
+`init` picks the judge from what is on your `PATH`: a logged-in `claude`, then `codex`, then
+Ollama, then a hosted Anthropic model with `ANTHROPIC_API_KEY`. It writes `evals/` (the
+suite, three sample cases, a README), `.github/workflows/evalproof.yml` (`--ci keyless`, the
+default, makes no model calls in CI; `--ci api-key` runs the suite there; `--ci none` writes
+no workflow) and a skill for coding agents at `.agents/skills/evalproof/SKILL.md` and
+`.claude/skills/evalproof/SKILL.md` (`--no-skill` skips it). It prints one line per file,
+never overwrites one without `--force`, and makes no model call. Replace the sample cases
+with your own: the gate needs 20 before it will decide.
+
 The offline example lives in the repository:
 
 ```bash

@@ -27,6 +27,15 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   providers raise it for rate limits and server errors.
 - `tests/test_live_agent_cli.py`: one real call per installed CLI, skipped unless
   `EVALPROOF_LIVE=1`.
+- `evalproof init [--dir PATH] [--judge TARGET] [--ci keyless|api-key|none] [--no-skill]
+  [--force]`: writes `evals/suite.yaml`, three sample cases in `evals/cases.jsonl`, an
+  `evals/README.md`, a GitHub Actions workflow at `.github/workflows/evalproof.yml` and an
+  agent skill at `.agents/skills/evalproof/SKILL.md` and `.claude/skills/evalproof/SKILL.md`.
+  The judge is the first of `claude`, `codex`, `ollama` found on `PATH`, else a hosted
+  Anthropic model. The keyless workflow makes no model calls and gates the committed
+  `evals/runs/latest.json` against the base branch; the api-key workflow runs the suite in CI
+  and pins the judge CLI to the version found at init time. Existing files are kept unless
+  `--force` is passed, nothing is written outside `--dir`, and no model is called.
 
 ### Changed
 
