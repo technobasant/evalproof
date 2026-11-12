@@ -27,8 +27,9 @@ Knowing the trust boundaries helps tell a vulnerability from intended behaviour:
 * **A suite file is code.** A `python:module:function` target imports and runs that
   function, and an `https://` target sends every case to that endpoint. Run suites you
   trust, as you would a test file.
-* **API keys come from the environment** (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) and are
-  sent only to the provider's API. They are not written to run files, caches or reports;
+* **API keys come from the environment** (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`
+  and the other variables in the README's provider table, or the one a suite's `api_key_env`
+  names) and are sent only to the provider's API. They are not written to run files, caches or reports;
   a path where one is would be a vulnerability.
 * **The response cache stores model outputs** under the suite's `cache_dir`. Treat it like
   the data it was computed from.

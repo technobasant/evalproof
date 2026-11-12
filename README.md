@@ -31,8 +31,9 @@ evalproof:
 4. **gates CI** only when a drop is both larger than your tolerance *and* statistically
    significant, plus latency and cost budgets, with distinct exit codes.
 
-It is local-first: Ollama is the default provider, Anthropic and OpenAI are optional, and
-every model call is cached by content so re-runs are free and reproducible.
+It is local-first: Ollama is the default, every major hosted provider is one `target:` line
+away ([Providers](#providers)), and every model call is cached by content so re-runs are free
+and reproducible.
 
 ## Install
 
@@ -42,8 +43,8 @@ uv tool install evalproof      # just the CLI
 ```
 
 Python 3.11 to 3.14. `compare`, `calibrate` and `report` work on run files and need no
-model. `run` needs a system to evaluate: a Python function, an HTTP endpoint, a local
-Ollama model, or an Anthropic or OpenAI key.
+model. `run` needs a system to evaluate: a Python function, an HTTP endpoint, a local model
+(Ollama, vLLM, LM Studio, llama.cpp), or a key for a hosted provider.
 
 ## What it found on a real run
 
@@ -92,6 +93,63 @@ With Ollama installed, the LLM example is
 The browser app in [`app/`](app) runs locally too:
 `uv run --with-requirements app/requirements.txt streamlit run app/streamlit_app.py`.
 
+## Providers
+
+The target is `<provider>:<model>`; the model name is everything after the first colon, so
+`openrouter:anthropic/claude-sonnet-4.5` and `ollama:qwen3:8b` both work. Two native adapters
+(`ollama`, `anthropic`) and one OpenAI-compatible adapter driven by a table of provider
+profiles ([`providers/profiles.py`](src/evalproof/providers/profiles.py), each row cites the
+provider's documentation). Plain HTTP throughout, no vendor SDK.
+
+| Provider | Example target | Key variable | Where |
+|---|---|---|---|
+| `ollama` | `ollama:qwen3:8b` | none | local |
+| `vllm` | `vllm:meta-llama/Llama-3.1-8B-Instruct` | `VLLM_API_KEY`, optional | local |
+| `lmstudio` | `lmstudio:qwen3-8b` | optional, via `api_key_env` | local |
+| `llamacpp` | `llamacpp:qwen3-8b` | `LLAMA_API_KEY`, optional | local |
+| `anthropic` | `anthropic:claude-sonnet-4-5` | `ANTHROPIC_API_KEY` | hosted |
+| `openai` | `openai:gpt-5` | `OPENAI_API_KEY` | hosted |
+| `azure` | `azure:<deployment>` | `AZURE_OPENAI_API_KEY` | hosted, needs `base_url` |
+| `gemini` | `gemini:gemini-2.5-flash` | `GEMINI_API_KEY` | hosted |
+| `mistral` | `mistral:mistral-large-latest` | `MISTRAL_API_KEY` | hosted |
+| `groq` | `groq:llama-3.3-70b-versatile` | `GROQ_API_KEY` | hosted |
+| `together` | `together:meta-llama/Llama-3.3-70B-Instruct-Turbo` | `TOGETHER_API_KEY` | hosted |
+| `fireworks` | `fireworks:accounts/fireworks/models/llama-v3p3-70b-instruct` | `FIREWORKS_API_KEY` | hosted |
+| `deepseek` | `deepseek:deepseek-chat` | `DEEPSEEK_API_KEY` | hosted |
+| `xai` | `xai:grok-4` | `XAI_API_KEY` | hosted |
+| `openrouter` | `openrouter:anthropic/claude-sonnet-4.5` | `OPENROUTER_API_KEY` | hosted |
+| `cerebras` | `cerebras:gpt-oss-120b` | `CEREBRAS_API_KEY` | hosted |
+| `openai-compatible` | `openai-compatible:<model>` | optional, via `api_key_env` | any server, needs `base_url` |
+
+```yaml
+system:
+  target: openai-compatible:gpt-4o    # a gateway, LiteLLM proxy, TGI, SGLang, ...
+  base_url: https://llm-gateway.internal/v1
+  api_key_env: TEAM_GATEWAY_KEY       # the variable to read; the key itself never goes in the suite
+  headers: {x-team: search}           # extra HTTP headers on every call, never secrets
+  params: {max_tokens: 2048}
+```
+
+* `base_url` overrides any profile's default (a regional endpoint, a proxy, an older
+  `llama-server`, which listened on port 8080 before October 2026 and now defaults to 9931).
+* `api_key_env` replaces the profile's variable for any provider; a variable named there
+  must be set.
+* `headers` merge into every request and win over the adapter's own, for example
+  `anthropic-version`. They are not part of the cache key, and a suite file is usually
+  committed, so keep keys in the environment.
+* Sampling: local servers (`ollama`, `vllm`, `lmstudio`, `llamacpp`) receive `temperature` and
+  `seed` on every call, defaults included, so a local run repeats. Hosted providers receive
+  them only when `params` sets them, because reasoning models reject a non-default
+  temperature; Anthropic never receives a seed, and since its current models also reject
+  `temperature`, it gets one only when the suite asks. `params.extra` adds any other body
+  field, such as `{thinking: {type: adaptive}, output_config: {effort: low}}`.
+* Thinking models spend output tokens on thinking inside `max_tokens`, which defaults to 512
+  (changing it would change every cache key). Set `params.max_tokens` higher for them; a reply
+  cut off before its first word, a refusal, or a content-filter block is recorded as that
+  case's error rather than as an empty answer.
+* AWS Bedrock and Google Vertex AI sign requests with cloud credentials, which evalproof does
+  not implement. Use a gateway's OpenAI-compatible endpoint through `openai-compatible`.
+
 ## Concepts
 
 **Suite** — one YAML file: a JSONL golden set, the system under test, scorers, an optional
@@ -101,7 +159,7 @@ judge, calibration settings and a gate.
 name: support-qa
 dataset: cases.jsonl              # {"id", "input", "reference", ...extra fields}
 system:
-  target: ollama:qwen3:1.7b       # or anthropic:…, openai:…, python:module:func, https://…
+  target: ollama:qwen3:1.7b       # or groq:…, anthropic:…, python:module:func, https://…
   system_prompt_file: prompt.md
   prompt_template: "{question}"
   params: {temperature: 0, seed: 0, think: false}
@@ -173,7 +231,7 @@ flowchart LR
   suite[suite.yaml] --> runner
   data[(cases.jsonl)] --> runner
   subgraph runner[evalproof run]
-    sys[system under test<br/>ollama · anthropic · openai<br/>python · http] --> scorers
+    sys[system under test<br/>ollama · anthropic · openai-compatible<br/>python · http] --> scorers
     scorers[scorers<br/>deterministic · retrieval · llm_judge]
     cache[(content-addressed<br/>cache)]
     sys <--> cache

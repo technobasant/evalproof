@@ -12,9 +12,41 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - MEASUREMENTS §8: the support-qa judge with thinking on (#3), with its runs, suite and
   analysis in `measure.py`. Against labels audited case by case it passes no wrong answer
   and κ rises, at 6.7× the judge time; the gate's decision does not change.
+- A provider profile table (`providers/profiles.py`) behind one OpenAI-compatible adapter:
+  `openai`, `azure`, `gemini`, `mistral`, `groq`, `together`, `fireworks`, `deepseek`, `xai`,
+  `openrouter`, `cerebras`, the local servers `vllm`, `lmstudio` and `llamacpp`, and
+  `openai-compatible` for any other server (set `base_url`). Each profile carries its base
+  URL, key variable, auth header, token-limit field and a link to the provider's docs.
+  `OpenAIProvider` stays importable.
+- `TargetConfig.api_key_env` names the environment variable that holds the key, and
+  `TargetConfig.headers` adds request headers to every HTTP provider; suite headers win over
+  a provider's own, and neither is part of the cache key or written to a run. A named key
+  variable that is not set is an error rather than a 401.
+- Anthropic: a `refusal` stop reason is recorded as a case error naming its category, and so
+  is `max_tokens` reached before any text, with a hint to raise `params.max_tokens`. The
+  OpenAI-compatible adapter does the same for `finish_reason` `length` with no text, and
+  for `content_filter`, and reads replies that arrive as a list of typed content parts.
+- A test pins the cache key of an existing Ollama call, so a change to it cannot slip in.
+
+### Changed
+
+- Hosted providers (everything except Ollama and the local servers) send `temperature` and
+  `seed` only when the suite sets them. Before, `openai` sent `temperature: 0` and
+  `seed: 0` on every call, which reasoning models reject; now an unset value is left to the
+  provider's default. A hosted run that relied on the implicit `temperature: 0` should set
+  it in `params`. Ollama and the local servers still send both, so local runs repeat as
+  before, and `GenerationParams` defaults and cache keys are unchanged.
+- `openai` sends the token limit as `max_completion_tokens`, which OpenAI's reasoning models
+  require (they reject `max_tokens`), and `mistral` sends its seed as `random_seed`. The
+  default limit is still 512.
+- The llama.cpp profile defaults to port 9931, the one its server documents now; for an older
+  build on 8080, set `base_url`.
 
 ### Fixed
 
+- Anthropic calls to current Claude models failed with HTTP 400, because `temperature` was
+  sent on every request. It goes out only when the suite sets it, and no seed is sent, since
+  the Messages API has none.
 - `examples/support-qa/cases.jsonl`: the q21 and q22 references named Enterprise, which the
   product facts do not give SSO or an admin console (#7). The original set is kept as
   `cases.v1.jsonl` so the recorded runs stay reproducible; the runs judged on the revised set

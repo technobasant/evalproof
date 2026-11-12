@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import random
 import time
 from collections.abc import Callable
@@ -67,6 +68,32 @@ def with_retries(
         if attempt < attempts - 1:
             sleep(base_delay * (2**attempt) * (0.5 + rng.random()))
     raise ProviderError(f"giving up after {attempts} attempts: {last}") from last
+
+
+def merge_headers(defaults: dict[str, str], extra: dict[str, str] | None) -> dict[str, str]:
+    """Suite headers win over a provider's own. Names are lowercased on both sides, because
+    HTTP header names are case-insensitive and ``Anthropic-Version`` must replace
+    ``anthropic-version`` rather than ride along beside it."""
+    merged = {k.lower(): v for k, v in defaults.items()}
+    merged.update({k.lower(): v for k, v in (extra or {}).items()})
+    return merged
+
+
+def read_key(
+    provider: str,
+    env: str | None,
+    *,
+    required: bool,
+    api_key: str | None = None,
+) -> str:
+    """The API key from an explicit argument or the environment, never from a suite file.
+
+    Returns ``""`` when there is none and none is required; a required key that is missing
+    is an error naming the variable to set."""
+    key = api_key or (os.environ.get(env) if env else None) or ""
+    if not key and required:
+        raise ProviderError(f"{provider}: set {env} to use this provider")
+    return key
 
 
 def split_system(messages: list[Message]) -> tuple[str | None, list[Message]]:

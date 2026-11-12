@@ -8,7 +8,13 @@ from typing import Any
 import httpx
 
 from evalproof.config import GenerationParams
-from evalproof.providers.base import ChatResponse, Message, ProviderError, with_retries
+from evalproof.providers.base import (
+    ChatResponse,
+    Message,
+    ProviderError,
+    merge_headers,
+    with_retries,
+)
 
 DEFAULT_BASE_URL = "http://127.0.0.1:11434"
 
@@ -23,9 +29,11 @@ class OllamaProvider:
         base_url: str | None = None,
         timeout_s: float = 120.0,
         client: httpx.Client | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         self.model = model
         self.base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
+        self._headers = merge_headers({}, headers)  # e.g. for an Ollama behind a proxy
         self._client = client or httpx.Client(timeout=timeout_s)
 
     def payload(self, messages: list[Message], params: GenerationParams) -> dict[str, Any]:
@@ -50,7 +58,7 @@ class OllamaProvider:
         body = self.payload(messages, params)
 
         def call() -> httpx.Response:
-            resp = self._client.post(f"{self.base_url}/api/chat", json=body)
+            resp = self._client.post(f"{self.base_url}/api/chat", json=body, headers=self._headers)
             resp.raise_for_status()
             return resp
 

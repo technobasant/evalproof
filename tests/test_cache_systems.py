@@ -29,6 +29,28 @@ def test_cache_key_depends_on_everything_that_changes_a_reply() -> None:
     )
 
 
+def test_cache_keys_of_existing_ollama_calls_are_pinned() -> None:
+    """Computed on the release before provider profiles. If these change, every cached local
+    run misses: change GenerationParams defaults or the key's inputs only on purpose."""
+    msgs = [Message(role="system", content="be brief"), Message(role="user", content="hi")]
+    assert GenerationParams().model_dump(mode="json") == {
+        "temperature": 0.0,
+        "seed": 0,
+        "max_tokens": 512,
+        "think": False,
+        "extra": {},
+    }
+    assert (
+        cache_key("ollama", "qwen3:8b", None, msgs, GenerationParams())
+        == "08d0b7fc706e8781e04a18eecd99fc97d56614a35c65b9985a5cf1439c2f7037"
+    )
+    tuned = GenerationParams(seed=7, max_tokens=64, think=True, extra={"top_p": 0.9})
+    assert (
+        cache_key("ollama", "qwen3:8b", "http://127.0.0.1:11434", msgs, tuned)
+        == "4b9256f81e2adceb39d49211bb7b81274f6b0d35b82ed028bae8566094826404"
+    )
+
+
 def test_cache_round_trip_and_torn_file(tmp_path: Path) -> None:
     cache = ResponseCache(tmp_path)
     resp = ChatResponse(text="t", model="m", tokens_in=3, tokens_out=1, latency_ms=42.0)

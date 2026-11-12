@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import time
 from typing import Any
 
@@ -13,12 +12,14 @@ from evalproof.providers.base import (
     ChatResponse,
     Message,
     ProviderError,
+    merge_headers,
+    read_key,
     split_system,
     with_retries,
 )
 
 DEFAULT_BASE_URL = "https://api.anthropic.com"
-API_VERSION = "2023-06-01"
+API_VERSION = "2023-06-01"  # override per suite with ``headers: {anthropic-version: ...}``
 
 
 class AnthropicProvider:
@@ -32,17 +33,22 @@ class AnthropicProvider:
         timeout_s: float = 120.0,
         client: httpx.Client | None = None,
         api_key: str | None = None,
+        api_key_env: str | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         self.model = model
         self.base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
-        key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-        if not key:
-            raise ProviderError("anthropic: set ANTHROPIC_API_KEY to use this provider")
-        self._headers = {
-            "x-api-key": key,
-            "anthropic-version": API_VERSION,
-            "content-type": "application/json",
-        }
+        key = read_key(
+            "anthropic", api_key_env or "ANTHROPIC_API_KEY", required=True, api_key=api_key
+        )
+        self._headers = merge_headers(
+            {
+                "x-api-key": key,
+                "anthropic-version": API_VERSION,
+                "content-type": "application/json",
+            },
+            headers,
+        )
         self._client = client or httpx.Client(timeout=timeout_s)
 
     def payload(self, messages: list[Message], params: GenerationParams) -> dict[str, Any]:
@@ -50,9 +56,12 @@ class AnthropicProvider:
         body: dict[str, Any] = {
             "model": self.model,
             "max_tokens": params.max_tokens,
-            "temperature": params.temperature,
             "messages": [m.model_dump() for m in rest],
         }
+        # Current Claude models answer a temperature (or top_p, top_k) with HTTP 400, so it
+        # goes out only when the suite asks for it. There is no seed parameter at all.
+        if "temperature" in params.model_fields_set:
+            body["temperature"] = params.temperature
         if system:
             body["system"] = system
         body.update(params.extra)
@@ -74,6 +83,17 @@ class AnthropicProvider:
         data = resp.json()
         blocks = data.get("content") or []
         text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+        stop_reason = data.get("stop_reason")
+        if stop_reason == "refusal":
+            details = data.get("stop_details")
+            category = details.get("category") if isinstance(details, dict) else None
+            raise ProviderError(f"anthropic: refused ({category or 'no category'})")
+        if stop_reason == "max_tokens" and not text:
+            # Adaptive thinking spends output tokens inside max_tokens, so a small budget can
+            # be used up before the first word of the answer.
+            raise ProviderError(
+                "anthropic: max_tokens reached before any text; raise params.max_tokens"
+            )
         usage = data.get("usage") or {}
         return ChatResponse(
             text=text,

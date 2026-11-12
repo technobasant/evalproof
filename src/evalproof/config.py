@@ -44,8 +44,24 @@ class GenerationParams(BaseModel):
 
 
 class TargetConfig(BaseModel):
-    """A model or system to call: ``ollama:<model>``, ``anthropic:<model>``, ``openai:<model>``,
-    ``python:<module>:<function>`` or an ``http(s)://`` endpoint."""
+    """A model or system to call. ``target`` is one of:
+
+    * ``ollama:<model>`` or ``anthropic:<model>``, the two native adapters;
+    * ``<profile>:<model>`` for an OpenAI-compatible service: ``openai``, ``azure``,
+      ``gemini``, ``mistral``, ``groq``, ``together``, ``fireworks``, ``deepseek``, ``xai``,
+      ``openrouter``, ``cerebras``, ``vllm``, ``lmstudio``, ``llamacpp``, or
+      ``openai-compatible`` for any other server (it needs ``base_url``). The model name is
+      everything after the first colon, so ``openrouter:anthropic/claude-sonnet-4.5`` works;
+    * ``python:<module>:<function>``;
+    * an ``http(s)://`` endpoint.
+
+    ``api_key_env`` names the environment variable that holds the key, replacing the
+    provider's usual one. ``headers`` are extra HTTP headers for every provider call (for
+    example an ``anthropic-version`` override or a gateway routing header). Keys belong in
+    environment variables: ``headers`` never reaches a run file or the cache (and is not part
+    of the cache key), but a suite file is usually committed, so a secret placed in it would be
+    committed too.
+    """
 
     target: str
     label: str | None = None  # how reports name this system, e.g. "qwen3:1.7b + grounded prompt"
@@ -54,6 +70,8 @@ class TargetConfig(BaseModel):
     params: GenerationParams = Field(default_factory=GenerationParams)
     timeout_s: float = 120.0
     base_url: str | None = None
+    api_key_env: str | None = None
+    headers: dict[str, str] = Field(default_factory=dict)
     pricing: Pricing = Field(default_factory=Pricing)
 
     @property

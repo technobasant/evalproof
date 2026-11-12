@@ -19,7 +19,11 @@ SECRET = "sk-test-0123456789-do-not-leak"
 def _reply(request: httpx.Request) -> httpx.Response:
     question = json.loads(request.content)["messages"][-1]["content"]
     if request.url.path.endswith("/chat/completions"):
-        assert request.headers["authorization"] == f"Bearer {SECRET}"
+        if request.url.host.endswith("azure.com"):  # Azure takes the raw key in `api-key`
+            assert request.headers["api-key"] == SECRET
+            assert "authorization" not in request.headers
+        else:
+            assert request.headers["authorization"] == f"Bearer {SECRET}"
         return httpx.Response(
             200,
             json={
@@ -38,11 +42,18 @@ def _reply(request: httpx.Request) -> httpx.Response:
 
 
 @pytest.mark.parametrize(
-    ("target", "env"),
-    [("openai:gpt-test", "OPENAI_API_KEY"), ("anthropic:claude-test", "ANTHROPIC_API_KEY")],
+    ("target", "env", "base_url"),
+    [
+        ("openai:gpt-test", "OPENAI_API_KEY", None),
+        ("anthropic:claude-test", "ANTHROPIC_API_KEY", None),
+        ("groq:llama-3.3-70b-versatile", "GROQ_API_KEY", None),
+        ("openrouter:anthropic/claude-sonnet-4.5", "OPENROUTER_API_KEY", None),
+        ("azure:my-deployment", "AZURE_OPENAI_API_KEY", "https://res.openai.azure.com/openai/v1"),
+        ("openai-compatible:m", "TEAM_GATEWAY_KEY", "https://gateway.example.com/v1"),
+    ],
 )
 def test_api_keys_are_not_written_anywhere(
-    target: str, env: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    target: str, env: str, base_url: str | None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv(env, SECRET)
     (tmp_path / "cases.jsonl").write_text(
@@ -53,12 +64,15 @@ def test_api_keys_are_not_written_anywhere(
         + "\n",
         "utf-8",
     )
+    system = [f"  target: {target}", "  prompt_template: '{question}'"]
+    if base_url:
+        system.append(f"  base_url: {base_url}")
+    if target.startswith("openai-compatible"):
+        system.append(f"  api_key_env: {env}")  # the suite names the variable, never the value
     (tmp_path / "suite.yaml").write_text(
-        "name: leak\n"
-        "dataset: cases.jsonl\n"
-        f"system:\n  target: {target}\n  prompt_template: '{{question}}'\n"
-        "scorers:\n  - {name: exact, type: exact_match}\n"
-        "cache_dir: cache\n",
+        "name: leak\ndataset: cases.jsonl\nsystem:\n"
+        + "\n".join(system)
+        + "\nscorers:\n  - {name: exact, type: exact_match}\ncache_dir: cache\n",
         "utf-8",
     )
     run = run_suite(load_config(tmp_path / "suite.yaml"), client=mock_client(_reply))

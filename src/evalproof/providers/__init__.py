@@ -14,14 +14,18 @@ from evalproof.providers.base import (
     with_retries,
 )
 from evalproof.providers.ollama import OllamaProvider
-from evalproof.providers.openai import OpenAIProvider
+from evalproof.providers.openai import OpenAICompatibleProvider, OpenAIProvider
+from evalproof.providers.profiles import PROFILES, Profile
 
 __all__ = [
+    "PROFILES",
     "AnthropicProvider",
     "ChatResponse",
     "Message",
     "OllamaProvider",
+    "OpenAICompatibleProvider",
     "OpenAIProvider",
+    "Profile",
     "Provider",
     "ProviderError",
     "make_provider",
@@ -29,7 +33,7 @@ __all__ = [
     "with_retries",
 ]
 
-LLM_PROVIDERS = {"ollama", "anthropic", "openai"}
+LLM_PROVIDERS = {"ollama", "anthropic", *PROFILES}
 
 
 def parse_target(target: str) -> tuple[str, str]:
@@ -43,12 +47,33 @@ def parse_target(target: str) -> tuple[str, str]:
 
 
 def make_provider(cfg: TargetConfig, client: httpx.Client | None = None) -> Provider:
+    """Native adapters first (``ollama``, ``anthropic``), then the OpenAI-compatible profiles."""
     provider, model = parse_target(cfg.target)
-    kwargs = {"base_url": cfg.base_url, "timeout_s": cfg.timeout_s, "client": client}
     if provider == "ollama":
-        return OllamaProvider(model, **kwargs)  # type: ignore[arg-type]
+        return OllamaProvider(
+            model,
+            base_url=cfg.base_url,
+            timeout_s=cfg.timeout_s,
+            client=client,
+            headers=cfg.headers,
+        )
     if provider == "anthropic":
-        return AnthropicProvider(model, **kwargs)  # type: ignore[arg-type]
-    if provider == "openai":
-        return OpenAIProvider(model, **kwargs)  # type: ignore[arg-type]
+        return AnthropicProvider(
+            model,
+            base_url=cfg.base_url,
+            timeout_s=cfg.timeout_s,
+            client=client,
+            api_key_env=cfg.api_key_env,
+            headers=cfg.headers,
+        )
+    if provider in PROFILES:
+        return OpenAICompatibleProvider(
+            PROFILES[provider],
+            model,
+            base_url=cfg.base_url,
+            timeout_s=cfg.timeout_s,
+            client=client,
+            api_key_env=cfg.api_key_env,
+            headers=cfg.headers,
+        )
     raise ProviderError(f"unknown provider {provider!r}; expected one of {sorted(LLM_PROVIDERS)}")
