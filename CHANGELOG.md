@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-11-13
+
 ### Added
 
 - `claude-code:<model>` and `codex:<model>` providers: run your own logged-in Claude Code or
@@ -21,8 +23,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   uses the subscription login or its own API key variable; `evalproof doctor` prints the mode
   in effect and warns when `api-key` has no key to use. `api_key_env` still wins.
 - `evalproof doctor [suite.yaml]`: reports each CLI's path, version, login mode and the
-  isolation flags it will use, without a model call, and exits 1 when a target is not usable.
-  It prints no account details.
+  isolation flags it will use, without a model call, and exits 1 when a target of the suite
+  is not usable. Without a suite it surveys the installed CLIs and exits 1 only when none is
+  usable. It prints no account details.
 - Run facts for CLI targets in `runner.environment`: `{judge,system}_cli`,
   `{judge,system}_cli_version`, `{judge,system}_isolation` and `{judge,system}_model_resolved`
   (the model ids that answered, sorted, cached replies included). The response cache keys on
@@ -63,6 +66,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - `runner.environment` records `judge_target` and `system_target` for every model target (not
   only CLI ones), and the system target it records is the one in effect, with any override
   applied.
+- The gate's "too few paired cases" reason now says how to fix it (add cases, or lower
+  `gate.min_cases`).
 
 ## [0.3.0] — 2026-11-12
 
@@ -239,7 +244,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/technobasant/evalproof/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/technobasant/evalproof/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/technobasant/evalproof/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/technobasant/evalproof/compare/v0.1.2...v0.2.0

@@ -469,7 +469,7 @@ The composite action runs `compare --gate`, appends the report to the job summar
 fails the job on exit codes 1, 3 or 4:
 
 ```yaml
-- uses: technobasant/evalproof@v0.3.0
+- uses: technobasant/evalproof@v0.4.0
   with:
     baseline: eval/baseline.json     # produced on main, e.g. as a build artifact
     candidate: eval/candidate.json   # produced on this branch
