@@ -118,7 +118,9 @@ The target is `<provider>:<model>`; the model name is everything after the first
 profiles ([`providers/profiles.py`](src/evalproof/providers/profiles.py), each row cites the
 provider's documentation). Plain HTTP throughout, no vendor SDK. Two more targets run a coding
 agent you already have logged in, `claude-code` and `codex`: see
-[Use your Claude Code or Codex login](#use-your-claude-code-or-codex-login).
+[Use your Claude Code or Codex login](#use-your-claude-code-or-codex-login). Three experimental
+ones run OpenCode, Cursor and GitHub Copilot the same way: see
+[Experimental providers](#experimental-providers).
 
 | Provider | Example target | Key variable | Where |
 |---|---|---|---|
@@ -141,6 +143,9 @@ agent you already have logged in, `claude-code` and `codex`: see
 | `openai-compatible` | `openai-compatible:<model>` | optional, via `api_key_env` | any server, needs `base_url` |
 | `claude-code` | `claude-code:haiku` | none: your Claude Code login | local CLI, see below |
 | `codex` | `codex:gpt-6-luna` | none: your ChatGPT login | local CLI, see below |
+| `opencode` | `opencode:ollama/qwen3:8b` | none: OpenCode's own login, per model provider | local CLI, experimental |
+| `cursor` | `cursor:auto` | none: your Cursor login | local CLI, experimental |
+| `copilot` | `copilot:gpt-5` | none: your GitHub Copilot login | local CLI, experimental |
 
 ```yaml
 system:
@@ -245,7 +250,58 @@ it is the same model either way. `evalproof doctor` prints the mode in effect an
   evals. For CI or team-wide use, use an API key (`EVALPROOF_CLI_AUTH=api-key`, or
   `api_key_env`). See Anthropic's
   [legal and compliance page](https://code.claude.com/docs/en/legal-and-compliance). Nothing
-  uses a CLI unless a suite names a `claude-code:` or `codex:` target.
+  uses a CLI unless a suite names a `claude-code:` or `codex:` target (or an experimental one,
+  below).
+
+### Experimental providers
+
+`opencode:`, `cursor:` and `copilot:` follow the same rules as the two above: your own logged-in
+binary, run as a subprocess in a fresh empty directory, its API-key variable removed from the
+child's environment unless `api_key_env` names one, a bounded runtime, and the CLI, its version
+and an isolation tag (`opencode/0`, `cursor/0`, `copilot/0`) in the run and in the cache key.
+They are experimental because their isolation is less proven than Claude Code's and Codex's.
+Each prints `evalproof: <name> provider is experimental` on stderr the first time it is used in
+a process. Like the other two they ignore `temperature`, `seed` and `max_tokens`, and
+`evalproof doctor` without a suite lists each of them whose binary is on `PATH`. What was
+checked, and what was not:
+
+* **`opencode:<provider>/<model>`** runs `opencode run --standalone --archived --format json`
+  with a custom agent that has every tool off and every permission denied, your system text as
+  that agent's prompt, and project config, the global config directory and the Claude Code
+  compatibility files switched off. The prompt is on stdin. *Verified* only against local
+  ollama models (`qwen3:8b`, a handful of calls): no tool event, a canary `AGENTS.md` in the
+  project not read, a canary `AGENTS.md` in the global config directory read by default and not
+  read with these settings, the parser and the error path. *Not verified:* any hosted model;
+  whether `~/.claude/CLAUDE.md` is read (that test was inconclusive); whether the empty
+  `OPENCODE_CONFIG_DIR` hides a login stored there; the token counts (input adds cache reads
+  and writes, output adds reasoning, summed per field name). OpenCode has no single login, so
+  `doctor` prints `auth: not checked`. Only `OPENCODE_API_KEY` is removed from the environment:
+  the key of the model's own provider (`ANTHROPIC_API_KEY` for `opencode:anthropic/...`) is
+  left, because naming that provider in the model id is choosing its key, and removing it would
+  break CI. `--archived` keeps a session out of OpenCode's lists but does not delete it, so
+  sessions accumulate in OpenCode's data directory (each run is a private `--standalone`
+  server in a temporary project); prune them yourself.
+* **`cursor:<model>`** runs `cursor-agent -p --mode ask --trust` with an empty `--workspace`.
+  *Not verified:* Cursor was not logged in on the test machine, so no call succeeded. The flags
+  come from the CLI's help and documentation, and the parser from its source; it is lenient (a
+  JSON result object, an array of events, terminal noise around it) and an unexpected shape
+  fails with a message that says what was expected. The empty workspace is the only isolation:
+  no flag ignores rules files, user-level rules were not checked, and whether ask mode really
+  has no tools is untested. There is no system-prompt option, so your system text goes in front
+  of the prompt under a heading, and the prompt is an argument (nothing says the CLI reads
+  stdin), so it is visible in `ps` while the call runs and a prompt over 100,000 bytes is
+  refused. The key variable is `CURSOR_API_KEY`, passed through the environment, never as
+  `--api-key`. `doctor` reads `cursor-agent about` for the login state (`status` hung) and
+  prints no account.
+* **`copilot:<model>`** runs `copilot -s --no-auto-update --no-ask-user --available-tools= -p`.
+  *Not verified:* Copilot CLI was not installed on the test machine; every flag comes from
+  GitHub's documentation. `--available-tools=` is an allow-list with nothing in it, the most
+  restrictive documented tool option; whether the CLI accepts an empty list was not tried. No
+  `--allow-*` flag is ever passed, so a tool that needs approval cannot get it. The reply is
+  plain text, so token counts are 0. `COPILOT_HOME` is not redirected, so user-level Copilot
+  instructions may still be read. System text and prompt travel as for Cursor. Only
+  `COPILOT_GITHUB_TOKEN` is removed; `GH_TOKEN` and `GITHUB_TOKEN` are left because `gh` and CI
+  set them for other reasons. `doctor` prints `auth: not checked`.
 
 ## Concepts
 

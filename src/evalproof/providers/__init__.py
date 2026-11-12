@@ -11,6 +11,12 @@ from evalproof.providers.agent_cli import (
     ClaudeCodeProvider,
     CodexProvider,
 )
+from evalproof.providers.agent_cli_experimental import (
+    EXPERIMENTAL_PROVIDERS,
+    CopilotProvider,
+    CursorProvider,
+    OpenCodeProvider,
+)
 from evalproof.providers.anthropic import AnthropicProvider
 from evalproof.providers.base import (
     ChatResponse,
@@ -26,16 +32,20 @@ from evalproof.providers.profiles import PROFILES, Profile
 
 __all__ = [
     "CLI_PROVIDERS",
+    "EXPERIMENTAL_PROVIDERS",
     "PROFILES",
     "AgentCLIProvider",
     "AnthropicProvider",
     "ChatResponse",
     "ClaudeCodeProvider",
     "CodexProvider",
+    "CopilotProvider",
+    "CursorProvider",
     "Message",
     "OllamaProvider",
     "OpenAICompatibleProvider",
     "OpenAIProvider",
+    "OpenCodeProvider",
     "Profile",
     "Provider",
     "ProviderError",
@@ -44,6 +54,12 @@ __all__ = [
     "parse_target",
     "with_retries",
 ]
+
+# The experimental CLI providers join the registry here, not in ``agent_cli``: that module is
+# imported by the experimental one, so registering from there would be a circular import. Every
+# user of ``CLI_PROVIDERS`` (``make_provider``, ``cli_facts``, ``doctor``) imports this package
+# first, so the dict is complete before any of them reads it.
+CLI_PROVIDERS.update(EXPERIMENTAL_PROVIDERS)
 
 LLM_PROVIDERS = {"ollama", "anthropic", *PROFILES, *CLI_PROVIDERS}
 
@@ -60,7 +76,8 @@ def parse_target(target: str) -> tuple[str, str]:
 
 def make_provider(cfg: TargetConfig, client: httpx.Client | None = None) -> Provider:
     """Native adapters first (``ollama``, ``anthropic``), then the coding-agent CLIs
-    (``claude-code``, ``codex``), then the OpenAI-compatible profiles."""
+    (``claude-code``, ``codex``, and the experimental ``opencode``, ``cursor``, ``copilot``),
+    then the OpenAI-compatible profiles."""
     provider, model = parse_target(cfg.target)
     if provider == "ollama":
         return OllamaProvider(
