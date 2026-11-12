@@ -180,6 +180,7 @@ class AgentCLIProvider:
     isolation: str  # bump when the flag set changes: it is part of the cache key and the gate
     key_var: str  # the variable the CLI reads its API key from
     strip_vars: tuple[str, ...]  # key variables removed in login mode (the subscription login)
+    key_alias: ClassVar[str | None] = None  # in api-key mode, copied into key_var when unset
     extra_env: ClassVar[dict[str, str]]
 
     def __init__(
@@ -239,6 +240,10 @@ class AgentCLIProvider:
             env = {k: v for k, v in os.environ.items() if k not in self.strip_vars}
         else:
             env = dict(os.environ)
+            # A key set under the vendor's usual name also reaches a CLI that reads another one.
+            alias = self.key_alias
+            if alias and not env.get(self.key_var) and env.get(alias):
+                env[self.key_var] = env[alias]
         env.update(self.extra_env)
         if self._api_key:
             env[self.key_var] = self._api_key
@@ -423,6 +428,8 @@ class CodexProvider(AgentCLIProvider):
     isolation = "codex/1"
     key_var = "CODEX_API_KEY"
     strip_vars = ("OPENAI_API_KEY", "CODEX_API_KEY")
+    # `codex exec` reads CODEX_API_KEY; CI secrets are usually named OPENAI_API_KEY.
+    key_alias = "OPENAI_API_KEY"
     extra_env: ClassVar[dict[str, str]] = {}
 
     def reasoning_effort(self, params: GenerationParams) -> str | None:

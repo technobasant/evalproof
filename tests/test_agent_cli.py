@@ -305,6 +305,28 @@ def test_cli_auth_api_key_keeps_the_cli_key_variables(
     assert seen["CODEX_API_KEY"] == "synthetic-CODEX_API_KEY"
 
 
+def test_cli_auth_api_key_hands_codex_an_openai_key(
+    claude: FakeCLI, codex: FakeCLI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for var in KEY_VARS:
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv(AUTH_ENV, "api-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "synthetic-openai")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "synthetic-token")
+    codex_provider().chat(USER, PARAMS)
+    claude_provider().chat(USER, PARAMS)
+    # codex exec reads CODEX_API_KEY, so the OpenAI key is copied there.
+    assert codex.last()["env"]["CODEX_API_KEY"] == "synthetic-openai"
+    # Claude has no alias: a token is never copied into the API-key variable.
+    assert claude.last()["env"]["ANTHROPIC_API_KEY"] is None
+    monkeypatch.setenv("CODEX_API_KEY", "synthetic-codex")
+    codex_provider().chat(USER, PARAMS)
+    assert codex.last()["env"]["CODEX_API_KEY"] == "synthetic-codex"
+    monkeypatch.setenv(AUTH_ENV, "login")
+    codex_provider().chat(USER, PARAMS)
+    assert codex.last()["env"]["CODEX_API_KEY"] is None
+
+
 def test_cli_auth_rejects_any_other_value(
     claude: FakeCLI, codex: FakeCLI, monkeypatch: pytest.MonkeyPatch
 ) -> None:
