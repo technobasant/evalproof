@@ -114,5 +114,17 @@ def run_doctor(suite: str | None, out: TextIO | None = None) -> int:
         out.write("no coding-agent CLI targets in this suite; nothing to check\n")
         return 0
     results = [check_target(cfg, roles, out) for cfg, roles in targets]
+    if suite is None:
+        # A survey of the machine: fine when any CLI is usable; the others are listed.
+        names = [parse_target(cfg.target)[0] for cfg, _ in targets]
+        ready = [n for n, ok in zip(names, results, strict=True) if ok]
+        missing = [n for n, ok in zip(names, results, strict=True) if not ok]
+        if ready:
+            out.write(f"ready: {', '.join(ready)}\n")
+            if missing:
+                out.write(f"not ready (unused unless a suite names it): {', '.join(missing)}\n")
+            return 0
+        out.write("not ready: no coding-agent CLI is usable; fix the problems above\n")
+        return 1
     out.write("ok\n" if all(results) else "not ready: fix the problems above\n")
     return 0 if all(results) else 1

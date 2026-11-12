@@ -80,7 +80,7 @@ def test_doctor_without_a_suite_checks_both_clis(both: tuple[FakeCLI, FakeCLI]) 
     assert "--tools ''" in text and "--disable shell_tool" in text
     assert "--disable sleep_tool --disable view_image" in text
     assert "--dangerously-skip-permissions" not in text
-    assert text.rstrip().endswith("ok")
+    assert text.rstrip().endswith("ready: claude-code, codex")
     # A free check: nothing was asked of a model.
     assert not both[0].calls() and not both[1].calls()
 

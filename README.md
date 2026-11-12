@@ -189,9 +189,10 @@ system:
 concurrency: 4
 ```
 
-Run `evalproof doctor suite.yaml` first (without a suite it checks both CLIs). It prints each
-CLI's path, version, login mode and the isolation flags it will pass, and exits 1 if a target
-is not usable. It makes no model call.
+Run `evalproof doctor suite.yaml` first. It prints each CLI's path, version, login mode and
+the isolation flags it will pass, and exits 1 if a target of the suite is not usable. Without a
+suite it surveys every CLI it knows that is installed, and exits 1 only when none is usable. It
+makes no model call.
 
 evalproof runs your own `claude` or `codex` binary as a subprocess, sends the prompt on stdin
 and reads the JSON it prints. It never reads a token file or the keychain. The environment

@@ -736,7 +736,7 @@ def test_doctor_without_a_suite_lists_the_experimental_clis_that_are_installed(
     only_fakes_on_path(tmp_path, monkeypatch)  # no copilot on PATH
     assert installed_experimental() == ["opencode:<model>", "cursor:<model>"]
     code, text = doctor()
-    assert code == 0 and text.rstrip().endswith("ok")
+    assert code == 0 and text.rstrip().endswith("ready: claude-code, codex, opencode, cursor")
     assert "\nopencode\n" in f"\n{text}" and "\ncursor\n" in f"\n{text}"
     assert "copilot" not in text
     block = section(text, "opencode")
@@ -792,7 +792,11 @@ def test_doctor_reports_cursor_when_not_logged_in(
     )
     only_fakes_on_path(tmp_path, monkeypatch)
     code, text = doctor()
-    assert code == 1 and "not ready" in text
+    # Without a suite doctor surveys the machine: claude-code and codex are usable, so it passes
+    # and names cursor as not ready.
+    assert code == 0
+    assert "ready: claude-code, codex" in text
+    assert "not ready (unused unless a suite names it): cursor" in text
     assert "auth: not logged in; run `cursor-agent login` or set CURSOR_API_KEY" in text
 
 
