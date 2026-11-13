@@ -29,22 +29,129 @@ evalproof:
 3. **compares runs on paired cases** — exact McNemar for pass/fail, paired bootstrap for
    scores;
 4. **gates CI** only when a drop is both larger than your tolerance *and* statistically
-   significant, plus latency and cost budgets, with distinct exit codes.
+   significant, plus latency and cost budgets, with distinct exit codes;
+5. **checks the run files it gates** — `verify` proves, with no model call, that a committed
+   run was made with this suite and covers the dataset as it is now.
 
 It is local-first: Ollama is the default, every major hosted provider is one `target:` line
-away ([Providers](#providers)), and every model call is cached by content so re-runs are free
-and reproducible.
+away ([Providers](#providers)), a logged-in Claude Code or Codex can be the judge with no API
+key, and every model call is cached by content so re-runs are free and reproducible. Results
+from promptfoo, Inspect, DeepEval and lm-eval can be [imported](#import-results-from-other-tools)
+and gated without re-running them.
 
 ## Install
 
+evalproof is a command-line tool and a Python library, published on
+[PyPI](https://pypi.org/project/evalproof/). It needs Python 3.11 to 3.14 and has four runtime
+dependencies (httpx, numpy, pydantic, PyYAML); no vendor SDK, no optional extras.
+
+**Run it without installing** (needs [uv](https://docs.astral.sh/uv/)):
+
 ```bash
-pip install evalproof          # or: uv add evalproof
-uv tool install evalproof      # just the CLI
+uvx evalproof --version
+uvx evalproof@0.5.1 init          # pin a version
 ```
 
-Python 3.11 to 3.14. `compare`, `calibrate` and `report` work on run files and need no
-model. `run` needs a system to evaluate: a Python function, an HTTP endpoint, a local model
-(Ollama, vLLM, LM Studio, llama.cpp), or a key for a hosted provider.
+**Install the CLI** on your `PATH`, isolated from your projects:
+
+```bash
+uv tool install evalproof         # or: pipx install evalproof
+evalproof --version               # evalproof 0.5.1
+```
+
+**Add it to a project**, to call it from Python or pin it with the project's other dev tools:
+
+```bash
+uv add --dev evalproof            # or: pip install evalproof
+uv run evalproof --version
+```
+
+**Upgrade** with `uv tool upgrade evalproof`, `pipx upgrade evalproof` or
+`pip install -U evalproof`. Run files from older versions keep working; see the
+[changelog](CHANGELOG.md) for what changed.
+
+**In GitHub Actions**, no install step is needed: the composite action
+`technobasant/evalproof@v0.5.1` runs the evalproof of the tag you pin ([In CI](#in-ci)).
+
+What else you need depends on what you run:
+
+| To | You need |
+|---|---|
+| `compare`, `calibrate`, `verify`, `rehash`, `report`, `import`, `init`, `doctor` | nothing: they read run files and make no model call |
+| `run` against a Python function or an HTTP endpoint | that function or endpoint |
+| `run` on a local model | [Ollama](https://ollama.com) (the default), vLLM, LM Studio or llama.cpp, with the model pulled |
+| `run` on a hosted model | the provider's key in an environment variable ([Providers](#providers)) |
+| `run` with your Claude Code or Codex login | the `claude` or `codex` CLI on your `PATH`, logged in; check with `evalproof doctor` |
+
+## Use cases
+
+Each of these is a suite file and one or two commands. The [quickstart](#five-minute-quickstart)
+writes a starting suite.
+
+**Gate a prompt or model change in a pull request.** Run the suite on the base branch and on the
+change, then gate. The build fails only when the drop is larger than `max_drop` *and*
+significant, so a two-case wobble on 60 cases does not block a merge:
+
+```bash
+evalproof run evals/suite.yaml --out base.json                     # on main
+evalproof run evals/suite.yaml --out cand.json                     # on the branch
+evalproof compare base.json cand.json --suite evals/suite.yaml --gate --show 5
+```
+
+**Choose between two models or providers.** Run the same suite with `--system` and compare the
+two runs. The report gives the paired difference with its interval and p-value, the cases that
+got worse, p95 latency and cost, so "cheaper and not measurably worse" is something you can show:
+
+```bash
+evalproof run evals/suite.yaml --system anthropic:claude-sonnet-4-5 --label sonnet --out a.json
+evalproof run evals/suite.yaml --system groq:llama-3.3-70b-versatile --label llama --out b.json
+evalproof compare a.json b.json --suite evals/suite.yaml
+```
+
+**Find out whether your LLM judge can be trusted.** Label 30 to 50 cases by hand
+(`{"id": ..., "label": true}` per line) and calibrate. You get the judge's TPR, FPR and
+Cohen's κ, and its pass rate corrected for those errors, each with an interval:
+
+```bash
+evalproof calibrate runs/latest.json --judge-scorer judge --labels gold.jsonl
+```
+
+**Use your Claude Code or Codex subscription as the judge.** Set `judge.target:
+claude-code:haiku` (or `codex:<model>`), run `evalproof doctor evals/suite.yaml`, and run as
+usual. No API key and no per-call bill; the CLI runs isolated, with no tools and none of your
+project's instructions ([details](#use-your-claude-code-or-codex-login)).
+
+**Gate results you already have from another eval tool.** Import each side, then compare as
+usual. Nothing is re-run:
+
+```bash
+evalproof import promptfoo main/output.json --out base.json
+evalproof import promptfoo pr/output.json --out cand.json
+evalproof compare base.json cand.json --gate --metric pass
+```
+
+**Check a retrieval or RAG change.** Score the ranked ids with `recall_at_k`, `mrr` and `ndcg`
+and gate on the one that matters to you. Recall@5 does not move when the right document drops
+from rank 1 to rank 5; MRR and nDCG do ([`examples/retrieval`](examples/retrieval)).
+
+**Cases that must never fail, and a floor on the first run.** Tag the critical cases and set
+`gate.must_pass: [critical]` and `gate.min_pass_rate`. They need no baseline, so they work
+from the first run: `evalproof run evals/suite.yaml --gate` exits 1 when one fails
+([Checks without a baseline](#concepts)).
+
+**Hold latency and cost while you swap a model.** `gate.max_p95_latency_ms` and
+`gate.max_cost_usd` fail a change with exit 3, separate from a quality regression. On the
+measured run below, a prompt change that was not a significant quality drop still failed on
+latency.
+
+**Gate in CI with no model calls and no secrets.** `evalproof init --ci keyless` writes a
+workflow that compares the run file developers commit against the base branch's.
+The action runs `verify` first, so a stale run, a `--limit` run or a hand-edited
+deterministic score fails the job ([In CI](#in-ci)).
+
+**Test a non-LLM system the same way.** Any Python function (`python:module:func`) or HTTP
+endpoint can be the system, scored by deterministic scorers: a classifier, a router, a search
+service. The [offline example](#five-minute-quickstart) is a keyword router.
 
 ## What it found on a real run
 
@@ -402,9 +509,11 @@ gate: {metric: judge, max_drop: 0.03, alpha: 0.05, min_cases: 40, max_p95_latenc
 ```
 
 **Run** — `evalproof run suite.yaml` writes one self-describing JSON file: every case's
-output, latency, tokens and scores, plus the dataset hash, seed, Ollama version and model
-digests, and for a `claude-code` or `codex` target the CLI, its version and the model that
-answered.
+output, latency, tokens, cost and scores, plus the dataset hash, a hash of each case, a
+fingerprint of the suite (system, judge, scorers, seed), the Ollama version and model digests,
+and for a CLI target the CLI, its version, the isolation scheme and the model that answered.
+`verify` and `compare` read these, so a run file can be committed and checked later without
+running anything.
 
 **Scorers** — `exact_match`, `contains`, `regex` (accept/reject answer keys),
 `json_schema`, `numeric_tolerance`, `recall_at_k`, `mrr`, `ndcg`, and `llm_judge`: a strict
@@ -570,18 +679,23 @@ flowchart LR
   suite[suite.yaml] --> runner
   data[(cases.jsonl)] --> runner
   subgraph runner[evalproof run]
-    sys[system under test<br/>ollama · anthropic · openai-compatible<br/>python · http] --> scorers
+    sys[system under test<br/>ollama · anthropic · openai-compatible<br/>claude-code · codex CLI<br/>python · http] --> scorers
     scorers[scorers<br/>deterministic · retrieval · llm_judge]
     cache[(content-addressed<br/>cache)]
     sys <--> cache
     scorers <--> cache
   end
+  other[promptfoo · Inspect · DeepEval<br/>lm-eval · csv · jsonl] --> imp[evalproof import]
   runner --> run1[(baseline.json)]
   runner --> run2[(candidate.json)]
+  imp --> run1
+  imp --> run2
+  run2 --> ver[verify<br/>suite fingerprint · case hashes<br/>deterministic re-score]
   run1 --> cal[calibrate<br/>TPR · FPR · κ · ACC · PPI]
-  run1 --> cmp[compare<br/>McNemar · paired bootstrap]
+  run1 --> cmp[compare<br/>pair by case hash<br/>McNemar · paired bootstrap · Holm]
   run2 --> cmp
-  cmp --> gate{gate<br/>significant AND large?<br/>budgets?}
+  ver --> gate
+  cmp --> gate{gate<br/>significant AND large?<br/>must_pass · min_pass_rate<br/>budgets?}
   gate --> out[exit code + Markdown summary + JSON]
 ```
 
@@ -674,7 +788,13 @@ lm-eval you do not even need to do that: evalproof [imports their results](#impo
   printing a number.
 * The percentile-bootstrap p-value for continuous scores is an approximation; pass/fail
   metrics use the exact McNemar test.
-* Cost tracking needs a price table in the suite for hosted models.
+* Cost tracking needs a `pricing` table in the suite for hosted models; only `claude-code`
+  reports a cost of its own (an API-equivalent estimate under a subscription).
+* CLI targets (`claude-code`, `codex` and the experimental three) take no temperature or seed,
+  so their runs do not repeat exactly; the cache makes a re-run identical, `--no-cache` does not.
+* `verify` re-scores deterministic scorers only. It cannot check a model-judged score or that
+  the stored outputs are what the system really said, so treat a run file from someone you do
+  not trust as unverified, or run the suite in CI with a key.
 
 ## Roadmap
 
