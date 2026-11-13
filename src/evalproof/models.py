@@ -85,6 +85,10 @@ class CaseResult(BaseModel):
     # A short hash of the case as it was scored, so ``compare`` can tell a case that was edited
     # from one that was not. None in run files written before evalproof 0.5.
     case_hash: str | None = None
+    # The same without the case's tags, which label a case and don't change what the system is
+    # asked, so ``compare`` does not count a tag change as an edit. None in run files written by
+    # evalproof 0.5.0, which pair on ``case_hash``.
+    content_hash: str | None = None
 
 
 class RunInfo(BaseModel):

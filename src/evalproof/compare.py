@@ -212,13 +212,21 @@ def compare_runs(
     b_ids, c_ids = set(b_by), set(c_by)
     same_dataset = baseline.info.dataset_hash == candidate.info.dataset_hash
     comparable = same_dataset or (records_case_hashes(baseline) and records_case_hashes(candidate))
-    # A case is paired when both runs scored the same content. Without per-case hashes the
+    # A case is paired when both runs scored the same content. The content hash leaves out the
+    # tags, so a tag change is not an edit; run files from evalproof 0.5.0 carry only the case
+    # hash, which does include them, so pairing falls back to it. Without per-case hashes the
     # dataset hash is all there is: equal means every shared case is the same case, and when it
     # differs the gate refuses (``comparable`` is False), so the old pairing is only for display.
     paired: list[str] = []
     edited: list[str] = []
     for cid in sorted(b_ids & c_ids):
-        b_hash, c_hash = b_by[cid].case_hash, c_by[cid].case_hash
+        b, c = b_by[cid], c_by[cid]
+        b_hash: str | None
+        c_hash: str | None
+        if b.content_hash is not None and c.content_hash is not None:
+            b_hash, c_hash = b.content_hash, c.content_hash
+        else:
+            b_hash, c_hash = b.case_hash, c.case_hash
         if b_hash is not None and c_hash is not None and b_hash != c_hash:
             edited.append(cid)
         else:

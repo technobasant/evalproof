@@ -117,7 +117,8 @@ The browser app in [`app/`](app) runs locally too:
 | `evalproof init` | write a starter suite, a CI workflow and an agent skill; no model call |
 | `evalproof run SUITE` | run the suite and write a run file; `--gate` applies the baseline-free checks (`min_pass_rate`, `must_pass`); `--show N` lists N failed cases |
 | `evalproof compare BASE CAND` | compare two runs on paired cases; `--gate` turns the result into an exit code; `--show N` prints both answers for N regressed cases |
-| `evalproof verify RUN SUITE` | check, with no model call, that a run file was made with this suite and covers exactly the dataset's cases as they are now |
+| `evalproof verify RUN SUITE` | check, with no model call, that a run file was made with this suite, covers exactly the dataset's cases as they are now, and has the scores its deterministic scorers give the stored outputs |
+| `evalproof rehash RUN SUITE` | add per-case hashes to a run file written before 0.5, from the dataset it scored; no model call |
 | `evalproof report RUN` | print a run file's report |
 | `evalproof import FORMAT FILE` | turn another tool's results into a run file |
 | `evalproof calibrate RUN` | measure the judge against gold labels and correct its pass rate |
@@ -442,10 +443,18 @@ way (`--show N`, default 10; 0 hides the list).
 pairs two runs by id and hash. A case added since the baseline has no baseline score and is not
 compared. A case edited since the baseline (same id, new content) is excluded and listed in the
 report, so adding or editing cases never blocks the gate; the baseline catches up when the
-change is merged and its run file replaces the old one. A `--limit` run pairs with a full
-baseline on the cases it ran. Only when the dataset differs and one run predates per-case
+change is merged and its run file replaces the old one. Tags label a case and do not change what
+the system is asked, so adding or changing a tag is not an edit. A `--limit` run pairs with a
+full baseline on the cases it ran. Only when the dataset differs and one run predates per-case
 hashes (written before 0.5) can the cases that stayed the same not be told from the ones that
-changed, and the gate exits 4 asking for a fresh baseline. A dataset change is a warning.
+changed, and the gate exits 4. Fix it without a model call: run
+`evalproof rehash BASELINE SUITE`. That works when the cases the baseline scored are still the
+first ones in the dataset, unchanged (cases appended after them are fine), which the
+`dataset_hash` stored in the run file proves. When a case was edited or inserted, rehash on the
+dataset the baseline was made from (the base branch, before your change), or re-run the
+baseline with 0.5 or newer. Run files from 0.5.0 keep working: they have
+no tag-free hash, so pairing falls back to the case hash, which includes tags. A dataset change
+is a warning.
 
 **Checks without a baseline.** The significance test needs a baseline. These do not:
 
@@ -604,10 +613,14 @@ fails the job on exit codes 1, 3 or 4:
 
 With a `suite`, the action first runs `evalproof verify` on the candidate (set
 `verify-candidate: "false"` to skip it): the run file must have been made with that suite's
-system, judge, scorers and seed and cover exactly the dataset's cases as they are now. A stale
-file, a `--limit` run and an edited case fail the job with exit 4 before any comparison. It
-cannot prove the scores were not edited by hand; for pull requests from people you do not
-trust, review the run file or use the api-key mode.
+system, judge, scorers and seed and cover exactly the dataset's cases as they are now (a tag
+change counts, because `must_pass` reads tags from the run file). A stale file, a `--limit` run
+and an edited case fail the job with exit 4 before any comparison. It also scores the stored
+outputs again with the suite's scorers that need no model (`exact_match`, `contains`, `regex`,
+`json_schema`, `numeric_tolerance` and the retrieval scorers) and fails when a stored score
+differs, so a hand-edited deterministic score is caught. It cannot check model-judged scores or
+the stored outputs themselves; for pull requests from people you do not trust, review the run
+file or use the api-key mode.
 
 This repository's own CI runs the offline example on every commit and asserts that the
 gate returns 1 for the real regression and 0 for the noisy and refactored candidates.

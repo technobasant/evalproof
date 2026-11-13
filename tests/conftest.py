@@ -19,6 +19,7 @@ def make_run(
     dataset_hash: str = "h",
     latency: float = 10.0,
     case_hashes: bool | dict[str, str] = False,
+    content_hashes: bool | dict[str, str] = False,
     tags: dict[str, list[str]] | None = None,
     errors: set[str] | None = None,
 ) -> Run:
@@ -27,8 +28,9 @@ def make_run(
 
     ``case_hashes`` stamps per-case hashes the way evalproof 0.5 does: True gives every case
     the hash ``h-<id>``, a dict sets the hash of the ids it names. The default writes a run as
-    older evalproof did, with none. ``tags`` gives case tags by id; ``errors`` names the cases
-    whose system call errored."""
+    older evalproof did, with none. ``content_hashes`` does the same for the tag-free content
+    hash (``c-<id>``), so a run with ``case_hashes`` only is a 0.5.0 file. ``tags`` gives case
+    tags by id; ``errors`` names the cases whose system call errored."""
     results = []
     for cid, scores in outcomes.items():
         built: dict[str, Score] = {}
@@ -44,6 +46,11 @@ def make_run(
             if isinstance(case_hashes, dict)
             else (f"h-{cid}" if case_hashes else None)
         )
+        content_stamp = (
+            content_hashes.get(cid)
+            if isinstance(content_hashes, dict)
+            else (f"c-{cid}" if content_hashes else None)
+        )
         results.append(
             CaseResult(
                 case_id=cid,
@@ -55,6 +62,7 @@ def make_run(
                 ),
                 scores=built,
                 case_hash=stamp,
+                content_hash=content_stamp,
             )
         )
     info = RunInfo(

@@ -18,6 +18,7 @@ from evalproof.scorers.judge import DEFAULT_RUBRIC, LLMJudge, PairwiseResult, pa
 from evalproof.scorers.retrieval import MRR, NDCG, RecallAtK
 
 __all__ = [
+    "DETERMINISTIC_TYPES",
     "MRR",
     "NDCG",
     "Contains",
@@ -29,6 +30,7 @@ __all__ = [
     "RecallAtK",
     "Regex",
     "Scorer",
+    "is_deterministic",
     "make_scorer",
     "pairwise",
 ]
@@ -50,6 +52,15 @@ _SIMPLE: dict[str, Any] = {
     "mrr": MRR,
     "ndcg": NDCG,
 }
+
+# The scorer types that need no model call: the same output and case always score the same, so
+# ``evalproof verify`` can re-score a stored output and compare.
+DETERMINISTIC_TYPES = frozenset(_SIMPLE)
+
+
+def is_deterministic(cfg: ScorerConfig) -> bool:
+    """True when the scorer runs without a model, so its scores can be reproduced offline."""
+    return cfg.type in DETERMINISTIC_TYPES
 
 
 def make_scorer(

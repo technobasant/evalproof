@@ -4,6 +4,35 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+Upgrading: run files written by 0.5.0 keep working. They have no tag-free hash, so `compare`
+pairs them on the per-case hash as before, tags included; a run written by 0.5.1 pairs on the
+tag-free hash. The first time both the baseline and the candidate come from 0.5.1, adding a tag
+stops counting as an edit.
+
+### Fixed
+
+- Adding or changing a case's tags no longer counts as an edit in `compare`. Run files carry a
+  new per-case `content_hash`, the case hash without its tags, and cases are paired on it when
+  both runs have one (otherwise on `case_hash`, as in 0.5.0). Before, adding a `must_pass` tag
+  excluded that case from the comparison until the baseline was refreshed. `verify` still counts
+  a tag change, because `must_pass` reads tags from the run file, and its message now says so.
+
+### Added
+
+- `evalproof verify` scores the stored outputs again with the suite's scorers that need no
+  model (`exact_match`, `contains`, `regex`, `json_schema`, `numeric_tolerance`, `recall_at_k`,
+  `mrr`, `ndcg`) and fails, naming the cases, when a stored score differs: a score edited by
+  hand, or made by another scorer version. It says which scorers it re-scored, or that none
+  could be re-scored without a model call. Model-judged scores and the stored outputs
+  themselves still cannot be checked.
+- `evalproof rehash RUN SUITE [--out FILE]`: adds per-case hashes to a run file written before
+  0.5, with no model call, so it can be gated against a changed dataset. It works when the
+  cases the run scored are still the first ones in the suite's dataset, unchanged, which the
+  `dataset_hash` stored in the run file proves: the dataset the run scored, the same with cases
+  appended, or the dataset behind a `--limit` run. Otherwise it exits 4 and writes nothing. Scores, outputs and the suite hash
+  are untouched, so `verify` still wants a run made with 0.5 or newer. The gate's exit-4 message
+  for a baseline without hashes names the command.
+
 ## [0.5.0] — 2026-11-13
 
 Breaking, in the order a user is likely to hit them:

@@ -62,6 +62,13 @@ def case_hash(case: Case) -> str:
     return hashlib.sha256(canonical_json(case.model_dump(mode="json")).encode()).hexdigest()[:16]
 
 
+def content_hash(case: Case) -> str:
+    """Hash of a case's content without its tags, which label a case and don't change what the
+    system is asked. ``compare`` pairs on this, so adding a tag is not an edit."""
+    dump = case.model_dump(mode="json", exclude={"tags"})
+    return hashlib.sha256(canonical_json(dump).encode()).hexdigest()[:16]
+
+
 def dataset_hash(cases: list[Case]) -> str:
     """Hash of the cases as loaded; two runs on different data never compare silently."""
     h = hashlib.sha256()
