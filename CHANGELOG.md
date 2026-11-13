@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-11-13
+
 Breaking, in the order a user is likely to hit them:
 
 - Unknown keys in a suite are now errors (`extra="forbid"` on every config model). A typo such
@@ -17,6 +19,18 @@ Breaking, in the order a user is likely to hit them:
   Before, it exited 4.
 - `compare` no longer exits 4 because the dataset changed, when both runs carry per-case hashes
   (runs written by 0.5 and later do). Edited cases are excluded and listed instead.
+- The action, given a `suite`, runs `evalproof verify` on the candidate first and fails with
+  exit 4 when the committed run does not match the suite and its cases. A run file written by
+  0.4.x has no suite fingerprint and fails it: re-run the suite with 0.5 and commit the file,
+  or set `verify-candidate: "false"`.
+- A cost budget can trip where it did not: a `claude-code` system or judge with no `pricing`
+  now records the CLI's reported `total_cost_usd`, and the judge's cost counts toward
+  `max_cost_usd`, so a suite with `gate.max_cost_usd` can newly exit 3.
+
+Upgrading: run the suite with 0.5 on the base branch and commit `evals/runs/latest.json` there
+first. A 0.4.x baseline has no per-case hashes, so a pull request that also changes the dataset
+cannot be gated (exit 4) until the base branch has a 0.5 run file. Tags are part of a case's
+hash, so adding a `must_pass` tag to a case counts as an edit until the baseline is refreshed.
 
 ### Added
 
@@ -38,6 +52,9 @@ Breaking, in the order a user is likely to hit them:
   the run records as the call's cost when the suite gives no pricing for that target. Under a
   subscription login it is an API-equivalent estimate, not a bill. The judge's cost is now
   computed from its `pricing` and counts toward `max_cost_usd`.
+- On a continuous gated metric, `min_pass_rate` cannot gate (exit 4, naming the fix),
+  `max_new_failures` is skipped with a warning, and `must_pass` fails only an errored or
+  undecided case, with a warning.
 - `import --quiet` keeps the report off stdout. `compare` and `run --gate` print a warning
   when a `must_pass` tag matches no case.
 - `docs/specs/0.5.0-dev-workflow.md`.
@@ -349,7 +366,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/technobasant/evalproof/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/technobasant/evalproof/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/technobasant/evalproof/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/technobasant/evalproof/compare/v0.2.1...v0.3.0
