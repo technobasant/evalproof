@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError, model_validator
+
+from evalproof.dataset import canonical_json
 
 ScorerType = Literal[
     "exact_match",
@@ -177,6 +180,38 @@ class SuiteConfig(BaseModel):
     def resolve(self, path: str) -> Path:
         p = Path(path)
         return p if p.is_absolute() else Path(self.base_dir) / p
+
+
+def _target_identity(cfg: TargetConfig | None) -> dict[str, Any] | None:
+    """What decides a target's answers. ``label``, ``timeout_s``, ``headers``, ``api_key_env``
+    and ``pricing`` change how it is reported or reached, not what it says."""
+    if cfg is None:
+        return None
+    return {
+        "target": cfg.target,
+        "system_prompt": cfg.system_prompt,
+        "prompt_template": cfg.prompt_template,
+        "params": cfg.params.model_dump(mode="json"),
+        "base_url": cfg.base_url,
+    }
+
+
+def suite_fingerprint(cfg: SuiteConfig, system_cfg: TargetConfig | None = None) -> str:
+    """A short hash of what makes a run's scores: the system under test, the judge, every
+    scorer and the seed. ``system_cfg`` is the target that actually ran, overrides included;
+    it defaults to the suite's own.
+
+    The dataset is not in it (``evalproof verify`` checks it case by case), nor is anything that
+    only names or paces the run: the labels, timeouts, headers, key variable, pricing, gate,
+    cache directory, concurrency and suite name.
+    """
+    material = {
+        "system": _target_identity(system_cfg or cfg.system),
+        "judge": _target_identity(cfg.judge),
+        "scorers": [s.model_dump(mode="json") for s in cfg.scorers],
+        "seed": cfg.seed,
+    }
+    return hashlib.sha256(canonical_json(material).encode()).hexdigest()[:16]
 
 
 def load_config(path: str | Path) -> SuiteConfig:

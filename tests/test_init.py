@@ -151,6 +151,18 @@ def test_the_gate_step_passes_inputs_the_action_declares(
     assert given["suite"] == "evals/suite.yaml"
 
 
+def test_the_keyless_gate_verifies_the_candidate_against_the_suite(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys)
+    text = (tmp_path / WORKFLOW).read_text(encoding="utf-8")
+    wf = yaml.safe_load(text)
+    assert wf["jobs"]["gate"]["steps"][-1]["with"]["verify-candidate"] == "true"
+    header = text.split("name: evalproof")[0]  # the honest limits, up front
+    assert "evalproof verify" in header and "edited by hand" in header
+    assert "--ci api-key" in header
+
+
 def test_the_written_suite_loads_and_scores_its_own_cases(
     tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

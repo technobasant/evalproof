@@ -98,6 +98,10 @@ class RunInfo(BaseModel):
     evalproof_version: str
     seed: int
     environment: dict[str, str] = Field(default_factory=dict)
+    # Fingerprint of the system, judge, scorers and seed the run used (``suite_fingerprint``),
+    # so ``evalproof verify`` can tell whether a committed run matches the committed suite.
+    # None in run files written before evalproof 0.5 and in imported runs.
+    suite_hash: str | None = None
 
 
 class Run(BaseModel):

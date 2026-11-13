@@ -1,4 +1,4 @@
-"""Command line: ``evalproof init | run | compare | calibrate | report | pairwise``."""
+"""Command line: ``evalproof init | run | compare | verify | calibrate | report | pairwise``."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from evalproof.compare import compare_runs
 from evalproof.config import ConfigError, GateConfig, load_config
 from evalproof.dataset import DatasetError, load_dataset
 from evalproof.doctor import run_doctor
-from evalproof.gate import EXIT_PASS, EXIT_USAGE, decide
+from evalproof.gate import EXIT_CANNOT_GATE, EXIT_PASS, EXIT_USAGE, decide
 from evalproof.importers import EPOCHS, FORMATS, import_run
 from evalproof.models import CaseResult
 from evalproof.providers import ProviderError, make_provider
@@ -28,6 +28,7 @@ from evalproof.report import (
 from evalproof.runner import load_run, run_suite, save_run
 from evalproof.scaffold import CI_MODES, init_project
 from evalproof.scorers import pairwise
+from evalproof.verify import verify_markdown, verify_run
 
 
 def _emit(markdown: str, path: str | None) -> None:
@@ -117,6 +118,13 @@ def cmd_compare(args: argparse.Namespace) -> int:
     if args.gate and decision is not None:
         return decision.exit_code
     return EXIT_PASS
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    run = load_run(args.run)
+    result = verify_run(run, load_config(args.suite))
+    _emit(verify_markdown(result, args.run, args.suite), args.markdown)
+    return EXIT_PASS if result.ok else EXIT_CANNOT_GATE
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -344,6 +352,18 @@ def build_parser() -> argparse.ArgumentParser:
     rep.add_argument("run")
     rep.add_argument("--markdown")
     rep.set_defaults(func=cmd_report)
+
+    ver = sub.add_parser(
+        "verify",
+        help="check that a run file matches the suite and dataset, without calling a model",
+        description="Check that RUN was made with SUITE's system, judge, scorers and seed, and "
+        "scored exactly the dataset's cases as they are now. Makes no model call. Exit 0 when "
+        "it matches, 4 when it does not, 2 for a usage error.",
+    )
+    ver.add_argument("run")
+    ver.add_argument("suite")
+    ver.add_argument("--markdown", help="also append the verdict to this file")
+    ver.set_defaults(func=cmd_verify)
 
     dr = sub.add_parser(
         "doctor",
