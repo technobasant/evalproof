@@ -38,9 +38,13 @@ from evalproof.providers.base import TransientError
 from tests.fakecli import FakeCLI, claude_auth, claude_ok, codex_ok, install, reply
 from tests.fakecli_experimental import (
     ENV_KEYS,
+    copilot_events,
+    copilot_failure,
+    copilot_ok,
+    copilot_usage,
     cursor_about,
     cursor_ok,
-    cursor_result,
+    cursor_stream,
     install_experimental,
     only_fakes_on_path,
     opencode_events,
@@ -70,6 +74,8 @@ SPECS: dict[str, tuple[type[ExperimentalCLIProvider], str, str]] = {
     "cursor": (CursorProvider, "auto", "2026.02.27-e7d2ef6"),
     "copilot": (CopilotProvider, "gpt-5", "GitHub Copilot CLI 1.0.4"),
 }
+# The isolation tag of each: bumped when the flag set changes.
+ISOLATION = {"opencode": "opencode/0", "cursor": "cursor/1", "copilot": "copilot/1"}
 # The CLI's own key variable, and the variables of other tools that must be left alone.
 KEY_VARS = {
     "opencode": ("OPENCODE_API_KEY", ["ANTHROPIC_API_KEY"]),
@@ -94,7 +100,7 @@ def ok_reply(name: str, text: str = "OK") -> dict[str, Any]:
         return opencode_ok(text)
     if name == "cursor":
         return cursor_ok(text)
-    return reply(text + "\n")
+    return copilot_ok(text)
 
 
 @dataclass
@@ -223,7 +229,7 @@ def test_cursor_command_line_and_prompt(cursor: Case) -> None:
     assert argv[:-1] == [
         "-p",
         "--output-format",
-        "json",
+        "stream-json",
         "--mode",
         "ask",
         "--trust",
@@ -241,24 +247,55 @@ def test_cursor_command_line_and_prompt(cursor: Case) -> None:
     assert (resp.tokens_in, resp.tokens_out) == (120 + 30 + 4, 7)
 
 
-def test_copilot_command_line_and_prompt(copilot: Case) -> None:
+def test_cursor_denies_every_read_write_and_shell_in_the_workspace_it_runs_in(
+    cursor: Case,
+) -> None:
+    cursor.provider().chat(USER, PARAMS)
+    call = cursor.fake.last()
+    # The permission file is in the very directory cursor-agent was given as its workspace, and
+    # it is the only thing there.
+    assert list(call["cwd_tree"]) == [".cursor/cli.json"]
+    assert json.loads(call["cwd_tree"][".cursor/cli.json"]) == {
+        "permissions": {
+            "allow": [],
+            "deny": ["Read(**)", "Read(/**)", "Write(**)", "Write(/**)", "Shell(*)"],
+        }
+    }
+    assert same_path(call["argv"][-2], call["cwd"])
+    assert not Path(call["cwd"]).exists()  # removed with the call
+
+
+def test_copilot_command_line_and_stdin(copilot: Case) -> None:
     resp = copilot.provider().chat(USER, PARAMS)
     call = copilot.fake.last()
-    assert call["argv"] == [
-        "-s",
+    argv = call["argv"]
+    usage_path = argv[argv.index("--usage-output-file") + 1]
+    assert argv == [
         "--no-auto-update",
         "--no-ask-user",
-        "--available-tools=",
+        "--no-custom-instructions",
+        "--disable-builtin-mcps",
+        "--available-tools=evalproof-no-tools",
+        "--output-format",
+        "json",
+        "--usage-output-file",
+        usage_path,
         "--model",
         "gpt-5",
-        "-p",
-        frame_prompt(NEUTRAL_SYSTEM, "What is 2+2?"),
     ]
-    assert not BYPASS & set(call["argv"])
-    assert not any(a.startswith(("--allow", "--yolo")) for a in call["argv"])
-    assert call["stdin"] == ""
-    assert (resp.text, resp.model) == ("OK", "gpt-5")
-    assert (resp.tokens_in, resp.tokens_out) == (0, 0)  # text output has no usage
+    assert "-p" not in argv and "-s" not in argv and "--available-tools=" not in argv
+    assert not BYPASS & set(argv)
+    assert not any(a.startswith(("--allow", "--yolo")) for a in argv)
+    # The prompt goes on stdin, with the system text in front, and is nowhere in argv.
+    assert call["stdin"] == frame_prompt(NEUTRAL_SYSTEM, "What is 2+2?")
+    assert "What is 2+2?" not in " ".join(argv)
+    # The usage file is in the spare directory next to the working directory, not in it.
+    assert Path(usage_path).parent.name == "aux"
+    assert same_path(str(Path(usage_path).parent.parent), str(Path(call["cwd"]).parent))
+    assert call["cwd_files"] == [] and call["usage_path"] == usage_path
+    assert not Path(usage_path).exists()  # removed with the call
+    assert (resp.text, resp.model) == ("OK", "gpt-6-luna")  # the model that answered
+    assert (resp.tokens_in, resp.tokens_out) == (13, 7)
 
 
 def test_no_command_line_ever_has_a_bypass_flag(cli: Case) -> None:
@@ -304,11 +341,16 @@ def test_cursor_and_copilot_put_the_system_text_in_front_of_the_prompt(
     user = Message(role="user", content="--help")  # must not become a flag
     case.provider().chat([system, user], PARAMS)
     call = case.fake.last()
-    sent = call["argv"][-1]
-    assert sent == frame_prompt("Reply in French.", "--help")
+    expected = frame_prompt("Reply in French.", "--help")
+    if name == "cursor":  # an argument
+        sent = call["argv"][-1]
+        assert call["stdin"] == ""
+        assert "--help" not in call["argv"][:-1]
+    else:  # stdin
+        sent = call["stdin"]
+        assert "--help" not in call["argv"] and expected not in call["argv"]
+    assert sent == expected
     assert not sent.startswith("-") and "Reply in French." in sent
-    assert call["stdin"] == ""
-    assert "--help" not in call["argv"][:-1]
 
 
 def test_frame_prompt_never_starts_with_a_dash() -> None:
@@ -318,17 +360,19 @@ def test_frame_prompt_never_starts_with_a_dash() -> None:
 # -- size guards -----------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("name", ["cursor", "copilot"])
-def test_a_prompt_too_long_for_argv_is_refused_not_sent(
-    name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    case = make_case(name, tmp_path, monkeypatch)
+def test_a_prompt_too_long_for_argv_is_refused_not_sent(cursor: Case) -> None:
     big = [Message(role="user", content="x" * (ARGV_PROMPT_LIMIT + 1))]
     with pytest.raises(ProviderError, match=f"over {ARGV_PROMPT_LIMIT} bytes"):
-        case.provider().chat(big, PARAMS)
-    assert case.fake.calls() == []  # refused up front, and not retried
+        cursor.provider().chat(big, PARAMS)
+    assert cursor.fake.calls() == []  # refused up front, and not retried
     just_under = [Message(role="user", content="x" * (ARGV_PROMPT_LIMIT - 1000))]
-    assert case.provider().chat(just_under, PARAMS).text == "OK"
+    assert cursor.provider().chat(just_under, PARAMS).text == "OK"
+
+
+def test_copilot_takes_a_long_prompt_on_stdin(copilot: Case) -> None:
+    long_input = [Message(role="user", content="y" * 300_000)]
+    assert copilot.provider().chat(long_input, PARAMS).text == "OK"
+    assert len(copilot.fake.last()["stdin"]) > 300_000  # the framed prompt, whole
 
 
 def test_opencode_takes_a_long_prompt_on_stdin_but_not_a_huge_system_text(opencode: Case) -> None:
@@ -352,7 +396,9 @@ def test_the_working_directory_is_fresh_empty_and_removed(cli: Case) -> None:
     provider.chat(USER, PARAMS)
     provider.chat(USER, PARAMS)
     first, second = cli.fake.calls()
-    assert first["cwd_files"] == [] and second["cwd_files"] == []
+    # Empty, except for the permission config that cursor puts in its workspace.
+    expected = [".cursor"] if cli.name == "cursor" else []
+    assert first["cwd_files"] == expected and second["cwd_files"] == expected
     assert first["cwd"] != second["cwd"]
     assert not same_path(first["cwd"], str(Path.cwd()))
     assert not Path(first["cwd"]).exists() and not Path(second["cwd"]).exists()
@@ -553,27 +599,53 @@ def test_opencode_without_text_or_with_a_bad_exit(opencode: Case) -> None:
 # -- cursor output -------------------------------------------------------------------------------
 
 
+def test_cursor_reply_is_the_result_event_not_the_assistant_text(cursor: Case) -> None:
+    cursor.set_replies(reply(cursor_stream("the answer")))
+    resp = cursor.provider().chat(USER, PARAMS)
+    assert resp.text == "the answer"
+
+
 def test_cursor_result_without_usage_has_zero_tokens(cursor: Case) -> None:
     cursor.set_replies(cursor_ok("hello", with_usage=False))
     resp = cursor.provider().chat(USER, PARAMS)
     assert (resp.text, resp.tokens_in, resp.tokens_out) == ("hello", 0, 0)
 
 
-def test_cursor_accepts_an_event_array_and_terminal_noise(cursor: Case) -> None:
-    events = [
-        {"type": "system", "subtype": "init"},
-        json.loads(cursor_result("from an array")),
-    ]
-    cursor.set_replies(reply(json.dumps(events)))
-    assert cursor.provider().chat(USER, PARAMS).text == "from an array"
-    noisy = "\x1b[2K\x1b[Gthinking...\n" + cursor_result("after noise") + "\x1b[0m\n"
-    cursor.set_replies(reply(noisy))
+def test_cursor_ignores_terminal_noise_and_lines_that_are_not_events(cursor: Case) -> None:
+    noisy = "\x1b[2K\x1b[Gthinking...\n[1, 2]\n{not json\n" + cursor_stream("after noise")
+    cursor.set_replies(reply(noisy + "\x1b[0m\n"))
     assert cursor.provider().chat(USER, PARAMS).text == "after noise"
+
+
+@pytest.mark.parametrize(
+    ("calls", "kind"),
+    [
+        ([{"readToolCall": {"args": {"path": "/etc/hosts"}}}], "readToolCall"),
+        ([{"shellToolCall": {"args": {}}}, {"readToolCall": {}}], "shellToolCall"),
+        ([{}], "unknown"),
+    ],
+)
+def test_cursor_tool_call_means_the_isolation_broke(
+    cursor: Case, calls: list[dict[str, Any]], kind: str
+) -> None:
+    # A denied read still emits the event, and the reply is not trusted whatever it says.
+    cursor.set_replies(reply(cursor_stream("I read it.", tool_calls=calls)), cursor_ok())
+    with pytest.raises(ProviderError) as err:
+        cursor.provider().chat(USER, PARAMS)
+    assert f"cursor used a tool ({kind}); isolation broken" in str(err.value)
+    assert not isinstance(err.value, TransientError)
+    assert len(cursor.fake.calls()) == 1  # not retried
+
+
+def test_cursor_tool_call_event_without_a_tool_object_still_fails(cursor: Case) -> None:
+    cursor.set_replies(reply('{"type": "tool_call", "subtype": "started"}\n' + cursor_stream()))
+    with pytest.raises(ProviderError, match=r"cursor used a tool \(unknown\); isolation broken"):
+        cursor.provider().chat(USER, PARAMS)
 
 
 def test_cursor_is_error_result_is_a_failure_that_is_not_retried(cursor: Case) -> None:
     cursor.set_replies(
-        reply(cursor_result("model not available for this plan", is_error=True)), cursor_ok()
+        reply(cursor_stream("model not available for this plan", is_error=True)), cursor_ok()
     )
     with pytest.raises(ProviderError, match="model not available for this plan") as err:
         cursor.provider().chat(USER, PARAMS)
@@ -595,8 +667,10 @@ def test_cursor_auth_required_is_an_error_with_its_own_message(cursor: Case) -> 
         "just some text, not JSON\n",
         "",
         '{"type": "result", "result": {"nested": 1}}\n',
+        '{"result": "no type"}\n',
         "[1, 2, 3]\n",
         '{"type": "result", "result": "cut off mid-object\n',
+        '{"type": "assistant", "message": {"content": []}}\n',  # a stream with no result event
     ],
 )
 def test_cursor_unexpected_output_says_what_was_expected(cursor: Case, stdout: str) -> None:
@@ -605,7 +679,7 @@ def test_cursor_unexpected_output_says_what_was_expected(cursor: Case, stdout: s
         cursor.provider().chat(USER, PARAMS)
     message = str(err.value)
     assert "unexpected output from cursor-agent" in message
-    assert '"result"' in message and "--output-format json" in message
+    assert '"result"' in message and "--output-format stream-json" in message
     assert len(message) < 600
     assert len(cursor.fake.calls()) == 1
 
@@ -620,21 +694,173 @@ def test_cursor_unexpected_output_shows_only_the_start_of_a_long_one(cursor: Cas
 # -- copilot output --------------------------------------------------------------------------------
 
 
-def test_copilot_text_is_stripped_and_has_no_token_counts(copilot: Case) -> None:
-    copilot.set_replies(reply("\n  The answer is 4.\n\n"))
+def test_copilot_text_is_stripped_and_a_missing_usage_file_is_zero_tokens(copilot: Case) -> None:
+    copilot.set_replies(copilot_ok("\n  The answer is 4.\n\n", tokens=None))
     resp = copilot.provider().chat(USER, PARAMS)
     assert resp.text == "The answer is 4."
-    assert (resp.tokens_in, resp.tokens_out) == (0, 0)
+    assert (resp.tokens_in, resp.tokens_out) == (0, 0)  # no usage file: not an error
+
+
+def test_copilot_records_the_model_that_answered_not_the_one_asked_for(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # ``auto`` routes each call on its own; the reply says which model it got.
+    case = make_case("copilot", tmp_path, monkeypatch)
+    case.set_replies(copilot_ok("one", model="gpt-6-luna"), copilot_ok("two", model="mai-1-flash"))
+    provider = CopilotProvider("auto", sleep=no_sleep)
+    first, second = provider.chat(USER, PARAMS), provider.chat(USER, PARAMS)
+    assert (first.text, first.model) == ("one", "gpt-6-luna")
+    assert (second.text, second.model) == ("two", "mai-1-flash")
+    assert case.fake.calls()[0]["argv"][-1] == "auto"  # what was asked for
+
+
+def test_copilot_without_a_model_in_the_reply_falls_back_to_the_requested_one(
+    copilot: Case,
+) -> None:
+    copilot.set_replies(copilot_ok("hi", model=None, tokens=None))
+    assert copilot.provider().chat(USER, PARAMS).model == "gpt-5"
+    copilot.set_replies(reply(copilot_events("hi", model="")))  # an empty model id
+    assert copilot.provider().chat(USER, PARAMS).model == "gpt-5"
+
+
+def test_copilot_the_last_message_with_text_is_the_reply(copilot: Case) -> None:
+    extra = [{"type": "assistant.message", "data": {"content": "first draft", "toolRequests": []}}]
+    copilot.set_replies(reply(copilot_events("final", extra=extra)))
+    assert copilot.provider().chat(USER, PARAMS).text == "final"
+    # An empty message after the text (no content) does not replace it.
+    empty = {"type": "assistant.message", "data": {"content": "", "toolRequests": []}}
+    copilot.set_replies(reply(copilot_events("kept") + json.dumps(empty) + "\n"))
+    assert copilot.provider().chat(USER, PARAMS).text == "kept"
+
+
+def test_copilot_tokens_are_summed_over_the_models_in_the_usage_file(copilot: Case) -> None:
+    out = copilot_ok("hi")
+    out["usage_file"] = copilot_usage(**{"model-a": (100, 5), "model-b": (20, 3)})
+    copilot.set_replies(out)
+    resp = copilot.provider().chat(USER, PARAMS)
+    assert (resp.tokens_in, resp.tokens_out) == (120, 8)
+
+
+@pytest.mark.parametrize(
+    "usage_file",
+    [
+        "not json",
+        "[1, 2]",
+        "{}",
+        '{"modelMetrics": []}',
+        '{"modelMetrics": {"m": "x", "n": {"usage": 3}}}',
+    ],
+)
+def test_copilot_an_odd_usage_file_is_zero_tokens_and_never_a_failure(
+    copilot: Case, usage_file: str
+) -> None:
+    out = copilot_ok("fine")
+    out["usage_file"] = usage_file
+    copilot.set_replies(out)
+    resp = copilot.provider().chat(USER, PARAMS)
+    assert (resp.text, resp.tokens_in, resp.tokens_out) == ("fine", 0, 0)
+
+
+@pytest.mark.parametrize(
+    ("event", "tool"),
+    [
+        (
+            {
+                "type": "assistant.message",
+                "data": {"content": "", "toolRequests": [{"name": "view", "arguments": {}}]},
+            },
+            "view",
+        ),
+        (
+            {
+                "type": "assistant.message",
+                "data": {"content": "x", "toolRequests": [{"arguments": {}}]},
+            },
+            "unknown",
+        ),
+        ({"type": "tool.execution_start", "data": {"toolName": "bash"}}, "bash"),
+        ({"type": "tool.execution_complete", "data": {}}, "unknown"),
+    ],
+)
+def test_copilot_a_tool_request_or_run_means_the_isolation_broke(
+    copilot: Case, event: dict[str, Any], tool: str
+) -> None:
+    out = reply(copilot_events("The file says hello.", extra=[event]))
+    out["usage_file"] = copilot_usage(m=(1, 1))
+    copilot.set_replies(out, copilot_ok())
+    with pytest.raises(ProviderError) as err:
+        copilot.provider().chat(USER, PARAMS)
+    assert f"copilot used a tool ({tool}); isolation broken" in str(err.value)
+    assert not isinstance(err.value, TransientError)
+    assert len(copilot.fake.calls()) == 1  # not retried
+
+
+def test_copilot_session_error_is_a_failure_with_its_own_message(copilot: Case) -> None:
+    message = 'Execution failed: Model "claude-haiku-5.5" is not available.'
+    copilot.set_replies(copilot_failure(message), copilot_ok())
+    with pytest.raises(ProviderError) as err:
+        copilot.provider().chat(USER, PARAMS)
+    assert message in str(err.value)
+    assert not isinstance(err.value, TransientError)
+    assert len(copilot.fake.calls()) == 1  # not retried
+
+
+@pytest.mark.parametrize("message", ["Rate limit exceeded", "HTTP 429", "upstream returned 503"])
+def test_copilot_retries_a_rate_limit_or_a_server_error(copilot: Case, message: str) -> None:
+    copilot.set_replies(copilot_failure(message), copilot_ok("after retry"))
+    assert copilot.provider().chat(USER, PARAMS).text == "after retry"
+    assert len(copilot.fake.calls()) == 2
+
+
+def test_copilot_session_error_wins_even_with_exit_status_zero(copilot: Case) -> None:
+    copilot.set_replies(copilot_failure("the model said no", exit=0))
+    with pytest.raises(ProviderError, match="the model said no"):
+        copilot.provider().chat(USER, PARAMS)
 
 
 def test_copilot_empty_reply_and_bad_exit(copilot: Case) -> None:
-    copilot.set_replies(reply("\n", stderr="nothing to say"))
+    copilot.set_replies(reply(copilot_events("  \n"), stderr="nothing to say"))
     with pytest.raises(ProviderError, match="empty reply: nothing to say"):
         copilot.provider().chat(USER, PARAMS)
+    copilot.set_replies(reply("", stderr="no output at all"))
+    with pytest.raises(ProviderError, match="empty reply: no output at all"):
+        copilot.provider().chat(USER, PARAMS)
+    # A bad exit with no session.error says what the process said.
     copilot.set_replies(reply("", exit=1))
     with pytest.raises(ProviderError, match="exited with status 1"):
         copilot.provider().chat(USER, PARAMS)
-    assert len(copilot.fake.calls()) == 1
+    copilot.set_replies(reply("", stderr="crashed hard", exit=2))
+    with pytest.raises(ProviderError, match="crashed hard"):
+        copilot.provider().chat(USER, PARAMS)
+
+
+def test_copilot_ignores_lines_that_are_not_events(copilot: Case) -> None:
+    copilot.set_replies(reply("starting...\n[1]\n{broken\n" + copilot_events("fine")))
+    assert copilot.provider().chat(USER, PARAMS).text == "fine"
+
+
+def test_copilot_calls_from_threads_each_get_their_own_usage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Every call has its own spare directory, so concurrent calls on one provider do not share a
+    # usage file or any per-call state.
+    case = make_case("copilot", tmp_path, monkeypatch)
+    case.set_replies(copilot_ok("same", tokens=(40, 2)))
+    provider = case.provider()
+    results: list[tuple[str, int, int]] = []
+
+    def call() -> None:
+        resp = provider.chat(USER, PARAMS)
+        results.append((resp.text, resp.tokens_in, resp.tokens_out))
+
+    threads = [threading.Thread(target=call) for _ in range(6)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert results == [("same", 40, 2)] * 6
+    usage_paths = {c["usage_path"] for c in case.fake.calls()}
+    assert len(usage_paths) == 6
 
 
 # -- fingerprint, cache, registry ------------------------------------------------------------------
@@ -644,11 +870,11 @@ def test_fingerprint(cli: Case) -> None:
     assert cli.provider().fingerprint() == {
         "cli": cli.name,
         "cli_version": cli.version,
-        "isolation": f"{cli.name}/0",
+        "isolation": ISOLATION[cli.name],
         "sampling": "cli-default",
     }
     facts = cli_facts(TargetConfig(target=f"{cli.name}:{cli.model}"))
-    assert facts["cli_version"] == cli.version and facts["isolation"] == f"{cli.name}/0"
+    assert facts["cli_version"] == cli.version and facts["isolation"] == ISOLATION[cli.name]
     assert cli.fake.calls() == []  # a version lookup is not a model call
 
 
@@ -749,7 +975,8 @@ def test_doctor_without_a_suite_lists_the_experimental_clis_that_are_installed(
     block = section(text, "cursor")
     assert "version: 2026.02.27-e7d2ef6" in block
     assert "auth: logged in (account not shown)" in block
-    assert "isolation: cursor/0" in block and "--mode ask" in block
+    assert "isolation: cursor/1" in block and "--mode ask" in block
+    assert "--output-format stream-json" in block
     assert "someone@example.invalid" not in text  # never an account
     # A free check: nothing was asked of a model.
     assert opencode.fake.calls() == [] and cursor.fake.calls() == []
@@ -762,8 +989,10 @@ def test_doctor_lists_copilot_with_auth_not_checked(
     code, text = doctor()
     assert code == 0
     block = section(text, "copilot")
-    assert "auth: not checked" in block and "isolation: copilot/0" in block
-    assert "--available-tools=" in block and "--no-ask-user" in block
+    assert "auth: not checked" in block and "isolation: copilot/1" in block
+    assert "--available-tools=evalproof-no-tools" in block and "--no-ask-user" in block
+    assert "--no-custom-instructions" in block and "--disable-builtin-mcps" in block
+    assert "--usage-output-file '<tmp>/aux/usage.json'" in block  # shell-quoted, as printed
     assert "opencode" not in text and "cursor" not in text
     assert copilot.fake.calls() == []
 

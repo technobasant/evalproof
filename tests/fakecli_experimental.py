@@ -1,11 +1,12 @@
 """Fake ``opencode``, ``cursor-agent`` and ``copilot`` binaries: no real CLI runs, no model call.
 
 A sibling of ``fakecli`` (a separate module so the two do not collide). The script records its
-argv, cwd, stdin, the environment variables the test asks for and the contents of the directory
-``OPENCODE_CONFIG_DIR`` names, then prints a canned output. Besides ``--version`` it answers one
-configurable status command (``cursor-agent about``). Canned outputs follow the shapes in LOCAL.md
-(real OpenCode output from a local ollama model, trimmed; Cursor's from the CLI's source; Copilot's
-is plain text), with synthetic values.
+argv, cwd, the files in it (with their text), stdin, the environment variables the test asks for
+and the contents of the directory ``OPENCODE_CONFIG_DIR`` names, then prints a canned output. A
+reply may also name text for the file ``--usage-output-file`` points at, as Copilot writes one.
+Besides ``--version`` it answers one configurable status command (``cursor-agent about``). Canned
+outputs follow the shapes seen from the real CLIs (OpenCode against a local ollama model, Cursor's
+stream-json and Copilot's JSONL on 2026-11-13), trimmed, with synthetic values.
 """
 
 from __future__ import annotations
@@ -40,6 +41,15 @@ ENV_KEYS = [
 SCRIPT = """#!{python}
 import json, os, subprocess, sys, time
 
+def tree(root):
+    found = {{}}
+    for base, _, files in os.walk(root):
+        for f in files:
+            path = os.path.join(base, f)
+            found[os.path.relpath(path, root)] = open(path).read()
+    return found
+
+
 here = os.path.dirname(os.path.abspath(__file__))
 name = os.path.basename(__file__)
 cfg = json.load(open(os.path.join(here, name + ".config.json")))
@@ -54,14 +64,17 @@ if cfg["status"] and args == cfg["status"]["args"]:
 calls_path = os.path.join(here, name + ".calls.jsonl")
 index = sum(1 for _ in open(calls_path)) if os.path.exists(calls_path) else 0
 config_dir = os.environ.get("OPENCODE_CONFIG_DIR")
+usage_path = args[args.index("--usage-output-file") + 1] if "--usage-output-file" in args else None
 record = {{
     "argv": args,
     "cwd": os.getcwd(),
     "cwd_files": sorted(os.listdir(os.getcwd())),
+    "cwd_tree": tree(os.getcwd()),
     "stdin": sys.stdin.read(),
     "env": {{k: os.environ.get(k) for k in cfg["env_keys"]}},
     "config_dir_files": sorted(os.listdir(config_dir)) if config_dir else None,
     "pid": os.getpid(),
+    "usage_path": usage_path,
 }}
 reply = cfg["responses"][min(index, len(cfg["responses"]) - 1)]
 if reply.get("spawn_child"):
@@ -69,6 +82,9 @@ if reply.get("spawn_child"):
     record["child_pid"] = child.pid
 with open(calls_path, "a") as fh:
     fh.write(json.dumps(record) + "\\n")
+if reply.get("usage_file") is not None and usage_path:
+    with open(usage_path, "w") as fh:
+        fh.write(reply["usage_file"])
 if reply.get("sleep"):
     time.sleep(reply["sleep"])
 sys.stdout.write(reply.get("stdout", ""))
@@ -194,8 +210,43 @@ def cursor_result(text: str = "OK", *, with_usage: bool = True, is_error: bool =
     return json.dumps(result) + "\n"
 
 
+def cursor_stream(
+    text: str = "OK",
+    *,
+    with_usage: bool = True,
+    is_error: bool = False,
+    tool_calls: list[dict[str, Any]] | None = None,
+) -> str:
+    """The ``stream-json`` events of one turn: init, the prompt, thinking, the reply, any tool
+    calls (each a ``{kind: {...}}`` object), the result."""
+    lines: list[dict[str, Any]] = [
+        {
+            "type": "system",
+            "subtype": "init",
+            "apiKeySource": "login",
+            "cwd": "/synthetic/workspace",
+            "model": "Synthetic Model",
+            "permissionMode": "default",
+        },
+        {"type": "user", "message": {"role": "user", "content": [{"type": "text", "text": "q"}]}},
+        {"type": "thinking", "subtype": "delta", "text": "hm"},
+        {"type": "thinking", "subtype": "completed"},
+    ]
+    for call in tool_calls or []:
+        lines.append({"type": "tool_call", "subtype": "started", "tool_call": call})
+        lines.append({"type": "tool_call", "subtype": "completed", "tool_call": call})
+    lines.append(
+        {
+            "type": "assistant",
+            "message": {"role": "assistant", "content": [{"type": "text", "text": text}]},
+        }
+    )
+    lines.append(json.loads(cursor_result(text, with_usage=with_usage, is_error=is_error)))
+    return "".join(json.dumps(line) + "\n" for line in lines)
+
+
 def cursor_ok(text: str = "OK", **kwargs: Any) -> dict[str, Any]:
-    return reply(cursor_result(text, **kwargs))
+    return reply(cursor_stream(text, **kwargs))
 
 
 def cursor_about(email: str = "Not logged in") -> str:
@@ -205,3 +256,66 @@ def cursor_about(email: str = "Not logged in") -> str:
         "CLI Version         2026.02.27-e7d2ef6\nModel               Auto\n"
         f"OS                  darwin (arm64)\nUser Email          {email}\n"
     )
+
+
+def copilot_usage(**by_model: tuple[int, int]) -> str:
+    """The ``--usage-output-file`` JSON: ``model=(input, output)`` per model."""
+    metrics = {
+        model: {
+            "requests": {"count": 1, "cost": 1},
+            "usage": {
+                "inputTokens": tokens_in,
+                "outputTokens": tokens_out,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0,
+                "reasoningTokens": 0,
+            },
+        }
+        for model, (tokens_in, tokens_out) in by_model.items()
+    }
+    return json.dumps({"sessionId": "synthetic", "modelMetrics": metrics})
+
+
+def copilot_events(
+    text: str = "OK",
+    *,
+    model: str | None = "gpt-6-luna",
+    requested: str = "auto",
+    tool_requests: list[dict[str, Any]] | None = None,
+    extra: list[dict[str, Any]] | None = None,
+) -> str:
+    """The ``--output-format json`` JSONL of one turn, as Copilot prints it."""
+    message: dict[str, Any] = {"content": text, "toolRequests": tool_requests or []}
+    if model is not None:
+        message["model"] = model
+    lines: list[dict[str, Any]] = [
+        {"type": "session.start", "data": {"selectedModel": requested}},
+        {"type": "session.info", "data": {"infoType": "tools", "message": "Disabled tools: bash"}},
+        {
+            "type": "session.info",
+            "data": {
+                "infoType": "warning",
+                "message": 'Unknown tool name in the tool allowlist: "evalproof-no-tools"',
+            },
+        },
+        {"type": "session.auto_mode_resolved", "data": {"chosenModel": model}},
+        *(extra or []),
+        {"type": "assistant.message", "data": message},
+        {"type": "result", "exitCode": 0, "usage": {"premiumRequests": 1}},
+    ]
+    return "".join(json.dumps({**line, "id": f"e{i}"}) + "\n" for i, line in enumerate(lines))
+
+
+def copilot_ok(
+    text: str = "OK", *, model: str | None = "gpt-6-luna", tokens: tuple[int, int] | None = (13, 7)
+) -> dict[str, Any]:
+    """A reply with the events and, unless ``tokens`` is ``None``, the usage file."""
+    out = reply(copilot_events(text, model=model))
+    if tokens is not None:
+        out["usage_file"] = copilot_usage(**{model or "synthetic": tokens})
+    return out
+
+
+def copilot_failure(message: str, *, exit: int = 1) -> dict[str, Any]:
+    event = {"type": "session.error", "data": {"errorType": "query", "message": message}}
+    return reply(json.dumps(event) + "\n", exit=exit)
