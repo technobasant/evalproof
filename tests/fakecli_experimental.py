@@ -36,7 +36,13 @@ ENV_KEYS = [
     "COPILOT_GITHUB_TOKEN",
     "GH_TOKEN",
     "GITHUB_TOKEN",
+    "CURSOR_CONFIG_DIR",
+    "CURSOR_DATA_DIR",
+    "COPILOT_HOME",
 ]
+
+# State directories a CLI is pointed at per call: the fake records what is in each one it is given.
+STATE_VARS = ("CURSOR_CONFIG_DIR", "CURSOR_DATA_DIR", "COPILOT_HOME")
 
 SCRIPT = """#!{python}
 import json, os, subprocess, sys, time
@@ -73,6 +79,9 @@ record = {{
     "stdin": sys.stdin.read(),
     "env": {{k: os.environ.get(k) for k in cfg["env_keys"]}},
     "config_dir_files": sorted(os.listdir(config_dir)) if config_dir else None,
+    "state_dirs": {{
+        k: tree(os.environ[k]) for k in cfg["state_vars"] if os.path.isdir(os.environ.get(k, ""))
+    }},
     "pid": os.getpid(),
     "usage_path": usage_path,
 }}
@@ -113,7 +122,13 @@ def install_experimental(
     status = (
         {"args": status_args, "stdout": status_stdout, "exit": status_exit} if status_args else None
     )
-    config = {"version": version, "responses": responses, "status": status, "env_keys": ENV_KEYS}
+    config = {
+        "version": version,
+        "responses": responses,
+        "status": status,
+        "env_keys": ENV_KEYS,
+        "state_vars": STATE_VARS,
+    }
     (bin_dir / f"{name}.config.json").write_text(json.dumps(config), "utf-8")
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     cli_version.cache_clear()

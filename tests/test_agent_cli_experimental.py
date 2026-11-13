@@ -75,7 +75,7 @@ SPECS: dict[str, tuple[type[ExperimentalCLIProvider], str, str]] = {
     "copilot": (CopilotProvider, "gpt-5", "GitHub Copilot CLI 1.0.4"),
 }
 # The isolation tag of each: bumped when the flag set changes.
-ISOLATION = {"opencode": "opencode/0", "cursor": "cursor/1", "copilot": "copilot/1"}
+ISOLATION = {"opencode": "opencode/0", "cursor": "cursor/2", "copilot": "copilot/2"}
 # The CLI's own key variable, and the variables of other tools that must be left alone.
 KEY_VARS = {
     "opencode": ("OPENCODE_API_KEY", ["ANTHROPIC_API_KEY"]),
@@ -263,6 +263,56 @@ def test_cursor_denies_every_read_write_and_shell_in_the_workspace_it_runs_in(
     }
     assert same_path(call["argv"][-2], call["cwd"])
     assert not Path(call["cwd"]).exists()  # removed with the call
+
+
+DENY_ALL = {
+    "allow": [],
+    "deny": ["Read(**)", "Read(/**)", "Write(**)", "Write(/**)", "Shell(*)"],
+}
+
+
+def test_cursor_config_and_data_dirs_are_in_the_call_temp_root_not_the_home(
+    cursor: Case,
+) -> None:
+    cursor.provider().chat(USER, PARAMS)
+    call = cursor.fake.last()
+    env = call["env"]
+    config, data = Path(env["CURSOR_CONFIG_DIR"]), Path(env["CURSOR_DATA_DIR"])
+    # Both sit in the spare directory next to the workspace, so ~/.cursor gets no chat or state.
+    root = Path(call["cwd"]).parent
+    for path in (config, data):
+        assert path.parent.name == "aux" and same_path(str(path.parent.parent), str(root))
+        assert not Path(call["cwd"]).is_relative_to(path)
+        assert not path.exists()  # removed with the call
+    # The config dir starts with a user-level config that allows nothing (a fresh default one
+    # allows ``Shell(ls)``), and the data dir starts empty.
+    state = call["state_dirs"]
+    assert list(state["CURSOR_CONFIG_DIR"]) == ["cli-config.json"]
+    user_level = json.loads(state["CURSOR_CONFIG_DIR"]["cli-config.json"])
+    assert user_level == {"version": 1, "permissions": DENY_ALL}
+    assert state["CURSOR_DATA_DIR"] == {}
+    assert "COPILOT_HOME" not in state and env["COPILOT_HOME"] is None
+
+
+def test_copilot_home_is_an_empty_dir_in_the_call_temp_root(copilot: Case) -> None:
+    copilot.provider().chat(USER, PARAMS)
+    call = copilot.fake.last()
+    home = Path(call["env"]["COPILOT_HOME"])
+    assert home.parent.name == "aux"
+    assert same_path(str(home.parent.parent), str(Path(call["cwd"]).parent))
+    assert call["state_dirs"] == {"COPILOT_HOME": {}}
+    assert call["cwd_files"] == []  # the working directory stays empty
+    assert not home.exists()  # removed with the call
+    assert call["env"]["CURSOR_CONFIG_DIR"] is None
+
+
+def test_state_dirs_are_fresh_for_every_call(cursor: Case, copilot: Case) -> None:
+    for case, var in ((cursor, "CURSOR_CONFIG_DIR"), (copilot, "COPILOT_HOME")):
+        provider = case.provider()
+        provider.chat(USER, PARAMS)
+        provider.chat(USER, PARAMS)
+        first, second = (c["env"][var] for c in case.fake.calls()[-2:])
+        assert first != second
 
 
 def test_copilot_command_line_and_stdin(copilot: Case) -> None:
@@ -975,7 +1025,7 @@ def test_doctor_without_a_suite_lists_the_experimental_clis_that_are_installed(
     block = section(text, "cursor")
     assert "version: 2026.02.27-e7d2ef6" in block
     assert "auth: logged in (account not shown)" in block
-    assert "isolation: cursor/1" in block and "--mode ask" in block
+    assert "isolation: cursor/2" in block and "--mode ask" in block
     assert "--output-format stream-json" in block
     assert "someone@example.invalid" not in text  # never an account
     # A free check: nothing was asked of a model.
@@ -989,7 +1039,7 @@ def test_doctor_lists_copilot_with_auth_not_checked(
     code, text = doctor()
     assert code == 0
     block = section(text, "copilot")
-    assert "auth: not checked" in block and "isolation: copilot/1" in block
+    assert "auth: not checked" in block and "isolation: copilot/2" in block
     assert "--available-tools=evalproof-no-tools" in block and "--no-ask-user" in block
     assert "--no-custom-instructions" in block and "--disable-builtin-mcps" in block
     assert "--usage-output-file '<tmp>/aux/usage.json'" in block  # shell-quoted, as printed
@@ -1096,3 +1146,30 @@ def test_doctor_fails_on_a_suite_target_whose_binary_is_missing(
     monkeypatch.setenv("PATH", str(empty))
     code, text = doctor(write_suite(tmp_path, "copilot:gpt-5", None))
     assert code == 1 and "npm install -g @github/copilot" in text and "not ready" in text
+
+
+def test_doctor_warns_that_cursor_sends_the_skills_list(
+    stable_clis: None, cursor: Case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    only_fakes_on_path(tmp_path, monkeypatch)
+    code, text = doctor()
+    block = section(text, "cursor")
+    assert code == 0  # a warning, not a failure
+    assert "warning: cursor-agent puts the names and descriptions of your skills" in block
+    assert "~/.claude/skills" in block and "no option turns this off" in block
+
+
+def test_doctor_warns_about_copilot_auto_as_the_judge_only(
+    stable_clis: None, copilot: Case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    only_fakes_on_path(tmp_path, monkeypatch)
+    code, text = doctor(write_suite(tmp_path, "python:x:y", "copilot:auto"))
+    assert code == 0
+    assert "warning: copilot:auto as the judge" in text and "(exit 4)" in text
+    # Not for a named judge model, nor for auto as the system under test.
+    _, text = doctor(write_suite(tmp_path, "python:x:y", "copilot:gpt-5"))
+    assert "copilot:auto as the judge" not in text
+    _, text = doctor(write_suite(tmp_path, "copilot:auto", None))
+    assert "copilot:auto as the judge" not in text
+    _, text = doctor()
+    assert "copilot:auto as the judge" not in text

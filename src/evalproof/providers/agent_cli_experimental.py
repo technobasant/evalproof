@@ -1,7 +1,8 @@
 """Experimental coding-agent CLI providers: ``opencode:``, ``cursor:`` and ``copilot:``.
 
 Same idea and the same shared behaviour as ``claude-code`` and ``codex`` (see ``agent_cli``): your
-own logged-in binary, run as a subprocess in a fresh empty directory, with API-key variables
+own logged-in binary, run as a subprocess in a fresh directory (empty but for cursor's permission
+file), with the CLI's own state directories moved into the call's temp root, API-key variables
 removed from its environment, a bounded runtime and a fingerprint in the run artifact. They are
 experimental because their isolation is less proven. What was and was not verified is in the
 README ("Experimental providers"). Each prints one warning per process on first use.
@@ -317,20 +318,33 @@ _ABOUT_EMAIL = re.compile(r"^\s*User Email\s+(?P<value>.+?)\s*$", re.MULTILINE)
 
 
 class CursorProvider(ExperimentalCLIProvider):
-    """``cursor-agent -p`` in ask mode in an empty workspace whose ``.cursor/cli.json`` denies
-    every read, write and shell command, with any tool event treated as an isolation break.
+    """``cursor-agent -p`` in ask mode in an empty workspace, with a permission config that
+    allows nothing and denies reads, writes and shell commands, its own config and data
+    directories moved into the call's temp root, and any tool event treated as an isolation break.
 
-    Verified live on 2026-11-13 with cursor-agent 2026.11.11: a canary prompt saw no user rules
-    and no ``AGENTS.md`` or ``CLAUDE.md`` content. Ask mode is not tool-free: it has a read tool
-    (``readToolCall``) that runs without approval and reads files inside the workspace and outside
-    it by absolute path. The workspace ``cli.json`` below made every read fail with "Permission
-    denied", inside and outside; the model still tries, so the stream has a ``tool_call`` event,
-    and the guard fails the call on any such event whatever its result."""
+    Verified live on 2026-11-13 with cursor-agent 2026.11.11:
+
+    * Ask mode has no write or shell tool, but it has a read tool (``readToolCall``) that runs
+      without approval and reads files inside the workspace and outside it by absolute path. The
+      deny list made every read fail with "Permission denied", inside and outside; the model still
+      tries, so the stream has a ``tool_call`` event, and the guard fails the call on any such
+      event whatever its result. The write and shell entries are there in case a later version
+      adds those tools to ask mode; they were not tested.
+    * Instruction files are read from the workspace (``AGENTS.md``, ``CLAUDE.md``,
+      ``.cursor/rules``) and from the directories above it; the workspace here is empty and sits
+      in the system temp directory. ``~/.claude/CLAUDE.md`` was not read.
+    * The names and descriptions of the user's skills (``~/.claude/skills``, ``~/.cursor/skills``,
+      ``~/.codex/skills``, ``~/.agents/skills``, plugin skills) and Cursor's own subagents are put
+      in every prompt. The paths are fixed under the home directory and no setting turns them off;
+      moving ``HOME`` logs the CLI out. ``evalproof doctor`` warns about it.
+    * ``CURSOR_CONFIG_DIR`` and ``CURSOR_DATA_DIR`` in the temp root keep the login (it is in the
+      system keychain) and keep the chat out of ``~/.cursor/chats`` and ``~/.cursor/projects``;
+      the user's own ``cli-config.json`` (its allow list included) is not read."""
 
     name = "cursor"
     binary = "cursor-agent"
     install_hint = "curl https://cursor.com/install -fsS | bash"
-    isolation = "cursor/1"
+    isolation = "cursor/2"
     key_var = "CURSOR_API_KEY"
     strip_vars = ("CURSOR_API_KEY",)
     prompt_in_argv = True
@@ -346,12 +360,30 @@ class CursorProvider(ExperimentalCLIProvider):
         }
     }
 
+    # Under the call's spare directory: Cursor's config dir (its ``cli-config.json``, where the
+    # user-level allow list lives, and its chat store) and its data dir (per-project state).
+    CONFIG_DIR = "cursor-config"
+    DATA_DIR = "cursor-data"
+
     def prepare_workdir(self, cwd: Path) -> None:
-        config_dir = cwd / ".cursor"
-        config_dir.mkdir()
-        (config_dir / "cli.json").write_text(
-            json.dumps(self.CLI_CONFIG, indent=2), encoding="utf-8"
-        )
+        text = json.dumps(self.CLI_CONFIG, indent=2)
+        project = cwd / ".cursor"
+        project.mkdir(exist_ok=True)
+        (project / "cli.json").write_text(text, encoding="utf-8")
+        # A config dir with no ``cli-config.json`` gets a default one whose allow list has
+        # ``Shell(ls)``; this one starts with the same deny-all list (kept as written: verified).
+        aux = Path(aux_dir_of(str(cwd)))
+        config = aux / self.CONFIG_DIR
+        config.mkdir(exist_ok=True)
+        user_level = {"version": 1, **self.CLI_CONFIG}
+        (config / "cli-config.json").write_text(json.dumps(user_level, indent=2), encoding="utf-8")
+        (aux / self.DATA_DIR).mkdir(exist_ok=True)
+
+    def call_env(self, system: str, aux_dir: str) -> dict[str, str]:
+        return {
+            "CURSOR_CONFIG_DIR": os.path.join(aux_dir, self.CONFIG_DIR),
+            "CURSOR_DATA_DIR": os.path.join(aux_dir, self.DATA_DIR),
+        }
 
     def build_command(self, binary: str, workdir: str, params: GenerationParams) -> list[str]:
         # The key travels in the environment, never as ``--api-key``: an argument is visible in
@@ -429,19 +461,31 @@ class CursorProvider(ExperimentalCLIProvider):
 
 
 class CopilotProvider(ExperimentalCLIProvider):
-    """``copilot`` with the prompt on stdin, JSONL output and a tool allow-list that names no
-    tool, in an empty directory. Any tool event, or a request for a tool, fails the call.
+    """``copilot`` with the prompt on stdin, JSONL output, a tool allow-list that names no tool and
+    ``COPILOT_HOME`` in the call's temp root, in an empty directory. Any tool event, or a request
+    for a tool, fails the call.
 
-    Verified live on 2026-11-13 with copilot 1.0.110. With ``--model auto`` Copilot routes each
-    call to a model of its choosing (``gpt-6-luna`` on one call, ``mai-code-1.1-flash`` on
-    another), so the reply's own model id is what the run records. On some plans only ``auto`` is
-    available: named models (``gpt-6-luna``, ``claude-haiku-5.5``) were rejected with "is not
-    available". Each call uses one premium request."""
+    Verified live on 2026-11-13 with copilot 1.0.110:
+
+    * ``--no-custom-instructions`` works: without it a canary ``AGENTS.md``, ``CLAUDE.md`` and
+      ``.github/copilot-instructions.md`` in the working directory were all read; with it none
+      was, nor an ``AGENTS.md`` in the directory above.
+    * Copilot keeps its own system prompt (the system text here is an instruction in the user
+      turn) and adds the date and a note that it is not sandboxed. With no tools the model
+      sometimes writes a made-up tool call and its result as plain text; that is reply text,
+      not a tool run, and is scored as such.
+    * With ``--model auto`` Copilot routes each call to a model of its choosing (``gpt-6-luna``
+      on one call, ``mai-code-1.1-flash`` on another), so the reply's own model id is what the
+      run records. On the test account named models (``gpt-6-luna``, ``claude-haiku-5.5``) were
+      rejected with "is not available"; that depends on the plan and the organisation's policy.
+      ``auto`` used one premium request per call there; the rate depends on model and plan.
+    * ``COPILOT_HOME`` in the temp root keeps the login (it is in the system keychain) and keeps
+      the session, its logs and the user's Copilot config and plugins out of ``~/.copilot``."""
 
     name = "copilot"
     binary = "copilot"
     install_hint = "npm install -g @github/copilot"
-    isolation = "copilot/1"
+    isolation = "copilot/2"
     # COPILOT_GITHUB_TOKEN wins over GH_TOKEN and GITHUB_TOKEN (documented precedence). Only it is
     # stripped: the other two are the general GitHub tokens that ``gh`` and CI set for other
     # reasons, and removing them would break unrelated tools' habits more than it protects.
@@ -457,6 +501,14 @@ class CopilotProvider(ExperimentalCLIProvider):
     # ``view`` tool. No ``--allow-tool`` or ``--allow-all`` flag is ever passed.
     NO_TOOLS = "--available-tools=evalproof-no-tools"
     TRANSIENT_MARKERS: ClassVar[tuple[str, ...]] = ("rate limit", "429", "503")
+    # Copilot's home (config, session state, logs) under the call's spare directory.
+    HOME_DIR = "copilot-home"
+
+    def prepare_workdir(self, cwd: Path) -> None:
+        (Path(aux_dir_of(str(cwd))) / self.HOME_DIR).mkdir(exist_ok=True)
+
+    def call_env(self, system: str, aux_dir: str) -> dict[str, str]:
+        return {"COPILOT_HOME": os.path.join(aux_dir, self.HOME_DIR)}
 
     def build_command(self, binary: str, workdir: str, params: GenerationParams) -> list[str]:
         # ``workdir`` and the spare directory are siblings under one temp root (see ``_once``),

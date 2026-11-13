@@ -48,6 +48,26 @@ def suite_targets(path: str | None) -> list[tuple[TargetConfig, list[str]]]:
     return list(found.values())
 
 
+def experimental_warnings(kind: str, model: str, roles: list[str]) -> list[str]:
+    """Known limits of an experimental CLI that a user should hear about before a run."""
+    warnings: list[str] = []
+    if kind == "cursor":
+        warnings.append(
+            "cursor-agent puts the names and descriptions of your skills (~/.claude/skills, "
+            "~/.cursor/skills, ~/.codex/skills, ~/.agents/skills, plugin skills) in every "
+            "prompt; no option turns this off, so they are sent to Cursor and count as input "
+            "tokens on each call"
+        )
+    if kind == "copilot" and model == "auto" and "judge" in roles:
+        warnings.append(
+            "copilot:auto as the judge: Copilot picks the model per call and the run records "
+            "every model it saw, so two runs often differ and compare and gate refuse them as "
+            "a judge change (exit 4) unless the gate sets allow_judge_change; name a model if "
+            "your plan allows one"
+        )
+    return warnings
+
+
 def check_target(cfg: TargetConfig, roles: list[str], out: TextIO) -> bool:
     """Print what is known about one target; True when it is usable."""
     kind, model = parse_target(cfg.target)
@@ -88,6 +108,8 @@ def check_target(cfg: TargetConfig, roles: list[str], out: TextIO) -> bool:
         out.write("  note: experimental provider; its isolation is less proven (see the README)\n")
         if provider.extra_env:
             out.write(f"  env: {' '.join(f'{k}={v}' for k, v in provider.extra_env.items())}\n")
+        for line in experimental_warnings(kind, model, roles):
+            out.write(f"  warning: {line}\n")
     if cfg.api_key_env:
         out.write(f"  key: ${cfg.api_key_env} is passed to the CLI as {provider.key_var}\n")
     elif provider.auth_mode == "api-key":

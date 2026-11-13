@@ -8,8 +8,15 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 - `cursor:` ask mode is not tool-free: it has a read tool that runs without approval and reads
   files in the workspace and outside it. The workspace now carries a `.cursor/cli.json` that
-  denies every read, write and shell command (verified), and any `tool_call` event in the
-  output fails the call as an isolation break.
+  allows nothing and denies reads (verified inside and outside the workspace), writes and shell
+  commands (ask mode has no write or shell tool; those entries are a second guard), and any
+  `tool_call` event in the output fails the call as an isolation break.
+- `cursor:` wrote every call's chat to `~/.cursor/chats` and read the user's
+  `~/.cursor/cli-config.json`. `CURSOR_CONFIG_DIR` and `CURSOR_DATA_DIR` now point into the
+  call's temp root, which keeps the login (verified) and starts from a config that allows
+  nothing.
+- `copilot:` kept every call's session in `~/.copilot` and read the user's Copilot config.
+  `COPILOT_HOME` now points into the call's temp root, which keeps the login (verified).
 - `copilot:` passed `--available-tools=`, which copilot 1.0.110 ignores, so the model could use
   its tools (it read a file). It now passes an allow-list with one unknown name, which disables
   every tool (verified), and any tool event or tool request in the output fails the call.
@@ -22,8 +29,21 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   `--disable-builtin-mcps`, reports real token counts from `--usage-output-file`, and records
   the model that answered each call: with `copilot:auto` Copilot routes every call, so the run
   artifact shows the routed model, not `auto`.
-- Isolation tags are now `cursor/1` and `copilot/1`, so earlier cached replies for these two
+- Isolation tags are now `cursor/2` and `copilot/2`, so earlier cached replies for these two
   are not reused.
+- `evalproof doctor` warns that `cursor-agent` sends the names and descriptions of the user's
+  skills (`~/.claude/skills`, `~/.cursor/skills` and others) in every prompt, which no option
+  turns off, and that `copilot:auto` as the judge makes compare and the gate refuse runs as a
+  judge change (Copilot picks the model per call).
+
+### Documentation
+
+- The experimental providers section now says what was verified and what was not: Cursor
+  reads instruction files from the directories above the workspace; Cursor and Copilot keep
+  their own system prompt; Copilot's `--no-custom-instructions` was verified with canary
+  files; the Copilot tool guard has not fired live; named-model availability and the
+  premium-request rate depend on plan and policy; with tools off Copilot may write a made-up
+  tool call as text.
 
 ## [0.4.0] — 2026-11-13
 
