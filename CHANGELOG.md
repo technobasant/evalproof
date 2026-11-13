@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-11-13
+
 Upgrading: run files written by 0.5.0 keep working. They have no tag-free hash, so `compare`
 pairs them on the per-case hash as before, tags included; a run written by 0.5.1 pairs on the
 tag-free hash. The first time both the baseline and the candidate come from 0.5.1, adding a tag
@@ -395,7 +397,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/technobasant/evalproof/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/technobasant/evalproof/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/technobasant/evalproof/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/technobasant/evalproof/compare/v0.3.0...v0.4.0
