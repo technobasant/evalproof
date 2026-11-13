@@ -4,6 +4,27 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+### Fixed
+
+- `cursor:` ask mode is not tool-free: it has a read tool that runs without approval and reads
+  files in the workspace and outside it. The workspace now carries a `.cursor/cli.json` that
+  denies every read, write and shell command (verified), and any `tool_call` event in the
+  output fails the call as an isolation break.
+- `copilot:` passed `--available-tools=`, which copilot 1.0.110 ignores, so the model could use
+  its tools (it read a file). It now passes an allow-list with one unknown name, which disables
+  every tool (verified), and any tool event or tool request in the output fails the call.
+
+### Changed
+
+- `cursor:` uses `--output-format stream-json` (the json result joined the model's preamble
+  with the answer).
+- `copilot:` takes the prompt on stdin, prints JSONL, runs with `--no-custom-instructions` and
+  `--disable-builtin-mcps`, reports real token counts from `--usage-output-file`, and records
+  the model that answered each call: with `copilot:auto` Copilot routes every call, so the run
+  artifact shows the routed model, not `auto`.
+- Isolation tags are now `cursor/1` and `copilot/1`, so earlier cached replies for these two
+  are not reused.
+
 ## [0.4.0] — 2026-11-13
 
 ### Added

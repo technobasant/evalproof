@@ -145,7 +145,7 @@ ones run OpenCode, Cursor and GitHub Copilot the same way: see
 | `codex` | `codex:gpt-6-luna` | none: your ChatGPT login | local CLI, see below |
 | `opencode` | `opencode:ollama/qwen3:8b` | none: OpenCode's own login, per model provider | local CLI, experimental |
 | `cursor` | `cursor:auto` | none: your Cursor login | local CLI, experimental |
-| `copilot` | `copilot:gpt-5` | none: your GitHub Copilot login | local CLI, experimental |
+| `copilot` | `copilot:auto` | none: your GitHub Copilot login | local CLI, experimental |
 
 ```yaml
 system:
@@ -259,7 +259,7 @@ it is the same model either way. `evalproof doctor` prints the mode in effect an
 `opencode:`, `cursor:` and `copilot:` follow the same rules as the two above: your own logged-in
 binary, run as a subprocess in a fresh empty directory, its API-key variable removed from the
 child's environment unless `api_key_env` names one, a bounded runtime, and the CLI, its version
-and an isolation tag (`opencode/0`, `cursor/0`, `copilot/0`) in the run and in the cache key.
+and an isolation tag (`opencode/0`, `cursor/1`, `copilot/1`) in the run and in the cache key.
 They are experimental because their isolation is less proven than Claude Code's and Codex's.
 Each prints `evalproof: <name> provider is experimental` on stderr the first time it is used in
 a process. Like the other two they ignore `temperature`, `seed` and `max_tokens`, and
@@ -282,27 +282,41 @@ checked, and what was not:
   break CI. `--archived` keeps a session out of OpenCode's lists but does not delete it, so
   sessions accumulate in OpenCode's data directory (each run is a private `--standalone`
   server in a temporary project); prune them yourself.
-* **`cursor:<model>`** runs `cursor-agent -p --mode ask --trust` with an empty `--workspace`.
-  *Not verified:* Cursor was not logged in on the test machine, so no call succeeded. The flags
-  come from the CLI's help and documentation, and the parser from its source; it is lenient (a
-  JSON result object, an array of events, terminal noise around it) and an unexpected shape
-  fails with a message that says what was expected. The empty workspace is the only isolation:
-  no flag ignores rules files, user-level rules were not checked, and whether ask mode really
-  has no tools is untested. There is no system-prompt option, so your system text goes in front
-  of the prompt under a heading, and the prompt is an argument (nothing says the CLI reads
-  stdin), so it is visible in `ps` while the call runs and a prompt over 100,000 bytes is
-  refused. The key variable is `CURSOR_API_KEY`, passed through the environment, never as
-  `--api-key`. `doctor` reads `cursor-agent about` for the login state (`status` hung) and
+* **`cursor:<model>`** runs `cursor-agent -p --output-format stream-json --mode ask --trust`
+  with an empty `--workspace` that holds a `.cursor/cli.json` denying every read, write and
+  shell command. *Verified live* on 2026-11-13 with cursor-agent 2026.11.11: a canary prompt saw
+  no user rules and no `AGENTS.md` or `CLAUDE.md` content. Ask mode is **not** tool-free: it has
+  a read tool that runs without approval and reads files inside the workspace and outside it by
+  absolute path. The workspace `cli.json` made every read fail with "Permission denied", inside
+  and outside, but the model still tries, so the stream carries a `tool_call` event; evalproof
+  fails the call on any such event (`cursor used a tool (readToolCall); isolation broken`) and
+  discards the reply. `stream-json` rather than `json` because the json result joins the model's
+  preamble text ("I'll read the file now.") with the answer and carries no tool events. Token counts
+  come from the result event (output includes reasoning). The model recorded is the one you
+  asked for; the result carries no model id. There is no system-prompt option, so your system
+  text goes in front of the prompt under a heading, and the prompt is an argument (nothing says
+  the CLI reads stdin), so it is visible in `ps` while the call runs and a prompt over 100,000
+  bytes is refused. The key variable is `CURSOR_API_KEY`, passed through the environment, never
+  as `--api-key`. `doctor` reads `cursor-agent about` for the login state (`status` hung) and
   prints no account.
-* **`copilot:<model>`** runs `copilot -s --no-auto-update --no-ask-user --available-tools= -p`.
-  *Not verified:* Copilot CLI was not installed on the test machine; every flag comes from
-  GitHub's documentation. `--available-tools=` is an allow-list with nothing in it, the most
-  restrictive documented tool option; whether the CLI accepts an empty list was not tried. No
-  `--allow-*` flag is ever passed, so a tool that needs approval cannot get it. The reply is
-  plain text, so token counts are 0. `COPILOT_HOME` is not redirected, so user-level Copilot
-  instructions may still be read. System text and prompt travel as for Cursor. Only
-  `COPILOT_GITHUB_TOKEN` is removed; `GH_TOKEN` and `GITHUB_TOKEN` are left because `gh` and CI
-  set them for other reasons. `doctor` prints `auth: not checked`.
+* **`copilot:<model>`** runs `copilot --no-auto-update --no-ask-user --no-custom-instructions
+  --disable-builtin-mcps --available-tools=evalproof-no-tools --output-format json
+  --usage-output-file <tmp>`, with the prompt on stdin. *Verified live* on 2026-11-13 with
+  copilot 1.0.110. An empty allow-list (`--available-tools=`) is **ignored**: the model called
+  its `view` tool and read a file. An allow-list of one name that is no tool disables every
+  tool (`session.info: Disabled tools: bash, create, edit, glob, grep, ...`), and that is what
+  evalproof passes; any `tool.execution*` event or tool request in the output fails the call
+  (`copilot used a tool (view); isolation broken`) as a second guard. No `--allow-*` flag is
+  ever passed. Token counts are read from the usage file (input already includes cache reads
+  and writes, output includes reasoning); a missing file means 0, never a failure. On some
+  plans only `copilot:auto` works: named models (`gpt-6-luna`, `claude-haiku-5.5`) were
+  rejected with "is not available". `auto` routes each call to a model of Copilot's choosing
+  (`gpt-6-luna` on one call, `mai-code-1.1-flash` on another), so the run artifact records the
+  model that answered each call, not `auto`, and a suite run on `auto` can mix models; pin a
+  model if your plan allows it when that matters. Each call uses one premium request.
+  `COPILOT_HOME` is not redirected. System text goes in front of the prompt under a heading, as
+  for Cursor. Only `COPILOT_GITHUB_TOKEN` is removed; `GH_TOKEN` and `GITHUB_TOKEN` are left
+  because `gh` and CI set them for other reasons. `doctor` prints `auth: not checked`.
 
 ## Concepts
 
