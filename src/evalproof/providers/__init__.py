@@ -24,6 +24,7 @@ from evalproof.providers.base import (
     Provider,
     ProviderError,
     TransientError,
+    response_cost,
     with_retries,
 )
 from evalproof.providers.ollama import OllamaProvider
@@ -52,6 +53,7 @@ __all__ = [
     "TransientError",
     "make_provider",
     "parse_target",
+    "response_cost",
     "with_retries",
 ]
 

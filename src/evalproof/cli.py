@@ -1,21 +1,36 @@
-"""Command line: ``evalproof init | run | compare | calibrate | report | pairwise``."""
+"""Command line.
+
+``evalproof init | run | import | compare | verify | calibrate | report | doctor | pairwise``
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import tempfile
 from collections.abc import Sequence
 from pathlib import Path
+
+from pydantic import ValidationError
 
 from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.calibration import calibrate
 from evalproof.compare import compare_runs
-from evalproof.config import ConfigError, GateConfig, load_config
+from evalproof.config import ConfigError, GateConfig, format_validation_error, load_config
 from evalproof.dataset import DatasetError, load_dataset
 from evalproof.doctor import run_doctor
-from evalproof.gate import EXIT_PASS, EXIT_USAGE, decide
+from evalproof.gate import (
+    EXIT_CANNOT_GATE,
+    EXIT_PASS,
+    EXIT_REGRESSION,
+    EXIT_USAGE,
+    absolute_checks,
+    continuous_floors,
+    decide,
+)
 from evalproof.importers import EPOCHS, FORMATS, import_run
 from evalproof.models import CaseResult
 from evalproof.providers import ProviderError, make_provider
@@ -28,18 +43,47 @@ from evalproof.report import (
 from evalproof.runner import load_run, run_suite, save_run
 from evalproof.scaffold import CI_MODES, init_project
 from evalproof.scorers import pairwise
+from evalproof.verify import verify_markdown, verify_run
+
+EXIT_INTERRUPTED = 130  # the shell's code for a process stopped by Ctrl-C
 
 
-def _emit(markdown: str, path: str | None) -> None:
-    sys.stdout.write(markdown)
+def _emit(markdown: str, path: str | None, *, quiet: bool = False) -> None:
+    """Print the report to stdout (unless ``quiet``) and append it to ``path`` if given."""
+    if not quiet:
+        sys.stdout.write(markdown)
     if path:
         # Append, so it can target $GITHUB_STEP_SUMMARY alongside other steps.
         with Path(path).open("a", encoding="utf-8") as fh:
             fh.write(markdown + "\n")
 
 
+def _clip(text: str, limit: int = 200) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _check_writable(path: Path) -> None:
+    """Fail before any case runs if the run file cannot be written: create the parent, then
+    create and delete a file in it."""
+    if path.is_dir():
+        raise ConfigError(f"cannot write the run file {path}: it is a directory")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".evalproof-write-check-"):
+            pass
+    except OSError as exc:
+        raise ConfigError(f"cannot write the run file {path}: {exc}") from exc
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     cfg = load_config(args.suite)
+    if args.gate and (cfg.gate is None or not cfg.gate.has_absolute_checks):
+        raise ConfigError(
+            "run --gate needs absolute checks: set gate.min_pass_rate or gate.must_pass in the "
+            "suite (a comparison with a baseline is `evalproof compare --gate`)"
+        )
+    _check_writable(Path(args.out) if args.out else Path("runs") / "run.json")
     override = None
     if args.system or args.system_prompt_file or args.label:
         override = cfg.system.model_copy(deep=True)
@@ -49,6 +93,9 @@ def cmd_run(args: argparse.Namespace) -> int:
             override.label = args.label
         if args.system_prompt_file:
             override.system_prompt = Path(args.system_prompt_file).read_text(encoding="utf-8")
+            if not args.label:  # so two runs with different prompt files are told apart
+                base = override.label or override.target
+                override.label = f"{base} + {Path(args.system_prompt_file).name}"
 
     def progress(i: int, n: int, res: CaseResult) -> None:
         if not args.quiet:
@@ -68,8 +115,25 @@ def cmd_run(args: argparse.Namespace) -> int:
     out = args.out or f"runs/{cfg.name}-{run.info.started_at.replace(':', '')}.json"
     save_run(run, out)
     sys.stderr.write(f"wrote {out}\n")
-    _emit(run_markdown(run), args.markdown)
-    return EXIT_PASS
+    markdown = run_markdown(run, args.show)
+    failures: list[str] = []
+    refused: list[str] = []
+    if args.gate and cfg.gate is not None:
+        refused = continuous_floors(run, cfg.gate)
+        failures, notes = absolute_checks(run, cfg.gate)
+        failures = refused + failures
+        verdict = "⚠️ cannot gate" if refused else ("❌ fail" if failures else "✅ pass")
+        markdown += f"\n**Gate (absolute checks only): {verdict}**\n\n"
+        markdown += "".join(f"- {r}\n" for r in failures)
+        markdown += "".join(f"- ⚠️ {w}\n" for w in notes)
+    _emit(markdown, args.markdown)
+    if run.results and all(r.output.error for r in run.results):
+        first = _clip(next(r.output.error or "" for r in run.results))
+        sys.stderr.write(f"evalproof: error: every case errored; the first error: {first}\n")
+        return EXIT_USAGE
+    if refused:
+        return EXIT_CANNOT_GATE
+    return EXIT_REGRESSION if failures else EXIT_PASS
 
 
 def _gate_config(args: argparse.Namespace) -> GateConfig | None:
@@ -88,27 +152,48 @@ def _gate_config(args: argparse.Namespace) -> GateConfig | None:
             "max_p95_latency_ms": args.max_p95_ms,
             "max_cost_usd": args.max_cost,
             "allow_judge_change": args.allow_judge_change,
+            "min_pass_rate": args.min_pass_rate,
+            "must_pass": args.must_pass,
+            "max_new_failures": args.max_new_failures,
         }.items()
         if v is not None
     }
     if base is None and "metric" not in overrides:
         return None
-    if base is None:
-        return GateConfig(**overrides)
     # Validate the merged config: model_copy would skip the check that a metric is named,
     # and an empty --metric (an unset variable in CI) would then gate nothing and pass.
-    return GateConfig.model_validate({**base.model_dump(), **overrides})
+    merged = overrides if base is None else {**base.model_dump(), **overrides}
+    try:
+        return GateConfig.model_validate(merged)
+    except ValidationError as exc:
+        raise ConfigError(format_validation_error(exc, "gate", GateConfig)) from exc
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
     baseline, candidate = load_run(args.baseline), load_run(args.candidate)
+    known = list(dict.fromkeys([*baseline.scorer_names(), *candidate.scorer_names()]))
+    for name in args.metric or []:
+        if name not in known:
+            raise ConfigError(
+                f"--metric {name!r} is not a scorer in either run; "
+                f"available: {', '.join(known) or 'none'}"
+            )
     gate = _gate_config(args)
     alpha = gate.alpha if gate else (args.alpha or 0.05)
     cmp = compare_runs(baseline, candidate, alpha=alpha, seed=args.seed)
-    decision = decide(cmp, gate) if gate else None
+    decision = decide(cmp, gate, candidate) if gate else None
     if args.gate and decision is None:
         raise ConfigError("--gate needs a gate: pass --suite with a gate block, or --metric")
-    _emit(comparison_markdown(cmp, decision, gate.gated if gate else None), args.markdown)
+    _emit(
+        comparison_markdown(
+            cmp,
+            decision,
+            gate.gated if gate else None,
+            runs=(baseline, candidate),
+            show=args.show,
+        ),
+        args.markdown,
+    )
     if args.json:
         payload = {"comparison": json.loads(to_json(cmp))}
         if decision:
@@ -117,6 +202,13 @@ def cmd_compare(args: argparse.Namespace) -> int:
     if args.gate and decision is not None:
         return decision.exit_code
     return EXIT_PASS
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    run = load_run(args.run)
+    result = verify_run(run, load_config(args.suite))
+    _emit(verify_markdown(result, args.run, args.suite), args.markdown)
+    return EXIT_PASS if result.ok else EXIT_CANNOT_GATE
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -159,7 +251,7 @@ def cmd_import(args: argparse.Namespace) -> int:
     )
     save_run(run, args.out)
     sys.stderr.write(f"wrote {args.out}\n")
-    _emit(run_markdown(run), args.markdown)
+    _emit(run_markdown(run), args.markdown, quiet=args.quiet)
     return EXIT_PASS
 
 
@@ -168,10 +260,19 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
     labels = None
     if args.labels:
         labels = {}
-        for line in Path(args.labels).read_text(encoding="utf-8").splitlines():
-            if line.strip():
+        for lineno, line in enumerate(
+            Path(args.labels).read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if not line.strip():
+                continue
+            where = f"{args.labels}:{lineno}"
+            try:
                 rec = json.loads(line)
-                labels[str(rec["id"])] = bool(rec["label"])
+            except json.JSONDecodeError as exc:
+                raise ConfigError(f"{where}: not valid JSON ({exc.msg})") from exc
+            if not isinstance(rec, dict) or "id" not in rec or "label" not in rec:
+                raise ConfigError(f'{where}: each line needs an "id" and a "label"')
+            labels[str(rec["id"])] = bool(rec["label"])
     rep = calibrate(
         run,
         args.judge_scorer,
@@ -188,7 +289,7 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
-    _emit(run_markdown(load_run(args.run)), args.markdown)
+    _emit(run_markdown(load_run(args.run), args.show), args.markdown)
     return EXIT_PASS
 
 
@@ -266,6 +367,19 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--label", help="name this system in reports")
     r.add_argument("--markdown", help="also append the report to this file")
     r.add_argument("--quiet", action="store_true")
+    r.add_argument(
+        "--show",
+        type=int,
+        default=10,
+        metavar="N",
+        help="list up to N failed cases in the report (default 10; 0 hides the list)",
+    )
+    r.add_argument(
+        "--gate",
+        action="store_true",
+        help="apply the suite's absolute checks (gate.min_pass_rate, gate.must_pass) to this "
+        "run, with no baseline; exit 1 when one fails",
+    )
     r.set_defaults(func=cmd_run)
 
     im = sub.add_parser(
@@ -286,6 +400,11 @@ def build_parser() -> argparse.ArgumentParser:
         "pass) or any",
     )
     im.add_argument("--markdown", help="also append the report to this file")
+    im.add_argument(
+        "--quiet",
+        action="store_true",
+        help="do not print the report to stdout (--markdown still writes it)",
+    )
     tab = im.add_argument_group("jsonl and csv only")
     tab.add_argument("--id-field", help="column holding the case id (default: id)")
     tab.add_argument("--metric-field", help="column holding the metric name (default: metric)")
@@ -312,14 +431,39 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--max-p95-ms", type=float)
     c.add_argument("--max-cost", type=float)
     c.add_argument(
+        "--min-pass-rate",
+        type=float,
+        help="lowest candidate pass rate on each gated metric; errored cases count as failures",
+    )
+    c.add_argument(
+        "--must-pass",
+        action="append",
+        metavar="TAG",
+        help="a case tag whose cases must all pass every gated metric; repeat for several",
+    )
+    c.add_argument(
+        "--max-new-failures",
+        type=int,
+        help="most cases that may go from pass to fail on a binary gated metric, whatever the "
+        "p-value; 0 suits deterministic scorers",
+    )
+    c.add_argument(
         "--allow-judge-change",
         action="store_const",
         const=True,
         default=None,
-        help="gate even if the judge (target, CLI version, isolation or resolved model) differs "
-        "between the runs; it is refused otherwise",
+        help="gate even if the judge (target, CLI, isolation or resolved model) differs "
+        "between the runs; it is refused otherwise. A new CLI version alone only warns",
     )
     c.add_argument("--gate", action="store_true", help="exit non-zero when the gate fails")
+    c.add_argument(
+        "--show",
+        type=int,
+        default=5,
+        metavar="N",
+        help="show both outputs for up to N regressed cases of the gated metrics (default 5; "
+        "0 hides them)",
+    )
     c.add_argument("--seed", type=int, default=0)
     c.add_argument("--markdown")
     c.add_argument("--json")
@@ -343,7 +487,26 @@ def build_parser() -> argparse.ArgumentParser:
     rep = sub.add_parser("report", help="summarise one run")
     rep.add_argument("run")
     rep.add_argument("--markdown")
+    rep.add_argument(
+        "--show",
+        type=int,
+        default=10,
+        metavar="N",
+        help="list up to N failed cases (default 10; 0 hides the list)",
+    )
     rep.set_defaults(func=cmd_report)
+
+    ver = sub.add_parser(
+        "verify",
+        help="check that a run file matches the suite and dataset, without calling a model",
+        description="Check that RUN was made with SUITE's system, judge, scorers and seed, and "
+        "scored exactly the dataset's cases as they are now. Makes no model call. Exit 0 when "
+        "it matches, 4 when it does not, 2 for a usage error.",
+    )
+    ver.add_argument("run")
+    ver.add_argument("suite")
+    ver.add_argument("--markdown", help="also append the verdict to this file")
+    ver.set_defaults(func=cmd_verify)
 
     dr = sub.add_parser(
         "doctor",
@@ -376,6 +539,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         code: int = args.func(args)
     except (ConfigError, DatasetError, ProviderError, FileNotFoundError, ValueError) as exc:
         sys.stderr.write(f"evalproof: error: {exc}\n")
+        return EXIT_USAGE
+    except KeyboardInterrupt:
+        sys.stderr.write("\nevalproof: interrupted\n")
+        return EXIT_INTERRUPTED
+    except Exception as exc:
+        if os.environ.get("EVALPROOF_DEBUG"):
+            raise
+        sys.stderr.write(
+            f"evalproof: error: {type(exc).__name__}: {exc}\n"
+            "set EVALPROOF_DEBUG=1 for the traceback\n"
+        )
         return EXIT_USAGE
     return code
 

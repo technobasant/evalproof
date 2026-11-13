@@ -4,6 +4,13 @@
 # result (evals/runs/latest.json). This job makes no model calls and needs no secret: it
 # compares that file with the one on the base branch and fails the pull request on a
 # regression that is both large enough to matter and statistically significant.
+#
+# What that proves, and what it does not. Before comparing, the job runs `evalproof verify`:
+# the committed run must match the committed suite (system, judge, scorers, seed) and cover
+# exactly the dataset's cases as they are now. So a stale run file, a --limit run and an
+# edited case all fail the job. It cannot prove the scores were not edited by hand. For pull
+# requests from people you do not trust (forks), review the run file, or use
+# `evalproof init --ci api-key`, which makes the run in CI.
 name: evalproof
 
 on:
@@ -45,8 +52,10 @@ jobs:
       - name: Warn when the run file is stale
         env:
           BASE_REF: ${{ github.base_ref }}
-          # Space-separated paths whose change should come with a fresh run file. Add the
-          # files that hold your system prompt or retrieval settings.
+          # `evalproof verify` (in the gate step below) already catches a changed suite or
+          # dataset. This step is for files it cannot see: application code that holds your
+          # prompts or retrieval logic. Space-separated paths whose change should come with a
+          # fresh run file; add yours.
           WATCH: evals/
         run: |
           set -euo pipefail
@@ -65,3 +74,4 @@ jobs:
           baseline: ${{ runner.temp }}/evalproof-baseline.json
           candidate: evals/runs/latest.json
           suite: evals/suite.yaml
+          verify-candidate: "true" # the run file must match the suite and dataset

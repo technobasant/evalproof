@@ -18,7 +18,14 @@ import httpx
 from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.config import ConfigError, TargetConfig
 from evalproof.models import Case, SystemOutput
-from evalproof.providers import Message, Provider, ProviderError, make_provider, with_retries
+from evalproof.providers import (
+    Message,
+    Provider,
+    ProviderError,
+    make_provider,
+    response_cost,
+    with_retries,
+)
 
 
 class System(Protocol):
@@ -64,7 +71,7 @@ class LLMSystem:
             latency_ms=resp.latency_ms,
             tokens_in=resp.tokens_in,
             tokens_out=resp.tokens_out,
-            cost_usd=self.cfg.pricing.cost(resp.tokens_in, resp.tokens_out),
+            cost_usd=response_cost(resp, self.cfg.pricing),
             cached=resp.cached,
         )
 

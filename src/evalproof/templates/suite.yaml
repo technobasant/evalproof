@@ -68,3 +68,7 @@ gate:
   max_drop: 0.03
   alpha: 0.05
   min_cases: 20
+  # More checks, off until you set them:
+  # max_new_failures: 0     # fail when more than this many cases pass before and fail now
+  # min_pass_rate: 0.8      # a floor on the candidate alone (or per scorer: {judge: 0.8})
+  # must_pass: [critical]   # every case tagged `critical` must pass (tags are in cases.jsonl)

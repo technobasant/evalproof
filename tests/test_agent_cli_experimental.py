@@ -533,11 +533,13 @@ def _gone(pid: int, wait_s: float = 3.0) -> bool:
 
 def test_timeout_kills_the_whole_process_group(cli: Case) -> None:
     cli.set_replies(reply(sleep=30, spawn_child=True))
-    provider = cli.provider(timeout_s=1.0)
+    # 3 s, not 1: the fake CLI is a Python script, and on a loaded machine it can take over a
+    # second to start and record its call, which this test then reads.
+    provider = cli.provider(timeout_s=3.0)
     start = time.monotonic()
-    with pytest.raises(ProviderError, match="timed out after 1s"):
+    with pytest.raises(ProviderError, match="timed out after 3s"):
         provider.chat(USER, PARAMS)
-    assert time.monotonic() - start < 10
+    assert time.monotonic() - start < 15
     call = cli.fake.last()
     assert _gone(call["pid"]) and _gone(call["child_pid"])
     assert len(cli.fake.calls()) == 1  # a timeout is not retried
@@ -928,22 +930,23 @@ def test_fingerprint(cli: Case) -> None:
     assert cli.fake.calls() == []  # a version lookup is not a model call
 
 
-def test_cache_salt_changes_with_the_cli_version(cli: Case) -> None:
+def test_cache_salt_does_not_depend_on_the_cli_version(cli: Case) -> None:
     provider = cli.provider()
     before = provider.cache_salt(PARAMS)
     cli.fake.set_version("9.9.9")
     after = provider.cache_salt(PARAMS)
-    assert before != after and after["cli_version"] == "9.9.9"
+    assert before == after and "cli_version" not in after
+    assert provider.fingerprint()["cli_version"] == "9.9.9"
 
 
-def test_a_version_change_is_a_cache_miss(cli: Case, tmp_path: Path) -> None:
+def test_a_version_change_is_still_a_cache_hit(cli: Case, tmp_path: Path) -> None:
     cached = CachedProvider(cli.provider(), ResponseCache(tmp_path / "cache"))
     first = cached.chat(USER, PARAMS)
     again = cached.chat(USER, PARAMS)
     assert not first.cached and again.cached and len(cli.fake.calls()) == 1
     cli.fake.set_version("9.9.9")
-    cached.chat(USER, PARAMS)
-    assert len(cli.fake.calls()) == 2
+    after = cached.chat(USER, PARAMS)
+    assert after.cached and len(cli.fake.calls()) == 1
 
 
 def test_make_provider_builds_the_experimental_providers(cli: Case) -> None:

@@ -11,7 +11,7 @@ from typing import Protocol, TypeVar
 import httpx
 from pydantic import BaseModel
 
-from evalproof.config import GenerationParams
+from evalproof.config import GenerationParams, Pricing
 
 T = TypeVar("T")
 
@@ -39,6 +39,19 @@ class ChatResponse(BaseModel):
     tokens_out: int = 0
     latency_ms: float = 0.0
     cached: bool = False
+    # The cost the provider itself reported, in USD (the Claude Code CLI's ``total_cost_usd``);
+    # None when it reports none. Under a subscription login this is the CLI's API-equivalent
+    # estimate, not a bill. A cache hit returns the cost recorded with the original call.
+    cost_usd: float | None = None
+
+
+def response_cost(resp: ChatResponse, pricing: Pricing) -> float:
+    """What one call cost: the suite's ``pricing`` when it sets a price, otherwise the cost the
+    provider reported, otherwise zero. A configured price always wins."""
+    unpriced = pricing.input_per_mtok == 0 and pricing.output_per_mtok == 0
+    if resp.cost_usd is not None and unpriced:
+        return resp.cost_usd
+    return pricing.cost(resp.tokens_in, resp.tokens_out)
 
 
 class Provider(Protocol):

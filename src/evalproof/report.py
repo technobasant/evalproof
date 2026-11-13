@@ -2,18 +2,42 @@
 
 from __future__ import annotations
 
+import html
 import json
 from collections.abc import Sequence
 from dataclasses import asdict
 from typing import Any
 
 from evalproof.calibration import CalibrationReport, Estimate
-from evalproof.compare import Comparison, MetricComparison
-from evalproof.gate import GateDecision
-from evalproof.models import Run
+from evalproof.compare import Comparison, MetricComparison, dataset_change_note
+from evalproof.gate import EXIT_CANNOT_GATE, GateDecision
+from evalproof.models import CaseResult, Run
 from evalproof.stats import percentile, wilson
 
 STATUS_ICON = {"pass": "✅ pass", "warn": "⚠️ pass with warnings", "fail": "❌ fail"}
+CANNOT_GATE = "⚠️ cannot gate"  # exit 4: nothing was decided, which is not a quality failure
+
+REGRESSED_SHOWN = 10  # ids listed per metric
+REASON_CHARS = 120  # a failed case's reason, in the run report
+EXAMPLE_CHARS = 400  # a regressed case's output, in a <details> block
+
+
+def _clip(text: str, limit: int) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _ids(ids: list[str], limit: int = REGRESSED_SHOWN) -> str:
+    shown = ", ".join(f"`{c}`" for c in ids[:limit])
+    return shown + (f" and {len(ids) - limit} more" if len(ids) > limit else "")
+
+
+def _fence(text: str) -> str:
+    """``text`` in a code fence long enough that nothing inside can close it."""
+    ticks = "```"
+    while ticks in text:
+        ticks += "`"
+    return f"{ticks}\n{text}\n{ticks}"
 
 
 def _pct(x: float | None) -> str:
@@ -30,17 +54,66 @@ def _delta(mc: MetricComparison) -> str:
     return f"{mc.delta:+.3f} [{mc.ci_low:+.3f}, {mc.ci_high:+.3f}]"
 
 
+def _examples(
+    cmp: Comparison, gated: list[str], baseline: Run, candidate: Run, show: int
+) -> list[str]:
+    """A ``<details>`` block for up to ``show`` cases that regressed on a gated metric: what
+    each run answered and why the candidate's scorer failed it."""
+    if show <= 0:
+        return []
+    b_by, c_by = baseline.by_id(), candidate.by_id()
+    picked: list[tuple[str, str]] = []
+    for name in gated:
+        mc = cmp.metrics.get(name)
+        for cid in mc.regressed if mc else []:
+            if all(cid != seen for seen, _ in picked):
+                picked.append((cid, name))
+    lines: list[str] = []
+    for cid, name in picked[:show]:
+        base, cand = b_by[cid], c_by[cid]
+        score = cand.scores.get(name)
+        reason = cand.output.error and f"system error: {cand.output.error}"
+        reason = reason or (score.reason if score and score.reason else "none recorded")
+        lines += [
+            "",
+            f"<details><summary><code>{html.escape(cid)}</code> regressed on "
+            f"{html.escape(name)}</summary>",
+            "",
+            "**Baseline output**",
+            "",
+            _fence(_clip(base.output.output, EXAMPLE_CHARS) or "(empty)"),
+            "",
+            "**Candidate output**",
+            "",
+            _fence(_clip(cand.output.output, EXAMPLE_CHARS) or "(empty)"),
+            "",
+            f"**Candidate's {html.escape(name)} reason:** "
+            f"{html.escape(_clip(reason, EXAMPLE_CHARS), quote=False)}",
+            "",
+            "</details>",
+        ]
+    return lines
+
+
 def comparison_markdown(
     cmp: Comparison,
     decision: GateDecision | None = None,
     gate_metric: str | Sequence[str] | None = None,
+    *,
+    runs: tuple[Run, Run] | None = None,
+    show: int = 0,
 ) -> str:
+    """``runs`` is ``(baseline, candidate)``; with it, ``show`` regressed cases of the gated
+    metrics get a ``<details>`` block holding both outputs."""
     gated = [gate_metric] if isinstance(gate_metric, str) else list(gate_metric or [])
     # With several gated metrics the decision carries Holm-adjusted p-values; show them.
     adjusted = decision.adjusted_p if decision is not None and len(gated) > 1 else {}
     lines = ["## evalproof", ""]
     if decision is not None:
-        lines += [f"**Gate: {STATUS_ICON[decision.status]}** (exit {decision.exit_code})", ""]
+        status = (
+            CANNOT_GATE if decision.exit_code == EXIT_CANNOT_GATE else STATUS_ICON[decision.status]
+        )
+        lines += [f"**Gate: {status}** (exit {decision.exit_code})", ""]
         lines += [f"- {r}" for r in decision.reasons]
         lines += [f"- ⚠️ {w}" for w in decision.warnings]
         if decision.reasons or decision.warnings:
@@ -52,9 +125,13 @@ def comparison_markdown(
                 f"- ⚠️ The judge changed, so the scores may not be comparable: {c}"
                 for c in cmp.judge_changes
             ]
+        lines += [f"- ⚠️ {w}" for w in cmp.judge_warnings]
         if cmp.system_changes:
             lines += [f"- ⚠️ The system under test changed: {c}" for c in cmp.system_changes]
-        if cmp.judge_changes or cmp.system_changes:
+        note = dataset_change_note(cmp)
+        if note:
+            lines.append(f"- ⚠️ {note}")
+        if cmp.judge_changes or cmp.judge_warnings or cmp.system_changes or note:
             lines.append("")
     lines += [
         f"Baseline `{cmp.baseline_label}` vs candidate `{cmp.candidate_label}` on "
@@ -83,18 +160,49 @@ def comparison_markdown(
             f"| {label} | {st.cases} | {st.errors} | {st.p50_latency_ms:.0f} ms | "
             f"{st.p95_latency_ms:.0f} ms | ${st.cost_usd:.4f} |"
         )
-    for name in gated:
-        focus = cmp.metrics.get(name)
-        if focus and focus.regressed:
-            shown = ", ".join(f"`{c}`" for c in focus.regressed[:20])
-            more = f" and {len(focus.regressed) - 20} more" if len(focus.regressed) > 20 else ""
-            lines += ["", f"Regressed on **{focus.name}** ({len(focus.regressed)}): {shown}{more}"]
-        if focus and focus.improved:
-            lines.append(f"Improved on **{focus.name}**: {len(focus.improved)} case(s)")
+    for name, focus in cmp.metrics.items():
+        label = f"**{name}**" if name in gated else name
+        if focus.regressed:
+            lines += ["", f"Regressed on {label} ({len(focus.regressed)}): {_ids(focus.regressed)}"]
+        if name in gated and focus.improved:
+            lines.append(f"Improved on {label}: {len(focus.improved)} case(s)")
+    if runs is not None:
+        lines += _examples(cmp, gated, runs[0], runs[1], show)
     return "\n".join(lines) + "\n"
 
 
-def run_markdown(run: Run) -> str:
+def _failed_cases(run: Run, max_cases: int) -> list[str]:
+    """The ``### Failed cases`` section: cases that errored, failed a scorer or were undecided."""
+
+    def problem(r: CaseResult) -> tuple[str, list[str]] | None:
+        failed = [n for n, s in r.scores.items() if s.passed is False]
+        undecided = [n for n, s in r.scores.items() if s.value is None]
+        if r.output.error:
+            return "errored", failed + undecided
+        if failed:
+            return "failed", failed
+        if undecided:
+            return "undecided", undecided
+        return None
+
+    found = [(r, p) for r in run.results if (p := problem(r)) is not None]
+    if not found or max_cases <= 0:
+        return []
+    lines = ["", f"### Failed cases ({len(found)})", ""]
+    for r, (kind, names) in found[:max_cases]:
+        what = f"{kind} on {', '.join(names)}" if names else kind
+        first = r.scores[names[0]] if names else None
+        reason = r.output.error or (first.reason if first and first.reason else "")
+        lines.append(
+            f"- `{r.case_id}` · {what}" + (f" · {_clip(reason, REASON_CHARS)}" if reason else "")
+        )
+    if len(found) > max_cases:
+        lines.append(f"- … and {len(found) - max_cases} more")
+    return lines
+
+
+def run_markdown(run: Run, max_cases: int = 10) -> str:
+    """The run's summary table. ``max_cases`` caps the failed-cases list; 0 leaves it out."""
     lines = [
         f"## {run.info.suite} — `{run.info.system}`",
         "",
@@ -128,6 +236,7 @@ def run_markdown(run: Run) -> str:
         f"errors {sum(1 for r in run.results if r.output.error)} · "
         f"cached {sum(1 for r in run.results if r.output.cached)}",
     ]
+    lines += _failed_cases(run, max_cases)
     return "\n".join(lines) + "\n"
 
 

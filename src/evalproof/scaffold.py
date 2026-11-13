@@ -22,7 +22,7 @@ from evalproof.providers import LLM_PROVIDERS, PROFILES, parse_target
 
 # The tag of the composite action (``action.yml``) the generated workflows use. The
 # ``evalproof`` version that ``run`` is pinned to in the api-key variant is the same release.
-ACTION_REF = "v0.4.1"
+ACTION_REF = "v0.5.0"
 
 CI_MODES = ("keyless", "api-key", "none")
 
@@ -243,16 +243,21 @@ def render_ci_text(ci: str, judge: Judge) -> str:
             "`.github/workflows/evalproof.yml` compares that file with the one on the base "
             "branch and fails the pull request on a regression that is both large enough to "
             "matter and statistically significant (exit 1; exit 3 over a latency or cost "
-            "budget; exit 4 when it cannot decide). It warns when `evals/` changed but "
-            "`latest.json` did not."
+            "budget; exit 4 when it cannot decide). Before comparing it runs `evalproof verify`, "
+            "which fails the job when `latest.json` does not match the suite and the cases in "
+            "`cases.jsonl` (a stale file, a `--limit` run, an edited case). It also warns when "
+            "`evals/` changed but `latest.json` did not."
         )
     if ci == "api-key":
         text = (
             "Commit `evals/runs/latest.json` on the main branch to set the baseline. "
-            "`.github/workflows/evalproof.yml` runs the suite on each pull request with the "
+            "`.github/workflows/evalproof.yml` runs the suite on a pull request that changes "
+            "`evals/` (add the paths that hold your prompt to `WATCH` in the workflow) with the "
             f"`{_key_env(judge)}` repository secret and compares the result with that file; "
             "it fails on a regression that is both large enough to matter and statistically "
-            "significant (exit 1; exit 3 over a budget; exit 4 when it cannot decide)."
+            "significant (exit 1; exit 3 over a budget; exit 4 when it cannot decide). Pull "
+            "requests from forks get no secrets, so the workflow runs nothing for them. "
+            "Responses are cached between runs."
         )
         if judge.provider in AGENT_CLIS:
             text += (

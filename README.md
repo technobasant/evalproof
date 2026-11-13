@@ -110,6 +110,20 @@ With Ollama installed, the LLM example is
 The browser app in [`app/`](app) runs locally too:
 `uv run --with-requirements app/requirements.txt streamlit run app/streamlit_app.py`.
 
+### Commands
+
+| Command | What it does |
+|---|---|
+| `evalproof init` | write a starter suite, a CI workflow and an agent skill; no model call |
+| `evalproof run SUITE` | run the suite and write a run file; `--gate` applies the baseline-free checks (`min_pass_rate`, `must_pass`); `--show N` lists N failed cases |
+| `evalproof compare BASE CAND` | compare two runs on paired cases; `--gate` turns the result into an exit code; `--show N` prints both answers for N regressed cases |
+| `evalproof verify RUN SUITE` | check, with no model call, that a run file was made with this suite and covers exactly the dataset's cases as they are now |
+| `evalproof report RUN` | print a run file's report |
+| `evalproof import FORMAT FILE` | turn another tool's results into a run file |
+| `evalproof calibrate RUN` | measure the judge against gold labels and correct its pass rate |
+| `evalproof pairwise A B` | judge two runs head to head, in both orders |
+| `evalproof doctor [SUITE]` | check the agent CLIs a suite uses; no model call |
+
 ## Providers
 
 The target is `<provider>:<model>`; the model name is everything after the first colon, so
@@ -231,18 +245,25 @@ it is the same model either way. `evalproof doctor` prints the mode in effect an
   and `max_tokens` are ignored. `think` maps to Codex's reasoning effort (`false` is `low`,
   `true` is `medium`; `params.extra.reasoning_effort` sets it directly). A run is therefore
   not repeatable the way a seeded local run is, so the run records the CLI, its version, the
-  isolation scheme and the model id that actually answered, and the cache keys on the CLI
-  version. To see how much a judge wobbles, score the same outputs twice with `--no-cache`, or
+  isolation scheme and the model id that actually answered. The cache does not key on the CLI
+  version, so a CLI that updates itself keeps its cached replies; `--no-cache` asks again. To
+  see how much a judge wobbles, score the same outputs twice with `--no-cache`, or
   [calibrate](#concepts) it against labels.
 * **A changed judge is not comparable.** `compare` and the gate refuse (exit 4) when the judge's
-  target, CLI version, isolation or resolved model differs between the two runs, because the
-  scores then come from a different instrument. Pass `--allow-judge-change` or set
-  `gate.allow_judge_change: true` to accept it. A changed system target or CLI version only
-  warns, since that is usually the change under test. Runs written before 0.4.0 carry none of
-  these keys and compare as before.
+  target, CLI, isolation or resolved model differs between the two runs, because the scores
+  then come from a different instrument. Pass `--allow-judge-change` or set
+  `gate.allow_judge_change: true` to accept it. A new judge CLI version alone only warns, since
+  the resolved model is what decides whether the instrument changed; so does a changed system
+  target or CLI version, since that is usually the change under test. Runs written before 0.4.0
+  carry none of these keys and compare as before.
 * **Latency and cost.** A call takes about 1.4 s on `claude-code:haiku` and about 4 s on
   Codex, mostly start-up, so set `concurrency`. There is no API bill; the calls count against
-  your subscription's usage limits.
+  your subscription's usage limits. `claude-code` also reports a cost for each call
+  (`total_cost_usd`), and when the suite gives no `pricing` for that target the run records it
+  as the call's cost, so `max_cost_usd` and the report's cost total work. Under a subscription
+  login this is the CLI's API-equivalent estimate, not a bill: nothing is charged to you for it.
+  A `pricing` block in the suite, when it has non-zero prices, takes precedence. Judge calls
+  count too, retries included.
 * **Terms.** OpenAI documents Codex CLI use on a ChatGPT plan, including automation.
   Anthropic's terms allow a user to run the unmodified Claude Code binary on their own
   subscription; its plan limits assume ordinary individual use, and it forbids third-party
@@ -405,10 +426,60 @@ orders and reports order-dependent verdicts as ties.
 | Exit | Meaning |
 |---|---|
 | 0 | pass — possibly with warnings (a big drop that is not significant; a significant drop within tolerance) |
-| 1 | quality regression: drop ≥ `max_drop` **and** p < `alpha` |
+| 1 | quality regression: drop ≥ `max_drop` **and** p < `alpha`; or an absolute check failed (`min_pass_rate`, `must_pass`, `max_new_failures`) |
 | 3 | budget breach: candidate p95 latency or cost over the limit |
-| 4 | cannot gate: fewer than `min_cases` paired cases, the runs used different data, or the judge changed (unless `--allow-judge-change`) |
-| 2 | usage or configuration error |
+| 4 | cannot gate, which is not a regression: fewer than `min_cases` paired cases, a gated metric with no paired scores, the dataset changed and a run predates per-case hashes, the judge changed (unless `--allow-judge-change`), or `verify` found the candidate does not match the suite |
+| 2 | usage or configuration error (an unknown key in the suite, an unknown `--metric`); also `run` when every case errored |
+| 130 | interrupted (Ctrl-C) |
+
+The report says "cannot gate" for exit 4 and "fail" only for a regression, and it lists the
+ids that regressed on every compared metric (ten per metric, then "and N more"). `--show N`
+(default 5) adds, for that many regressed cases of the gated metrics, both answers and the
+candidate scorer's reason in a collapsed block. `run` and `report` list failed cases the same
+way (`--show N`, default 10; 0 hides the list).
+
+**When the cases change.** Every case in a run carries a hash of its content, and `compare`
+pairs two runs by id and hash. A case added since the baseline has no baseline score and is not
+compared. A case edited since the baseline (same id, new content) is excluded and listed in the
+report, so adding or editing cases never blocks the gate; the baseline catches up when the
+change is merged and its run file replaces the old one. A `--limit` run pairs with a full
+baseline on the cases it ran. Only when the dataset differs and one run predates per-case
+hashes (written before 0.5) can the cases that stayed the same not be told from the ones that
+changed, and the gate exits 4 asking for a fresh baseline. A dataset change is a warning.
+
+**Checks without a baseline.** The significance test needs a baseline. These do not:
+
+```yaml
+gate:
+  metric: judge
+  min_pass_rate: 0.8           # a floor for the candidate; or per scorer: {judge: 0.8, answer_key: 0.9}
+  must_pass: [critical]        # every case with this tag must pass every pass/fail gated metric
+  max_new_failures: 0          # most cases that may go from pass to fail on a pass/fail metric
+```
+
+`min_pass_rate`, `must_pass` and `max_new_failures` need a pass/fail metric. On a continuous one
+`min_pass_rate` cannot gate (exit 4), `max_new_failures` is skipped with a warning, and
+`must_pass` fails only an errored or undecided case.
+
+`evalproof run suite.yaml --gate` applies `min_pass_rate` and `must_pass` to the run alone and
+exits 1 when one fails (a usage error if the suite sets neither), which is the gate for a first
+run. `compare --gate` applies all three, and the same flags exist there:
+`--min-pass-rate`, `--must-pass` (repeatable) and `--max-new-failures`. `max_new_failures: 0`
+suits deterministic scorers, where one case flipping is a real change that the statistics, with
+few cases, would call noise. Errored cases count as failures in every one of these checks.
+
+| `gate:` key | Meaning | Default |
+|---|---|---|
+| `metric` / `metrics` | the scorer(s) to gate; several get a Holm correction | required |
+| `max_drop` | the largest tolerated drop, as a fraction | 0.02 |
+| `alpha` | significance level | 0.05 |
+| `min_cases` | fewest paired cases the gate will decide on | 20 |
+| `max_p95_latency_ms`, `max_cost_usd` | budgets on the candidate | none |
+| `allow_judge_change` | accept a changed judge | false |
+| `min_pass_rate`, `must_pass`, `max_new_failures` | the checks above | none |
+
+Unknown keys are errors everywhere in a suite, not silently ignored: a typo such as
+`max_drops` fails with `suite.yaml: gate.max_drops: unknown key (did you mean 'max_drop'?)`.
 
 The gate checks one metric by default. To gate several, repeat `--metric` or list them in
 the suite; each metric's p-value is then Holm-adjusted for the number of metrics gated, so
@@ -447,8 +518,9 @@ Import each side with the same importer, then gate as usual, for example
 
 * Case ids are stable between runs of the same dataset (they come from the test's inputs, or
   the tool's own sample id, never from its position), which is what lets two files pair.
-  The dataset hash covers the ids and inputs as the tool recorded them, so runs imported by
-  different importers refuse to gate (exit 4) instead of pairing on a coincidence.
+  Each case also carries a hash of its id and input as the tool recorded them, so runs imported
+  by different importers pair no cases and the gate refuses (exit 4) instead of pairing on a
+  coincidence.
 * A system error counts as a failure on every metric, as in a native run. Repeats of one case
   (epochs, repeated tests) collapse by `--epochs`: `mean` (the default), `first`, `all`
   or `any`. Under `mean`, `first` and `any`, a case with at least one repeat that ran is not
@@ -522,7 +594,7 @@ The composite action runs `compare --gate`, appends the report to the job summar
 fails the job on exit codes 1, 3 or 4:
 
 ```yaml
-- uses: technobasant/evalproof@v0.4.1
+- uses: technobasant/evalproof@v0.5.0
   with:
     baseline: eval/baseline.json     # produced on main, e.g. as a build artifact
     candidate: eval/candidate.json   # produced on this branch
@@ -530,16 +602,35 @@ fails the job on exit codes 1, 3 or 4:
     # metric: "judge, answer_key"    # optional: gate several metrics, newline- or comma-separated
 ```
 
+With a `suite`, the action first runs `evalproof verify` on the candidate (set
+`verify-candidate: "false"` to skip it): the run file must have been made with that suite's
+system, judge, scorers and seed and cover exactly the dataset's cases as they are now. A stale
+file, a `--limit` run and an edited case fail the job with exit 4 before any comparison. It
+cannot prove the scores were not edited by hand; for pull requests from people you do not
+trust, review the run file or use the api-key mode.
+
 This repository's own CI runs the offline example on every commit and asserts that the
 gate returns 1 for the real regression and 0 for the noisy and refactored candidates.
+
+`evalproof init` writes one of two workflows. **`--ci keyless`** (the default) makes no model
+call in CI: developers run the suite on their own login and commit `evals/runs/latest.json`;
+the job takes the baseline from the base branch, verifies the committed run, and gates. It also
+warns when files you watch (`WATCH`, default `evals/`) changed but the run file did not.
+**`--ci api-key`** makes the run in CI with a repository secret. It starts on every pull
+request (a path filter would leave a required check pending), and its first step compares
+against the base branch: when nothing in `WATCH` changed it says so and runs nothing. Pull
+requests from forks get no secrets, so for them it runs nothing and says so. Responses are
+cached in `evals/.evalproof/cache` between runs, keyed on the contents of `evals/`, so a push
+that changes no prompt or case is answered from the cache. The cache is saved right after the
+run, before the gate, so a pull request that fails the gate keeps it too.
 
 If the judge is a Claude Code or Codex CLI, `evalproof init --ci api-key` writes a workflow that
 installs the CLI at the version found at init time and runs `evals/suite.yaml` as it is. The run
 step sets `EVALPROOF_CLI_AUTH: api-key` and the repository secret (`ANTHROPIC_API_KEY` for
 Claude Code, `OPENAI_API_KEY` for Codex), so the CLI uses that key instead of a login. The
 suite names no key and there is no second suite file; a suite with an `api_key_env` still uses
-that variable. Keep the pinned CLI version equal to the one in your baseline run, because the
-gate exits 4 when the judge's CLI version differs.
+that variable. The pinned CLI version is advisory: a different version than the baseline's only
+warns, and the gate still refuses when the resolved model changes.
 
 ## How it relates to other tools
 

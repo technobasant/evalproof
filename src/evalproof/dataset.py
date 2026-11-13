@@ -57,6 +57,11 @@ def load_dataset(path: str | Path) -> list[Case]:
     return cases
 
 
+def case_hash(case: Case) -> str:
+    """Hash of one case's content (its id, input, reference, tags and extra fields)."""
+    return hashlib.sha256(canonical_json(case.model_dump(mode="json")).encode()).hexdigest()[:16]
+
+
 def dataset_hash(cases: list[Case]) -> str:
     """Hash of the cases as loaded; two runs on different data never compare silently."""
     h = hashlib.sha256()

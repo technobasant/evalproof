@@ -18,9 +18,17 @@ def make_run(
     system: str = "sys",
     dataset_hash: str = "h",
     latency: float = 10.0,
+    case_hashes: bool | dict[str, str] = False,
+    tags: dict[str, list[str]] | None = None,
+    errors: set[str] | None = None,
 ) -> Run:
     """Build a run from ``{case_id: {scorer: passed_or_value}}``. Booleans become binary
-    scores; floats become continuous scores; None becomes undecided."""
+    scores; floats become continuous scores; None becomes undecided.
+
+    ``case_hashes`` stamps per-case hashes the way evalproof 0.5 does: True gives every case
+    the hash ``h-<id>``, a dict sets the hash of the ids it names. The default writes a run as
+    older evalproof did, with none. ``tags`` gives case tags by id; ``errors`` names the cases
+    whose system call errored."""
     results = []
     for cid, scores in outcomes.items():
         built: dict[str, Score] = {}
@@ -31,9 +39,22 @@ def make_run(
                 built[name] = Score(value=1.0 if v else 0.0, passed=v)
             else:
                 built[name] = Score(value=float(v))
+        stamp = (
+            case_hashes.get(cid)
+            if isinstance(case_hashes, dict)
+            else (f"h-{cid}" if case_hashes else None)
+        )
         results.append(
             CaseResult(
-                case_id=cid, output=SystemOutput(output="x", latency_ms=latency), scores=built
+                case_id=cid,
+                tags=(tags or {}).get(cid, []),
+                output=SystemOutput(
+                    output="" if cid in (errors or set()) else "x",
+                    latency_ms=latency,
+                    error="boom" if cid in (errors or set()) else None,
+                ),
+                scores=built,
+                case_hash=stamp,
             )
         )
     info = RunInfo(

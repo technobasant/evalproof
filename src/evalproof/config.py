@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import difflib
+import hashlib
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+
+from evalproof.dataset import canonical_json
 
 ScorerType = Literal[
     "exact_match",
@@ -28,6 +32,8 @@ class ConfigError(ValueError):
 class Pricing(BaseModel):
     """USD per million tokens. Local models default to zero."""
 
+    model_config = ConfigDict(extra="forbid")
+
     input_per_mtok: float = 0.0
     output_per_mtok: float = 0.0
 
@@ -36,6 +42,8 @@ class Pricing(BaseModel):
 
 
 class GenerationParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     temperature: float = 0.0
     seed: int | None = 0
     max_tokens: int = 512
@@ -63,6 +71,8 @@ class TargetConfig(BaseModel):
     committed too.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     target: str
     label: str | None = None  # how reports name this system, e.g. "qwen3:1.7b + grounded prompt"
     system_prompt: str | None = None
@@ -82,6 +92,8 @@ class TargetConfig(BaseModel):
 
 
 class ScorerConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     type: ScorerType
     params: dict[str, Any] = Field(default_factory=dict)
@@ -90,6 +102,8 @@ class ScorerConfig(BaseModel):
 class CalibrationConfig(BaseModel):
     """How to calibrate a judge: against a labels file, or against another (trusted) scorer
     sampled down to ``gold_sample`` cases to mimic a small human-reviewed set."""
+
+    model_config = ConfigDict(extra="forbid")
 
     judge_scorer: str
     labels: str | None = None
@@ -111,6 +125,8 @@ class GateConfig(BaseModel):
     Either may be omitted as long as one scorer is named; ``gated`` is the full list.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     metric: str | None = None
     metrics: list[str] = Field(default_factory=list)
     max_drop: float = 0.02
@@ -119,9 +135,29 @@ class GateConfig(BaseModel):
     max_p95_latency_ms: float | None = None
     max_cost_usd: float | None = None
     n_boot: int = 5000
-    # A changed judge (target, CLI version, isolation or resolved model) makes two runs'
-    # scores incomparable, so the gate refuses unless told to accept it.
+    # A changed judge (target, CLI, isolation or resolved model) makes two runs' scores
+    # incomparable, so the gate refuses unless told to accept it. A new CLI version alone only
+    # warns, so a pinned CLI version is advisory.
     allow_judge_change: bool = False
+    # Absolute checks on the candidate alone (``evalproof run --gate`` applies just these).
+    # ``min_pass_rate`` is the lowest candidate pass rate per gated metric (a float for all of
+    # them, or a dict by scorer name); errored cases count as failures. ``must_pass`` lists
+    # case tags: a case with one must pass every gated metric. ``max_new_failures`` is the most
+    # cases that may go from pass to fail on a binary gated metric, whatever the p-value; 0
+    # suits deterministic scorers.
+    min_pass_rate: float | dict[str, float] | None = None
+    must_pass: list[str] = Field(default_factory=list)
+    max_new_failures: int | None = None
+
+    @model_validator(mode="after")
+    def _check_absolute(self) -> GateConfig:
+        floors = self.min_pass_rate
+        for value in floors.values() if isinstance(floors, dict) else [floors]:
+            if value is not None and not 0.0 <= value <= 1.0:
+                raise ValueError(f"min_pass_rate must be between 0 and 1, got {value}")
+        if self.max_new_failures is not None and self.max_new_failures < 0:
+            raise ValueError("max_new_failures must be >= 0")
+        return self
 
     @model_validator(mode="after")
     def _name_a_metric(self) -> GateConfig:
@@ -138,8 +174,24 @@ class GateConfig(BaseModel):
         names = [self.metric] if self.metric else []
         return list(dict.fromkeys([*names, *self.metrics]))
 
+    @property
+    def pass_rate_floors(self) -> dict[str, float]:
+        """The minimum pass rate per scorer: a float applies to every gated metric."""
+        if self.min_pass_rate is None:
+            return {}
+        if isinstance(self.min_pass_rate, dict):
+            return dict(self.min_pass_rate)
+        return {name: self.min_pass_rate for name in self.gated}
+
+    @property
+    def has_absolute_checks(self) -> bool:
+        """True when the gate sets a check that needs no baseline."""
+        return self.min_pass_rate is not None or bool(self.must_pass)
+
 
 class SuiteConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     dataset: str
     system: TargetConfig
@@ -164,6 +216,10 @@ class SuiteConfig(BaseModel):
                 if name not in names:
                     where = "gate.metric" if i == 0 else "gate.metrics"
                     raise ValueError(f"{where} {name!r} is not a scorer name")
+            if isinstance(self.gate.min_pass_rate, dict):
+                for name in self.gate.min_pass_rate:
+                    if name not in names:
+                        raise ValueError(f"gate.min_pass_rate {name!r} is not a scorer name")
         if self.calibration:
             for field in ("judge_scorer", "gold_scorer"):
                 ref = getattr(self.calibration, field)
@@ -176,6 +232,78 @@ class SuiteConfig(BaseModel):
     def resolve(self, path: str) -> Path:
         p = Path(path)
         return p if p.is_absolute() else Path(self.base_dir) / p
+
+
+def _target_identity(cfg: TargetConfig | None) -> dict[str, Any] | None:
+    """What decides a target's answers. ``label``, ``timeout_s``, ``headers``, ``api_key_env``
+    and ``pricing`` change how it is reported or reached, not what it says."""
+    if cfg is None:
+        return None
+    return {
+        "target": cfg.target,
+        "system_prompt": cfg.system_prompt,
+        "prompt_template": cfg.prompt_template,
+        "params": cfg.params.model_dump(mode="json"),
+        "base_url": cfg.base_url,
+    }
+
+
+def suite_fingerprint(cfg: SuiteConfig, system_cfg: TargetConfig | None = None) -> str:
+    """A short hash of what makes a run's scores: the system under test, the judge, every
+    scorer and the seed. ``system_cfg`` is the target that actually ran, overrides included;
+    it defaults to the suite's own.
+
+    The dataset is not in it (``evalproof verify`` checks it case by case), nor is anything that
+    only names or paces the run: the labels, timeouts, headers, key variable, pricing, gate,
+    cache directory, concurrency and suite name.
+    """
+    material = {
+        "system": _target_identity(system_cfg or cfg.system),
+        "judge": _target_identity(cfg.judge),
+        "scorers": [s.model_dump(mode="json") for s in cfg.scorers],
+        "seed": cfg.seed,
+    }
+    return hashlib.sha256(canonical_json(material).encode()).hexdigest()[:16]
+
+
+def _model_in(annotation: Any) -> type[BaseModel] | None:
+    """The pydantic model inside an annotation such as ``GateConfig | None`` or ``list[X]``."""
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+    for arg in get_args(annotation):
+        found = _model_in(arg)
+        if found is not None:
+            return found
+    return None
+
+
+def format_validation_error(
+    exc: ValidationError, path: str | Path, model: type[BaseModel] | None = None
+) -> str:
+    """One readable line per problem, ``<path>: <where>: <what>``, with no pydantic URLs. An
+    unknown key gets a suggestion when one is close, and the valid keys otherwise."""
+    lines = []
+    for err in exc.errors(include_url=False):
+        loc = err["loc"]
+        msg = err["msg"].removeprefix("Value error, ")
+        if err["type"] == "extra_forbidden":
+            current: type[BaseModel] | None = model or SuiteConfig
+            for part in loc[:-1]:
+                if isinstance(part, str) and current is not None:
+                    field = current.model_fields.get(part)
+                    current = _model_in(field.annotation) if field else None
+            valid = list(current.model_fields) if current else []
+            if current is TargetConfig:  # system and judge also take prompt text from a file
+                valid += ["system_prompt_file", "prompt_template_file"]
+            bad = str(loc[-1])
+            close = difflib.get_close_matches(bad, valid, n=1)
+            if close:
+                msg = f"unknown key (did you mean {close[0]!r}?)"
+            else:
+                msg = f"unknown key (valid keys: {', '.join(valid)})" if valid else "unknown key"
+        where = ".".join(str(part) for part in loc)
+        lines.append(f"{path}: {where}: {msg}" if where else f"{path}: {msg}")
+    return "\n".join(lines)
 
 
 def load_config(path: str | Path) -> SuiteConfig:
@@ -200,4 +328,4 @@ def load_config(path: str | Path) -> SuiteConfig:
     try:
         return SuiteConfig.model_validate(raw)
     except ValidationError as exc:
-        raise ConfigError(f"{path}: {exc}") from exc
+        raise ConfigError(format_validation_error(exc, path)) from exc

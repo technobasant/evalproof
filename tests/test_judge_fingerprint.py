@@ -148,13 +148,20 @@ def test_same_judge_when_nothing_changed() -> None:
     assert cmp.same_judge and cmp.judge_changes == [] and cmp.system_changes == []
 
 
-def test_a_changed_judge_is_listed() -> None:
+def test_a_new_judge_cli_version_is_only_a_warning() -> None:
     newer = {**JUDGE_ENV, "judge_cli_version": "2.1.400 (Claude Code)"}
     cmp = compare_runs(run_with(JUDGE_ENV), run_with(newer), n_boot=200)
-    assert not cmp.same_judge
-    assert cmp.judge_changes == [
-        "judge_cli_version: 2.1.322 (Claude Code) -> 2.1.400 (Claude Code)"
+    assert cmp.same_judge and cmp.judge_changes == []
+    assert cmp.judge_warnings == [
+        "the judge's CLI version changed: 2.1.322 (Claude Code) -> 2.1.400 (Claude Code); "
+        "the resolved model is unchanged"
     ]
+
+
+def test_a_changed_judge_is_listed() -> None:
+    cmp = compare_runs(*changed_pair(), n_boot=200)
+    assert not cmp.same_judge
+    assert cmp.judge_changes == ["judge_model_resolved: claude-haiku-5-5 -> claude-haiku-5-6"]
     moved = {**JUDGE_ENV, "judge_model_resolved": "claude-haiku-5-6", "judge_target": "codex:m"}
     cmp = compare_runs(run_with(JUDGE_ENV), run_with(moved), n_boot=200)
     assert [c.split(":")[0] for c in cmp.judge_changes] == ["judge_target", "judge_model_resolved"]
@@ -181,8 +188,9 @@ GATE = GateConfig(metric="m", min_cases=5)
 
 
 def changed_pair() -> tuple[Run, Run]:
-    newer = {**JUDGE_ENV, "judge_cli_version": "2.1.400 (Claude Code)"}
-    return run_with(JUDGE_ENV), run_with(newer)
+    """Two runs whose judge resolved to a different model: the gate must refuse these."""
+    moved = {**JUDGE_ENV, "judge_model_resolved": "claude-haiku-5-6"}
+    return run_with(JUDGE_ENV), run_with(moved)
 
 
 def test_the_gate_refuses_a_changed_judge() -> None:
@@ -190,8 +198,35 @@ def test_the_gate_refuses_a_changed_judge() -> None:
     decision = decide(cmp, GATE)
     assert decision.exit_code == EXIT_CANNOT_GATE and decision.status == "fail"
     assert "judge changed" in decision.reasons[0]
-    assert "judge_cli_version: 2.1.322" in decision.reasons[0]
+    assert "judge_model_resolved: claude-haiku-5-5 -> claude-haiku-5-6" in decision.reasons[0]
     assert "--allow-judge-change" in decision.reasons[0]
+
+
+def test_the_gate_refuses_a_changed_judge_target_cli_or_isolation() -> None:
+    for key, value in (
+        ("judge_target", "claude-code:sonnet"),
+        ("judge_cli", "codex"),
+        ("judge_isolation", "claude-code/2"),
+    ):
+        cmp = compare_runs(run_with(JUDGE_ENV), run_with({**JUDGE_ENV, key: value}), n_boot=200)
+        assert decide(cmp, GATE).exit_code == EXIT_CANNOT_GATE, key
+
+
+def test_a_new_judge_cli_version_warns_and_does_not_refuse() -> None:
+    newer = {**JUDGE_ENV, "judge_cli_version": "2.1.400 (Claude Code)"}
+    cmp = compare_runs(run_with(JUDGE_ENV), run_with(newer), n_boot=200)
+    decision = decide(cmp, GATE)
+    assert decision.exit_code == EXIT_PASS and decision.status == "warn"
+    assert decision.warnings == [
+        "the judge's CLI version changed: 2.1.322 (Claude Code) -> 2.1.400 (Claude Code); "
+        "the resolved model is unchanged"
+    ]
+    # Without a gate, the report says so too.
+    assert "CLI version changed" in comparison_markdown(cmp)
+    # A version bump together with a changed model is still refused.
+    both = {**newer, "judge_model_resolved": "claude-haiku-5-6"}
+    refused = decide(compare_runs(run_with(JUDGE_ENV), run_with(both), n_boot=200), GATE)
+    assert refused.exit_code == EXIT_CANNOT_GATE
 
 
 def test_the_gate_can_allow_a_changed_judge() -> None:
@@ -206,7 +241,7 @@ def test_a_changed_judge_and_dataset_are_both_reported() -> None:
     b.info.dataset_hash = "other"
     decision = decide(compare_runs(a, b, n_boot=200), GATE)
     assert decision.exit_code == EXIT_CANNOT_GATE
-    assert len(decision.reasons) == 2 and "different datasets" in decision.reasons[0]
+    assert len(decision.reasons) == 2 and "re-run the baseline" in decision.reasons[0]
 
 
 def test_a_changed_system_only_warns() -> None:
@@ -233,9 +268,9 @@ def test_runs_without_the_keys_gate_as_before() -> None:
 def test_the_report_shows_judge_changes_without_a_gate() -> None:
     cmp = compare_runs(*changed_pair(), n_boot=200)
     text = comparison_markdown(cmp)
-    assert "The judge changed" in text and "2.1.400" in text
+    assert "The judge changed" in text and "claude-haiku-5-6" in text
     gated = comparison_markdown(cmp, decide(cmp, GATE), ["m"])
-    assert gated.count("judge_cli_version") == 1  # once, among the gate's reasons
+    assert gated.count("judge_model_resolved") == 1  # once, among the gate's reasons
 
 
 def test_compare_exit_codes_and_the_flag(
@@ -252,7 +287,7 @@ def test_compare_exit_codes_and_the_flag(
     assert main([*argv, "--allow-judge-change", "--json", str(payload)]) == EXIT_PASS
     data = json.loads(payload.read_text("utf-8"))
     assert data["comparison"]["same_judge"] is False
-    assert data["comparison"]["judge_changes"][0].startswith("judge_cli_version")
+    assert data["comparison"]["judge_changes"][0].startswith("judge_model_resolved")
     # Without --gate the comparison reports the change but exits 0.
     assert main(argv[:-1]) == EXIT_PASS
 

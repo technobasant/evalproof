@@ -18,6 +18,14 @@ inputs:
     description: Suite YAML whose `gate` block sets the metric and thresholds.
     required: false
     default: ""
+  verify-candidate:
+    description: >-
+      With a suite, first run `evalproof verify` on the candidate: it must have been made
+      with that suite's system, judge, scorers and seed, and cover exactly the dataset's
+      cases as they are now. A mismatch fails the job (exit 4) and skips the comparison.
+      Set to "false" to skip the check.
+    required: false
+    default: "true"
   metric:
     description: >-
       Scorer to gate on, if not taken from the suite. Several, separated by newlines or
@@ -48,11 +56,24 @@ runs:
         EP_BASELINE: ${{ inputs.baseline }}
         EP_CANDIDATE: ${{ inputs.candidate }}
         EP_SUITE: ${{ inputs.suite }}
+        EP_VERIFY: ${{ inputs.verify-candidate }}
         EP_METRIC: ${{ inputs.metric }}
         EP_MAX_DROP: ${{ inputs.max-drop }}
         EP_ALPHA: ${{ inputs.alpha }}
         EP_SOURCE: ${{ github.action_path }}
       run: |
+        # Verify first: a candidate that does not match the suite cannot be gated.
+        if [ -n "$EP_SUITE" ] && [ "$EP_VERIFY" = "true" ]; then
+          set +e
+          uvx --from "$EP_SOURCE" evalproof verify "$EP_CANDIDATE" "$EP_SUITE" \
+            --markdown "$GITHUB_STEP_SUMMARY"
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+            exit "$code"
+          fi
+        fi
         args=(compare "$EP_BASELINE" "$EP_CANDIDATE" --gate --markdown "$GITHUB_STEP_SUMMARY")
         [ -n "$EP_SUITE" ] && args+=(--suite "$EP_SUITE")
         # One --metric per name: split on commas and newlines, trim, skip blanks.

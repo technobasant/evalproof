@@ -129,9 +129,9 @@ def test_generated_workflow_is_valid_yaml(
     run_init(tmp_path, capsys, "--ci", ci)
     wf = yaml.safe_load((tmp_path / WORKFLOW).read_text(encoding="utf-8"))
     assert wf["name"] == "evalproof"
-    assert wf[True] == (  # YAML 1.1 reads the key `on` as a boolean
-        {"pull_request": None} if ci == "keyless" else {"pull_request": {"paths": ["evals/**"]}}
-    )
+    # YAML 1.1 reads the key `on` as a boolean. Neither workflow filters by path: a skipped
+    # workflow leaves a required check pending, so the api-key one decides inside the job.
+    assert wf[True] == {"pull_request": None}
     assert wf["permissions"] == {"contents": "read"}
     steps = wf["jobs"]["gate"]["steps"]
     assert steps[0]["uses"].startswith("actions/checkout@")
@@ -149,6 +149,18 @@ def test_the_gate_step_passes_inputs_the_action_declares(
     assert set(given) <= set(declared)
     assert {k for k, v in declared.items() if v["required"]} <= set(given)
     assert given["suite"] == "evals/suite.yaml"
+
+
+def test_the_keyless_gate_verifies_the_candidate_against_the_suite(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys)
+    text = (tmp_path / WORKFLOW).read_text(encoding="utf-8")
+    wf = yaml.safe_load(text)
+    assert wf["jobs"]["gate"]["steps"][-1]["with"]["verify-candidate"] == "true"
+    header = text.split("name: evalproof")[0]  # the honest limits, up front
+    assert "evalproof verify" in header and "edited by hand" in header
+    assert "--ci api-key" in header
 
 
 def test_the_written_suite_loads_and_scores_its_own_cases(
@@ -383,7 +395,7 @@ def test_api_key_workflow_pins_the_cli_found_at_init_time(
         "EVALPROOF_CLI_AUTH": "api-key",
         "ANTHROPIC_API_KEY": "${{ secrets.ANTHROPIC_API_KEY }}",
     }
-    assert 'uvx evalproof@0.4.1 run evals/suite.yaml --out "$RUNNER_TEMP/' in run["run"]
+    assert 'uvx evalproof@0.5.0 run evals/suite.yaml --out "$RUNNER_TEMP/' in run["run"]
     assert "judge_cli_version" in (tmp_path / WORKFLOW).read_text(encoding="utf-8")
 
 
@@ -433,7 +445,7 @@ def test_api_key_workflow_for_the_default_hosted_judge(
     steps = _steps(tmp_path / WORKFLOW)
     run = next(s for s in steps if s.get("name") == "Run the suite")
     assert run["env"] == {"ANTHROPIC_API_KEY": "${{ secrets.ANTHROPIC_API_KEY }}"}
-    assert "uvx evalproof@0.4.1 run evals/suite.yaml --out" in run["run"]
+    assert "uvx evalproof@0.5.0 run evals/suite.yaml --out" in run["run"]
     assert not any("npm install" in str(s.get("run", "")) for s in steps)
     assert "api_key_env: ANTHROPIC_API_KEY" in (tmp_path / "evals" / "suite.yaml").read_text(
         encoding="utf-8"
@@ -491,6 +503,68 @@ def test_the_evals_readme_explains_the_cli_auth_mode_for_a_cli_judge(
     assert "EVALPROOF_CLI_AUTH" not in (tmp_path / "hosted" / "evals" / "README.md").read_text(
         encoding="utf-8"
     )
+
+
+def test_api_key_workflow_does_not_filter_by_path(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys, "--ci", "api-key", "--judge", "openai:gpt-5")
+    text = (tmp_path / WORKFLOW).read_text(encoding="utf-8")
+    assert "paths:" not in text.split("permissions:")[0]
+    header = text.split("name: evalproof")[0]
+    assert "the run step fails" not in header and "forks get no secrets" in header.replace(
+        "\n# ", " "
+    )
+
+
+def test_api_key_workflow_decides_inside_the_job_and_skips_forks(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys, "--ci", "api-key", "--judge", "openai:gpt-5")
+    steps = _steps(tmp_path / WORKFLOW)
+    names = [s.get("name") or s.get("uses", "") for s in steps]
+    assert names.index("Check whether anything watched changed") == 1  # right after checkout
+    changed = steps[1]
+    assert changed["id"] == "changed" and changed["env"]["WATCH"] == "evals/"
+    not_fork = "github.event.pull_request.head.repo.full_name == github.repository"
+    for name in ("Run the suite", "Restore the response cache", "Compare with the baseline"):
+        step = next(s for s in steps if s.get("name", "").startswith(name))
+        assert "steps.baseline.outputs.found == 'true'" in step["if"], name
+        assert not_fork in step["if"], name  # no secrets for a fork, so no run and no gate
+    baseline = next(s for s in steps if s.get("name", "").startswith("Take the baseline"))
+    assert baseline["if"] == "steps.changed.outputs.changed == 'true'"
+    skip = next(s for s in steps if s.get("name") == "Skip pull requests from forks")
+    assert "head.repo.full_name != github.repository" in skip["if"]
+    assert "no secrets" in skip["run"] and "::notice" in skip["run"]
+
+
+def test_api_key_workflow_caches_responses_with_a_pinned_action(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys, "--ci", "api-key", "--judge", "openai:gpt-5")
+    path = tmp_path / WORKFLOW
+    step = next(s for s in _steps(path) if s.get("name") == "Restore the response cache")
+    assert re.fullmatch(r"actions/cache/restore@[0-9a-f]{40}", step["uses"])  # a commit
+    text = path.read_text("utf-8")
+    assert re.search(r"actions/cache/restore@[0-9a-f]{40} # v\d+\.\d+\.\d+", text)
+    assert re.search(r"actions/cache/save@[0-9a-f]{40} # v\d+\.\d+\.\d+", text)
+    assert step["with"]["path"] == "evals/.evalproof/cache"
+    assert step["with"]["key"] == "evalproof-${{ hashFiles('evals/**') }}"
+    assert step["with"]["restore-keys"].strip() == "evalproof-"
+    # The path is where the suite's default cache_dir lands: next to the suite.
+    cfg = load_config(tmp_path / "evals" / "suite.yaml")
+    assert (Path("evals") / cfg.cache_dir).as_posix() == step["with"]["path"]
+    names = [s.get("name", "") for s in _steps(path)]
+    assert names.index("Restore the response cache") < names.index("Run the suite")
+    # Saved before the gate, so a pull request that fails the gate keeps what it paid for.
+    save = next(s for s in _steps(path) if s.get("name") == "Save the response cache")
+    assert names.index("Run the suite") < names.index("Save the response cache")
+    assert names.index("Save the response cache") < names.index(
+        "Compare with the baseline and gate"
+    )
+    assert save["with"]["path"] == step["with"]["path"]
+    assert save["with"]["key"] == "${{ steps.cache.outputs.cache-primary-key }}"
+    assert step["id"] == "cache" and "cache-hit != 'true'" in save["if"]
 
 
 # --- the keyless workflow, run for real ---------------------------------------------------
@@ -656,6 +730,58 @@ def test_keyless_warning_follows_the_watch_list(
     pr.commit({"src/prompt.txt": "v2\n"})
     _, out, _ = pr.run_step("Warn when the run file is stale", tmp_path)
     assert "src/prompt.txt" in out and "::warning" in out
+
+
+@pytest.fixture
+def api_key_steps(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> list[dict[str, Any]]:
+    run_init(tmp_path / "gen", capsys, "--ci", "api-key", "--judge", "openai:gpt-5")
+    return _steps(tmp_path / "gen" / WORKFLOW)
+
+
+@needs_git
+@pytest.mark.parametrize(
+    ("changes", "changed"),
+    [
+        ({"evals/cases.jsonl": "{}\n"}, True),
+        ({"evals/suite.yaml": "name: t\n"}, True),
+        ({"evals/runs/latest.json": '{"v": 2}'}, False),  # CI makes the run itself
+        ({"src/prompt.txt": "v2\n"}, False),  # outside WATCH until the user adds it
+        ({"README.md": "hello\n"}, False),
+    ],
+)
+def test_api_key_runs_the_suite_only_when_something_watched_changed(
+    tmp_path: Path,
+    api_key_steps: list[dict[str, Any]],
+    changes: dict[str, str],
+    changed: bool,
+) -> None:
+    pr = Pr(tmp_path, api_key_steps, base_has_run=True)
+    pr.commit(changes)
+    code, out, outputs = pr.run_step("Check whether anything watched changed", tmp_path)
+    assert code == 0 and outputs == {"changed": "true" if changed else "false"}
+    assert ("::notice title=evalproof::Nothing in evals/ changed" in out) is not changed
+
+
+@needs_git
+def test_api_key_change_check_follows_the_watch_list(
+    tmp_path: Path, api_key_steps: list[dict[str, Any]]
+) -> None:
+    step = next(s for s in api_key_steps if s.get("id") == "changed")
+    step["env"]["WATCH"] = "evals/ src/"
+    pr = Pr(tmp_path, api_key_steps, base_has_run=True)
+    pr.commit({"src/prompt.txt": "v2\n"})
+    _, _, outputs = pr.run_step("Check whether anything watched changed", tmp_path)
+    assert outputs == {"changed": "true"}
+
+
+@needs_git
+def test_api_key_baseline_notice_when_the_base_has_no_run_file(
+    tmp_path: Path, api_key_steps: list[dict[str, Any]]
+) -> None:
+    pr = Pr(tmp_path, api_key_steps, base_has_run=False)
+    pr.commit({"evals/cases.jsonl": "{}\n"})
+    code, out, outputs = pr.run_step("Take the baseline", tmp_path)
+    assert code == 0 and outputs == {"found": "false"} and "::notice" in out
 
 
 # --- plumbing ----------------------------------------------------------------------------
