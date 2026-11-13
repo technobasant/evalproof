@@ -12,10 +12,12 @@ from evalproof.stats import mcnemar_exact, paired_bootstrap, percentile, wilson
 JUDGE_KEYS = (
     "judge_target",
     "judge_cli",
-    "judge_cli_version",
     "judge_isolation",
     "judge_model_resolved",
 )
+# The judge's CLI version is advisory: a CLI that updates itself still answers with the model
+# the run resolved, so a new version warns and does not stop the gate.
+JUDGE_WARN_KEYS = ("judge_cli_version",)
 # The system under test is usually the thing being changed, so these only warn.
 SYSTEM_KEYS = ("system_target", "system_cli", "system_cli_version", "system_isolation")
 
@@ -54,7 +56,7 @@ class Comparison:
     paired_ids: list[str]
     only_baseline: list[str]
     only_candidate: list[str]
-    same_dataset: bool
+    same_dataset: bool  # informational: the two dataset hashes are equal
     metrics: dict[str, MetricComparison]
     baseline: RunStats
     candidate: RunStats
@@ -63,6 +65,11 @@ class Comparison:
     same_judge: bool = True
     judge_changes: list[str] = field(default_factory=list)  # "key: before -> after"
     system_changes: list[str] = field(default_factory=list)
+    # False only when the datasets differ and a run predates per-case hashes, so the cases
+    # that stayed the same cannot be told from the ones that changed.
+    comparable: bool = True
+    edited: list[str] = field(default_factory=list)  # same id, different content: not compared
+    judge_warnings: list[str] = field(default_factory=list)  # advisory judge changes
 
 
 def environment_changes(baseline: Run, candidate: Run, keys: tuple[str, ...]) -> list[str]:
@@ -73,6 +80,36 @@ def environment_changes(baseline: Run, candidate: Run, keys: tuple[str, ...]) ->
         for k in keys
         if k in before and k in after and before[k] != after[k]
     ]
+
+
+def judge_warnings(baseline: Run, candidate: Run) -> list[str]:
+    """Advisory judge changes: a new CLI version. The wording says whether the resolved model
+    is known to be the same, because that is what makes the change harmless."""
+    before, after = baseline.info.environment, candidate.info.environment
+    key = "judge_model_resolved"
+    same_model = key in before and key in after and before[key] == after[key]
+    out = []
+    for k in JUDGE_WARN_KEYS:
+        if k in before and k in after and before[k] != after[k]:
+            note = "; the resolved model is unchanged" if same_model else ""
+            out.append(f"the judge's CLI version changed: {before[k]} -> {after[k]}{note}")
+    return out
+
+
+def dataset_change_note(cmp: Comparison) -> str | None:
+    """One line on the cases left out of the comparison, or None when every case was shared."""
+    if not (cmp.only_baseline or cmp.only_candidate or cmp.edited):
+        return None
+    return (
+        f"{len(cmp.only_candidate)} case(s) added, {len(cmp.only_baseline)} removed, "
+        f"{len(cmp.edited)} edited: excluded from the comparison; gated on the "
+        f"{len(cmp.paired_ids)} cases both runs share"
+    )
+
+
+def records_case_hashes(run: Run) -> bool:
+    """True when every result carries a ``case_hash`` (written by evalproof 0.5 or newer)."""
+    return bool(run.results) and all(r.case_hash is not None for r in run.results)
 
 
 def run_stats(run: Run) -> RunStats:
@@ -171,8 +208,21 @@ def compare_runs(
     seed: int = 0,
     metrics: list[str] | None = None,
 ) -> Comparison:
-    b_ids, c_ids = set(baseline.by_id()), set(candidate.by_id())
-    paired = sorted(b_ids & c_ids)
+    b_by, c_by = baseline.by_id(), candidate.by_id()
+    b_ids, c_ids = set(b_by), set(c_by)
+    same_dataset = baseline.info.dataset_hash == candidate.info.dataset_hash
+    comparable = same_dataset or (records_case_hashes(baseline) and records_case_hashes(candidate))
+    # A case is paired when both runs scored the same content. Without per-case hashes the
+    # dataset hash is all there is: equal means every shared case is the same case, and when it
+    # differs the gate refuses (``comparable`` is False), so the old pairing is only for display.
+    paired: list[str] = []
+    edited: list[str] = []
+    for cid in sorted(b_ids & c_ids):
+        b_hash, c_hash = b_by[cid].case_hash, c_by[cid].case_hash
+        if b_hash is not None and c_hash is not None and b_hash != c_hash:
+            edited.append(cid)
+        else:
+            paired.append(cid)
     names = metrics or [n for n in baseline.scorer_names() if n in candidate.scorer_names()]
     out: dict[str, MetricComparison] = {}
     for name in names:
@@ -186,7 +236,7 @@ def compare_runs(
         paired_ids=paired,
         only_baseline=sorted(b_ids - c_ids),
         only_candidate=sorted(c_ids - b_ids),
-        same_dataset=baseline.info.dataset_hash == candidate.info.dataset_hash,
+        same_dataset=same_dataset,
         metrics=out,
         baseline=run_stats(baseline),
         candidate=run_stats(candidate),
@@ -195,4 +245,7 @@ def compare_runs(
         same_judge=not judge_changes,
         judge_changes=judge_changes,
         system_changes=environment_changes(baseline, candidate, SYSTEM_KEYS),
+        comparable=comparable,
+        edited=edited,
+        judge_warnings=judge_warnings(baseline, candidate),
     )

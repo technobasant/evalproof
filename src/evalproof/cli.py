@@ -316,8 +316,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_const",
         const=True,
         default=None,
-        help="gate even if the judge (target, CLI version, isolation or resolved model) differs "
-        "between the runs; it is refused otherwise",
+        help="gate even if the judge (target, CLI, isolation or resolved model) differs "
+        "between the runs; it is refused otherwise. A new CLI version alone only warns",
     )
     c.add_argument("--gate", action="store_true", help="exit non-zero when the gate fails")
     c.add_argument("--seed", type=int, default=0)

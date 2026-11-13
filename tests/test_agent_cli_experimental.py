@@ -928,22 +928,23 @@ def test_fingerprint(cli: Case) -> None:
     assert cli.fake.calls() == []  # a version lookup is not a model call
 
 
-def test_cache_salt_changes_with_the_cli_version(cli: Case) -> None:
+def test_cache_salt_does_not_depend_on_the_cli_version(cli: Case) -> None:
     provider = cli.provider()
     before = provider.cache_salt(PARAMS)
     cli.fake.set_version("9.9.9")
     after = provider.cache_salt(PARAMS)
-    assert before != after and after["cli_version"] == "9.9.9"
+    assert before == after and "cli_version" not in after
+    assert provider.fingerprint()["cli_version"] == "9.9.9"
 
 
-def test_a_version_change_is_a_cache_miss(cli: Case, tmp_path: Path) -> None:
+def test_a_version_change_is_still_a_cache_hit(cli: Case, tmp_path: Path) -> None:
     cached = CachedProvider(cli.provider(), ResponseCache(tmp_path / "cache"))
     first = cached.chat(USER, PARAMS)
     again = cached.chat(USER, PARAMS)
     assert not first.cached and again.cached and len(cli.fake.calls()) == 1
     cli.fake.set_version("9.9.9")
-    cached.chat(USER, PARAMS)
-    assert len(cli.fake.calls()) == 2
+    after = cached.chat(USER, PARAMS)
+    assert after.cached and len(cli.fake.calls()) == 1
 
 
 def test_make_provider_builds_the_experimental_providers(cli: Case) -> None:

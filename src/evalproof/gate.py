@@ -7,8 +7,12 @@ from a setup problem:
 * ``1``  quality regression: drop >= ``max_drop`` and p < ``alpha`` (Holm-adjusted p when
   several metrics are gated)
 * ``3``  budget breach: candidate p95 latency or total cost over the limit
-* ``4``  cannot gate: too few paired cases, metric missing, the runs used different data, or the
-  judge changed (unless the gate sets ``allow_judge_change``)
+* ``4``  cannot gate: too few paired cases, metric missing, the dataset changed and a run predates
+  per-case hashes, or the judge's target, CLI, isolation or resolved model changed (unless the
+  gate sets ``allow_judge_change``). A new judge CLI version only warns: it is advisory.
+
+Cases added, removed or edited between the runs are left out of the comparison, with a warning;
+the gate decides on the cases both runs share.
 * ``2``  usage or configuration error (raised by the CLI, not here)
 """
 
@@ -16,7 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from evalproof.compare import Comparison
+from evalproof.compare import Comparison, dataset_change_note
 from evalproof.config import GateConfig
 from evalproof.stats import holm
 
@@ -42,9 +46,11 @@ def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
     warnings: list[str] = []
 
     refused: list[str] = []
-    if not cmp.same_dataset:
+    if not cmp.comparable:
         refused.append(
-            "baseline and candidate were run on different datasets (dataset hash differs)"
+            "the dataset changed between the runs and one of them predates per-case hashes, so "
+            "the cases that stayed the same cannot be told from the ones that changed: re-run "
+            "the baseline with evalproof 0.5 or newer"
         )
     if not cmp.same_judge:
         changes = "; ".join(cmp.judge_changes) or "unrecorded"
@@ -57,6 +63,7 @@ def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
             )
     if refused:
         return GateDecision("fail", EXIT_CANNOT_GATE, refused)
+    warnings.extend(cmp.judge_warnings)
     if cmp.system_changes:
         warnings.append(f"the system under test changed: {'; '.join(cmp.system_changes)}")
     names = gate.gated
@@ -133,11 +140,9 @@ def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
 
     if cmp.candidate.errors > cmp.baseline.errors:
         warnings.append(f"system errors rose from {cmp.baseline.errors} to {cmp.candidate.errors}")
-    if cmp.only_baseline or cmp.only_candidate:
-        warnings.append(
-            f"{len(cmp.only_baseline)} case(s) only in baseline, "
-            f"{len(cmp.only_candidate)} only in candidate — excluded from the comparison"
-        )
+    note = dataset_change_note(cmp)
+    if note:
+        warnings.append(note)
 
     status = "fail" if exit_code else ("warn" if warnings else "pass")
     return GateDecision(

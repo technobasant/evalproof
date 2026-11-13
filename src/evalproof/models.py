@@ -82,6 +82,9 @@ class CaseResult(BaseModel):
     tags: list[str] = Field(default_factory=list)
     output: SystemOutput
     scores: dict[str, Score] = Field(default_factory=dict)
+    # A short hash of the case as it was scored, so ``compare`` can tell a case that was edited
+    # from one that was not. None in run files written before evalproof 0.5.
+    case_hash: str | None = None
 
 
 class RunInfo(BaseModel):

@@ -771,12 +771,19 @@ def test_fingerprint(claude: FakeCLI, codex: FakeCLI) -> None:
     assert not claude.calls() and not codex.calls()  # a version lookup is not a model call
 
 
-def test_cache_salt_changes_with_the_cli_version(claude: FakeCLI) -> None:
+def test_cache_salt_does_not_depend_on_the_cli_version(claude: FakeCLI) -> None:
     provider = claude_provider()
     before = provider.cache_salt(PARAMS)
     claude.set_version("2.1.400 (Claude Code)")
     after = provider.cache_salt(PARAMS)
-    assert before != after and after["cli_version"] == "2.1.400 (Claude Code)"
+    assert before == after and "cli_version" not in after
+    assert before == {
+        "cli": "claude-code",
+        "isolation": provider.isolation,
+        "sampling": "cli-default",
+    }
+    # The run still records the version, so compare can warn about it.
+    assert provider.fingerprint()["cli_version"] == "2.1.400 (Claude Code)"
 
 
 def test_codex_cache_salt_includes_the_reasoning_effort(codex: FakeCLI) -> None:
@@ -788,14 +795,14 @@ def test_codex_cache_salt_includes_the_reasoning_effort(codex: FakeCLI) -> None:
     assert low["reasoning_effort"] == "low" and default["reasoning_effort"] == "default"
 
 
-def test_a_version_change_is_a_cache_miss(claude: FakeCLI, tmp_path: Path) -> None:
+def test_a_version_change_is_still_a_cache_hit(claude: FakeCLI, tmp_path: Path) -> None:
     cached = CachedProvider(claude_provider(), ResponseCache(tmp_path / "cache"))
     first = cached.chat(USER, PARAMS)
     again = cached.chat(USER, PARAMS)
     assert not first.cached and again.cached and len(claude.calls()) == 1
-    claude.set_version("2.1.400 (Claude Code)")
-    cached.chat(USER, PARAMS)
-    assert len(claude.calls()) == 2
+    claude.set_version("2.1.400 (Claude Code)")  # a CLI that updated itself
+    after = cached.chat(USER, PARAMS)
+    assert after.cached and len(claude.calls()) == 1
 
 
 # -- registry ------------------------------------------------------------------------------

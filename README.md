@@ -231,15 +231,17 @@ it is the same model either way. `evalproof doctor` prints the mode in effect an
   and `max_tokens` are ignored. `think` maps to Codex's reasoning effort (`false` is `low`,
   `true` is `medium`; `params.extra.reasoning_effort` sets it directly). A run is therefore
   not repeatable the way a seeded local run is, so the run records the CLI, its version, the
-  isolation scheme and the model id that actually answered, and the cache keys on the CLI
-  version. To see how much a judge wobbles, score the same outputs twice with `--no-cache`, or
+  isolation scheme and the model id that actually answered. The cache does not key on the CLI
+  version, so a CLI that updates itself keeps its cached replies; `--no-cache` asks again. To
+  see how much a judge wobbles, score the same outputs twice with `--no-cache`, or
   [calibrate](#concepts) it against labels.
 * **A changed judge is not comparable.** `compare` and the gate refuse (exit 4) when the judge's
-  target, CLI version, isolation or resolved model differs between the two runs, because the
-  scores then come from a different instrument. Pass `--allow-judge-change` or set
-  `gate.allow_judge_change: true` to accept it. A changed system target or CLI version only
-  warns, since that is usually the change under test. Runs written before 0.4.0 carry none of
-  these keys and compare as before.
+  target, CLI, isolation or resolved model differs between the two runs, because the scores
+  then come from a different instrument. Pass `--allow-judge-change` or set
+  `gate.allow_judge_change: true` to accept it. A new judge CLI version alone only warns, since
+  the resolved model is what decides whether the instrument changed; so does a changed system
+  target or CLI version, since that is usually the change under test. Runs written before 0.4.0
+  carry none of these keys and compare as before.
 * **Latency and cost.** A call takes about 1.4 s on `claude-code:haiku` and about 4 s on
   Codex, mostly start-up, so set `concurrency`. There is no API bill; the calls count against
   your subscription's usage limits.
@@ -538,8 +540,8 @@ installs the CLI at the version found at init time and runs `evals/suite.yaml` a
 step sets `EVALPROOF_CLI_AUTH: api-key` and the repository secret (`ANTHROPIC_API_KEY` for
 Claude Code, `OPENAI_API_KEY` for Codex), so the CLI uses that key instead of a login. The
 suite names no key and there is no second suite file; a suite with an `api_key_env` still uses
-that variable. Keep the pinned CLI version equal to the one in your baseline run, because the
-gate exits 4 when the judge's CLI version differs.
+that variable. The pinned CLI version is advisory: a different version than the baseline's only
+warns, and the gate still refuses when the resolved model changes.
 
 ## How it relates to other tools
 

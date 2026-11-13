@@ -82,7 +82,7 @@ def test_gate_passes_clean_change() -> None:
     [
         (GateConfig(metric="m", min_cases=100), {}, "paired cases"),
         (GateConfig(metric="zzz"), {}, "no paired scores"),
-        (GateConfig(metric="m"), {"dataset_hash": "other"}, "different datasets"),
+        (GateConfig(metric="m"), {"dataset_hash": "other"}, "re-run the baseline"),
     ],
 )
 def test_gate_cannot_gate(gate: GateConfig, kwargs: dict[str, str], reason: str) -> None:
@@ -106,7 +106,7 @@ def test_gate_regression_outranks_budget_and_lists_extra_warnings() -> None:
     d = decide(compare_runs(b, c), gate)
     assert d.exit_code == EXIT_REGRESSION
     assert any("errors rose" in w for w in d.warnings)
-    assert any("only in baseline" in w for w in d.warnings)
+    assert any("1 removed" in w and "excluded from the comparison" in w for w in d.warnings)
 
 
 def test_comparison_markdown_and_json() -> None:

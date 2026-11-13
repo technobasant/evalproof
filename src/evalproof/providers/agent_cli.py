@@ -59,6 +59,9 @@ AUTH_TIMEOUT_S = 30.0
 AUTH_ENV = "EVALPROOF_CLI_AUTH"
 AUTH_MODES = ("login", "api-key")
 
+# A CLI exposes no sampling controls, so the fingerprint and the cache key say so.
+SAMPLING = "cli-default"
+
 # The codex release the isolation flags were verified against.
 CODEX_TESTED_VERSION = "codex-cli 0.167.2"
 # The only item types a codex turn may contain when it used no tool.
@@ -254,12 +257,18 @@ class AgentCLIProvider:
             "cli": self.name,
             "cli_version": cli_version(self.binary_path()),
             "isolation": self.isolation,
-            "sampling": "cli-default",
+            "sampling": SAMPLING,
         }
 
     def cache_salt(self, params: GenerationParams) -> dict[str, object]:
-        """A CLI upgrade or a change to the flag set must not be answered from the cache."""
-        salt: dict[str, object] = dict(self.fingerprint())
+        """A change to the flag set must not be answered from the cache. The CLI's version is
+        deliberately not part of the key: a self-update would otherwise throw the cache away,
+        and the run records the version for ``compare`` to warn about. ``--no-cache`` asks again."""
+        salt: dict[str, object] = {
+            "cli": self.name,
+            "isolation": self.isolation,
+            "sampling": SAMPLING,
+        }
         salt.update(self.salt_extra(params))
         return salt
 

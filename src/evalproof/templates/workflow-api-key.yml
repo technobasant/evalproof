@@ -44,8 +44,9 @@ jobs:
         if: steps.baseline.outputs.found == 'true'
 
 #@@IF cli
-      # The judge's CLI version is part of the run file, and the gate exits 4 when it differs
-      # from the baseline's, so keep this equal to the judge_cli_version in your run file.
+      # The judge's CLI version is recorded in the run file as judge_cli_version. A different
+      # version only warns (the gate refuses when the resolved model changes), so this pin is
+      # advisory: it keeps CI close to the version your run file records.
 @@CLI_PIN_NOTE@@
       - name: Install @@CLI_BINARY@@
         if: steps.baseline.outputs.found == 'true'

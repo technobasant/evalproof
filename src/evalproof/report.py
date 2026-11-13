@@ -8,7 +8,7 @@ from dataclasses import asdict
 from typing import Any
 
 from evalproof.calibration import CalibrationReport, Estimate
-from evalproof.compare import Comparison, MetricComparison
+from evalproof.compare import Comparison, MetricComparison, dataset_change_note
 from evalproof.gate import GateDecision
 from evalproof.models import Run
 from evalproof.stats import percentile, wilson
@@ -52,9 +52,13 @@ def comparison_markdown(
                 f"- ⚠️ The judge changed, so the scores may not be comparable: {c}"
                 for c in cmp.judge_changes
             ]
+        lines += [f"- ⚠️ {w}" for w in cmp.judge_warnings]
         if cmp.system_changes:
             lines += [f"- ⚠️ The system under test changed: {c}" for c in cmp.system_changes]
-        if cmp.judge_changes or cmp.system_changes:
+        note = dataset_change_note(cmp)
+        if note:
+            lines.append(f"- ⚠️ {note}")
+        if cmp.judge_changes or cmp.judge_warnings or cmp.system_changes or note:
             lines.append("")
     lines += [
         f"Baseline `{cmp.baseline_label}` vs candidate `{cmp.candidate_label}` on "

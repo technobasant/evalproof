@@ -16,7 +16,7 @@ import httpx
 from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.config import GenerationParams, SuiteConfig, TargetConfig
-from evalproof.dataset import dataset_hash, load_dataset
+from evalproof.dataset import case_hash, dataset_hash, load_dataset
 from evalproof.models import Case, CaseResult, Run, RunInfo
 from evalproof.providers import (
     LLM_PROVIDERS,
@@ -114,6 +114,7 @@ def score_case(case: Case, system: System, scorers: list[Scorer]) -> CaseResult:
         tags=case.tags,
         output=out,
         scores={s.name: s.score(case, out) for s in scorers},
+        case_hash=case_hash(case),
     )
 
 

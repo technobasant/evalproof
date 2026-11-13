@@ -82,6 +82,12 @@ def imported_dataset_hash(items: Iterable[tuple[str, Any]]) -> str:
     return hashlib.sha256(canonical_json(ordered).encode()).hexdigest()[:16]
 
 
+def imported_case_hash(case_id: str, case_input: Any) -> str:
+    """Hash of one imported case, built from the same ``(case_id, input)`` pair as the dataset
+    hash, so an unchanged case keeps its hash and an edited one does not."""
+    return hashlib.sha256(canonical_json([case_id, case_input]).encode()).hexdigest()[:16]
+
+
 def pick_system(found: Sequence[str], wanted: str | None) -> str:
     """Choose the system to import, or say which ones the file holds."""
     if not found:
@@ -284,6 +290,8 @@ def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Opt
 
     repeated = any(len(s.repeats) > 1 for s in samples)
     results = [_collapse(s, opts.epochs, repeated) for s in samples]
+    for sample, result in zip(samples, results, strict=True):
+        result.case_hash = imported_case_hash(sample.case_id, sample.input)
 
     environment = {"imported_from": fmt}
     if meta.schema:
