@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-11-13
+
 ### Fixed
 
 - `cursor:` ask mode is not tool-free: it has a read tool that runs without approval and reads
@@ -285,7 +287,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/technobasant/evalproof/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/technobasant/evalproof/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/technobasant/evalproof/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/technobasant/evalproof/compare/v0.2.0...v0.2.1
