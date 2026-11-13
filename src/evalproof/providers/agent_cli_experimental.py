@@ -11,10 +11,10 @@ Three things differ from the stable pair, and each is a consequence of what the 
 * ``cursor`` and ``copilot`` have no system-prompt option. The system text goes in front of the
   prompt instead, under a fixed heading, so it is an instruction in the user turn, not a
   replacement of the agent's own system prompt.
-* The same two take the prompt as an argument, not on stdin: the Cursor docs only show an
-  argument and nothing says it reads stdin, and ``copilot -p`` is documented as taking the
-  prompt text. The prompt is therefore visible in ``ps`` while the call runs, and a prompt over
-  ``ARGV_PROMPT_LIMIT`` bytes is refused instead of failing in ``execve``. stdin is closed.
+* ``copilot`` reads the prompt on stdin (verified), but ``cursor`` takes it as an argument: nothing
+  in the Cursor docs says it reads stdin. The prompt is therefore visible in ``ps`` while a cursor
+  call runs, and a prompt over ``ARGV_PROMPT_LIMIT`` bytes is refused instead of failing in
+  ``execve``. stdin is closed.
 * ``opencode`` has no system-prompt flag either, but its agent config has a ``prompt`` field, and
   the config can be given inline in an environment variable, so the system text travels there.
 """
@@ -49,6 +49,18 @@ from evalproof.providers.base import ChatResponse, Message, split_system
 # A Linux process cannot take one argument or environment string longer than 128 KiB; stay well
 # below it. The same bound caps the OpenCode config, which travels in one environment variable.
 ARGV_PROMPT_LIMIT = 100_000
+
+# One temp root per call with two empty sibling directories: the working directory the CLI sees
+# and a spare one for what a provider needs outside it (a config dir, a usage file). A provider
+# that gets only the working directory finds the spare one with ``aux_dir_of``.
+CWD_NAME = "cwd"
+AUX_NAME = "aux"
+
+
+def aux_dir_of(workdir: str) -> str:
+    """The spare directory that sits next to ``workdir`` under the call's temp root."""
+    return str(Path(workdir).parent / AUX_NAME)
+
 
 _warned: set[str] = set()
 _warn_lock = threading.Lock()
@@ -106,10 +118,24 @@ class ExperimentalCLIProvider(AgentCLIProvider):
         with the call."""
         return {}
 
+    def prepare_workdir(self, cwd: Path) -> None:
+        """Called once the call's directories exist and before the CLI runs: a provider that must
+        put a file in the working directory (a permission config) does it here."""
+
+    def parse_call(
+        self, returncode: int, stdout: str, stderr: str, latency_ms: float, aux: Path
+    ) -> ChatResponse:
+        """``parse`` with the call's spare directory, still on disk, for a provider that has the
+        CLI write a file there. Keep no per-call state on ``self``: providers are called from
+        several threads."""
+        return self.parse(returncode, stdout, stderr, latency_ms)
+
     def command(self, binary: str, system_file: str, params: GenerationParams) -> list[str]:
         # The base class and ``evalproof doctor`` ask for the command with a system file; none of
-        # these CLIs reads one, so only the directory it would be in is used.
-        return self.build_command(binary, os.path.dirname(system_file), params)
+        # these CLIs reads one, so only the directory it would be in is used, laid out like a
+        # real call: ``<root>/cwd`` for the CLI, ``<root>/aux`` next to it.
+        root = os.path.dirname(system_file)
+        return self.build_command(binary, os.path.join(root, CWD_NAME), params)
 
     def _once(self, messages: list[Message], params: GenerationParams) -> ChatResponse:
         warn_experimental(self.name)
@@ -129,10 +155,11 @@ class ExperimentalCLIProvider(AgentCLIProvider):
         # one for config. Removed afterwards, also when the call fails.
         root = tempfile.mkdtemp(prefix="evalproof-")
         try:
-            cwd = Path(root) / "cwd"
-            aux = Path(root) / "aux"
+            cwd = Path(root) / CWD_NAME
+            aux = Path(aux_dir_of(str(cwd)))
             cwd.mkdir()
             aux.mkdir()
+            self.prepare_workdir(cwd)
             env.update(self.call_env(system, str(aux)))
             cmd = self.build_command(binary, str(cwd), params)
             if self.prompt_in_argv:
@@ -150,7 +177,7 @@ class ExperimentalCLIProvider(AgentCLIProvider):
             except OSError as exc:
                 raise self.fail(f"could not run {binary}: {exc.strerror or exc}") from exc
             latency_ms = (time.perf_counter() - start) * 1000
-            return self.parse(code, out, err, latency_ms)
+            return self.parse_call(code, out, err, latency_ms, aux)
         finally:
             shutil.rmtree(root, ignore_errors=True)
 
@@ -290,30 +317,52 @@ _ABOUT_EMAIL = re.compile(r"^\s*User Email\s+(?P<value>.+?)\s*$", re.MULTILINE)
 
 
 class CursorProvider(ExperimentalCLIProvider):
-    """``cursor-agent -p`` in ask mode (read-only Q&A) in an empty workspace.
+    """``cursor-agent -p`` in ask mode in an empty workspace whose ``.cursor/cli.json`` denies
+    every read, write and shell command, with any tool event treated as an isolation break.
 
-    Not verified: Cursor was not logged in on the test machine, so no call succeeded and the
-    output parser follows the CLI's source, leniently. The empty workspace is the only isolation:
-    there is no flag to ignore ``.cursor/rules``, ``AGENTS.md`` or ``CLAUDE.md``, and whether
-    ``--mode ask`` really has no tools is not known."""
+    Verified live on 2026-11-13 with cursor-agent 2026.11.11: a canary prompt saw no user rules
+    and no ``AGENTS.md`` or ``CLAUDE.md`` content. Ask mode is not tool-free: it has a read tool
+    (``readToolCall``) that runs without approval and reads files inside the workspace and outside
+    it by absolute path. The workspace ``cli.json`` below made every read fail with "Permission
+    denied", inside and outside; the model still tries, so the stream has a ``tool_call`` event,
+    and the guard fails the call on any such event whatever its result."""
 
     name = "cursor"
     binary = "cursor-agent"
     install_hint = "curl https://cursor.com/install -fsS | bash"
-    isolation = "cursor/0"
+    isolation = "cursor/1"
     key_var = "CURSOR_API_KEY"
     strip_vars = ("CURSOR_API_KEY",)
     prompt_in_argv = True
     system_in_prompt = True
 
+    # ``--mode ask`` has a read tool that needs no approval and reaches outside the workspace
+    # (verified); this project-level permission file, read from the workspace, denies it (verified:
+    # reads inside and outside fail). Deny-all, with nothing allowed.
+    CLI_CONFIG: ClassVar[dict[str, Any]] = {
+        "permissions": {
+            "allow": [],
+            "deny": ["Read(**)", "Read(/**)", "Write(**)", "Write(/**)", "Shell(*)"],
+        }
+    }
+
+    def prepare_workdir(self, cwd: Path) -> None:
+        config_dir = cwd / ".cursor"
+        config_dir.mkdir()
+        (config_dir / "cli.json").write_text(
+            json.dumps(self.CLI_CONFIG, indent=2), encoding="utf-8"
+        )
+
     def build_command(self, binary: str, workdir: str, params: GenerationParams) -> list[str]:
         # The key travels in the environment, never as ``--api-key``: an argument is visible in
         # ``ps`` (a running Cursor worker was seen with its key on its command line).
+        # ``stream-json`` instead of ``json``: the json result joins the model's preamble text
+        # with the answer and carries no tool events, the stream has one event per tool call.
         return [
             binary,
             "-p",
             "--output-format",
-            "json",
+            "stream-json",
             "--mode",
             "ask",
             "--trust",
@@ -323,27 +372,17 @@ class CursorProvider(ExperimentalCLIProvider):
             workdir,
         ]
 
-    @staticmethod
-    def _result_object(stdout: str) -> dict[str, Any] | None:
-        """The result object: the whole output as JSON, else the last line that is. An array of
-        events is accepted too (the ``stream-json`` shape)."""
-        text = _ANSI.sub("", stdout).strip()
-        candidates = [text, *reversed(text.splitlines())]
-        for candidate in candidates:
-            candidate = candidate.strip()
-            if not candidate.startswith(("{", "[")):
-                continue
-            try:
-                data = json.loads(candidate)
-            except ValueError:
-                continue
-            for item in reversed(data) if isinstance(data, list) else [data]:
-                if isinstance(item, dict) and (item.get("type") == "result" or "result" in item):
-                    return item
-        return None
-
     def parse(self, returncode: int, stdout: str, stderr: str, latency_ms: float) -> ChatResponse:
-        result = self._result_object(stdout)
+        events = _json_lines(_ANSI.sub("", stdout))
+        for event in events:
+            if event.get("type") == "tool_call":
+                # The reply text is not read: a turn that used a tool is not isolated, even when
+                # the tool was denied.
+                call = event.get("tool_call")
+                kinds = [k for k in call if isinstance(k, str)] if isinstance(call, dict) else []
+                kind = kinds[0] if kinds else "unknown"
+                raise self.fail(f"cursor used a tool ({kind}); isolation broken")
+        result = next((e for e in reversed(events) if e.get("type") == "result"), None)
         if result is not None and result.get("is_error"):
             message = result.get("result") or result.get("error") or result.get("message")
             raise self.fail(str(message or stderr.strip() or "request failed"))
@@ -353,8 +392,8 @@ class CursorProvider(ExperimentalCLIProvider):
         if result is None or not isinstance(result.get("result"), str):
             shown = (stdout.strip() or stderr.strip() or "no output")[:200]
             raise self.fail(
-                "unexpected output from cursor-agent: expected one JSON object with a string "
-                f'"result" (--output-format json); got: {shown}'
+                'unexpected output from cursor-agent: expected a JSON event of type "result" '
+                f'with a string "result" (--output-format stream-json); got: {shown}'
             )
         usage = result.get("usage")
         usage = usage if isinstance(usage, dict) else {}
@@ -364,9 +403,9 @@ class CursorProvider(ExperimentalCLIProvider):
 
         return ChatResponse(
             text=result["result"],
-            model=self.model,  # the json result carries no model id
+            model=self.model,  # the result event carries no model id
             tokens_in=count("inputTokens", "cacheReadTokens", "cacheWriteTokens"),
-            tokens_out=count("outputTokens"),
+            tokens_out=count("outputTokens"),  # reasoning is already inside outputTokens
             latency_ms=latency_ms,
         )
 
@@ -390,55 +429,129 @@ class CursorProvider(ExperimentalCLIProvider):
 
 
 class CopilotProvider(ExperimentalCLIProvider):
-    """``copilot -p`` in silent mode with an empty tool allow-list, in an empty directory.
+    """``copilot`` with the prompt on stdin, JSONL output and a tool allow-list that names no
+    tool, in an empty directory. Any tool event, or a request for a tool, fails the call.
 
-    Not verified: Copilot CLI was not installed on the test machine, so every flag here comes from
-    GitHub's documentation. The reply is plain text (the JSONL schema is undocumented), so token
-    counts are 0."""
+    Verified live on 2026-11-13 with copilot 1.0.110. With ``--model auto`` Copilot routes each
+    call to a model of its choosing (``gpt-6-luna`` on one call, ``mai-code-1.1-flash`` on
+    another), so the reply's own model id is what the run records. On some plans only ``auto`` is
+    available: named models (``gpt-6-luna``, ``claude-haiku-5.5``) were rejected with "is not
+    available". Each call uses one premium request."""
 
     name = "copilot"
     binary = "copilot"
     install_hint = "npm install -g @github/copilot"
-    isolation = "copilot/0"
+    isolation = "copilot/1"
     # COPILOT_GITHUB_TOKEN wins over GH_TOKEN and GITHUB_TOKEN (documented precedence). Only it is
     # stripped: the other two are the general GitHub tokens that ``gh`` and CI set for other
     # reasons, and removing them would break unrelated tools' habits more than it protects.
     key_var = "COPILOT_GITHUB_TOKEN"
     strip_vars = ("COPILOT_GITHUB_TOKEN",)
-    prompt_in_argv = True
     system_in_prompt = True
 
+    # Where copilot writes its per-model token usage, inside the call's spare directory.
+    USAGE_FILE = "usage.json"
+    # A tool allow-list of one name that is no tool: copilot 1.0.110 then disables every tool
+    # (verified: "Disabled tools: bash, create, edit, glob, grep, ..."). An empty allow-list
+    # (``--available-tools=``) is ignored by that version and the model read a file with its
+    # ``view`` tool. No ``--allow-tool`` or ``--allow-all`` flag is ever passed.
+    NO_TOOLS = "--available-tools=evalproof-no-tools"
+    TRANSIENT_MARKERS: ClassVar[tuple[str, ...]] = ("rate limit", "429", "503")
+
     def build_command(self, binary: str, workdir: str, params: GenerationParams) -> list[str]:
+        # ``workdir`` and the spare directory are siblings under one temp root (see ``_once``),
+        # so the usage path follows from it.
+        usage_path = Path(aux_dir_of(workdir)) / self.USAGE_FILE
         return [
             binary,
-            "-s",  # silent: the response only
             "--no-auto-update",  # the version in the fingerprint is the version that runs
             "--no-ask-user",  # never wait for an answer in a scripted run
-            # The most restrictive documented tool option: an allow-list ("the model can use only
-            # the listed tools") with nothing in it. Whether the CLI takes an empty list was not
-            # tried. No ``--allow-tool`` or ``--allow-all`` flag is ever passed, so a tool that
-            # needs approval cannot get it in a non-interactive run.
-            "--available-tools=",
+            "--no-custom-instructions",  # AGENTS.md, CLAUDE.md and the like
+            "--disable-builtin-mcps",
+            self.NO_TOOLS,
+            "--output-format",
+            "json",
+            "--usage-output-file",
+            str(usage_path),
             "--model",
             self.model,
         ]
 
-    def with_prompt(self, command: list[str], prompt: str) -> list[str]:
-        return [*command, "-p", prompt]
-
-    def parse(self, returncode: int, stdout: str, stderr: str, latency_ms: float) -> ChatResponse:
+    def parse_call(
+        self, returncode: int, stdout: str, stderr: str, latency_ms: float, aux: Path
+    ) -> ChatResponse:
+        events = _json_lines(stdout)
+        for event in events:
+            tool = self._tool_used(event)
+            if tool is not None:
+                # The reply text is not read: a turn that used a tool is not isolated.
+                raise self.fail(f"copilot used a tool ({tool}); isolation broken")
+        for event in events:
+            if event.get("type") == "session.error":
+                data = event.get("data")
+                found = data.get("message") if isinstance(data, dict) else None
+                message = str(found or "the request failed")
+                lowered = message.lower()
+                transient = any(marker in lowered for marker in self.TRANSIENT_MARKERS)
+                raise self.fail(message, transient=transient)
         if returncode != 0:
             raise self.fail(stderr.strip() or stdout.strip() or f"exited with status {returncode}")
-        text = stdout.strip()
+        text, model = "", self.model
+        for event in events:
+            data = event.get("data")
+            if event.get("type") != "assistant.message" or not isinstance(data, dict):
+                continue
+            content = data.get("content")
+            if isinstance(content, str) and content.strip():
+                text = content.strip()
+                routed = data.get("model")
+                model = routed if isinstance(routed, str) and routed else self.model
         if not text:
             raise self.fail(f"empty reply: {stderr.strip() or 'no output'}")
+        tokens_in, tokens_out = self._usage(aux / self.USAGE_FILE)
         return ChatResponse(
             text=text,
-            model=self.model,
-            tokens_in=0,  # text output carries no usage
-            tokens_out=0,
+            model=model,  # with ``auto`` this is the model Copilot routed the call to
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
             latency_ms=latency_ms,
         )
+
+    @staticmethod
+    def _tool_used(event: dict[str, Any]) -> str | None:
+        """The name of a tool the event says was requested or run, else ``None``."""
+        data = event.get("data")
+        data = data if isinstance(data, dict) else {}
+        kind = event.get("type")
+        if isinstance(kind, str) and kind.startswith("tool.execution"):
+            name = data.get("toolName")
+            return name if isinstance(name, str) and name else "unknown"
+        requests = data.get("toolRequests") if kind == "assistant.message" else None
+        if isinstance(requests, list) and requests:
+            first = requests[0]
+            name = first.get("name") if isinstance(first, dict) else None
+            return name if isinstance(name, str) and name else "unknown"
+        return None
+
+    @staticmethod
+    def _usage(path: Path) -> tuple[int, int]:
+        """Tokens in and out summed over the models in the usage file (input already includes
+        cache reads and writes, output includes reasoning). A missing or odd file is 0, 0: a
+        reply is never failed for its accounting."""
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return 0, 0
+        metrics = data.get("modelMetrics") if isinstance(data, dict) else None
+        if not isinstance(metrics, dict):
+            return 0, 0
+        tokens_in = tokens_out = 0
+        for entry in metrics.values():
+            usage = entry.get("usage") if isinstance(entry, dict) else None
+            if isinstance(usage, dict):
+                tokens_in += _int(usage.get("inputTokens"))
+                tokens_out += _int(usage.get("outputTokens"))
+        return tokens_in, tokens_out
 
     def auth_status(self) -> AuthStatus:
         # No documented command reports the login without starting the interactive UI.
