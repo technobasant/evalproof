@@ -8,9 +8,11 @@
 # What that proves, and what it does not. Before comparing, the job runs `evalproof verify`:
 # the committed run must match the committed suite (system, judge, scorers, seed) and cover
 # exactly the dataset's cases as they are now. So a stale run file, a --limit run and an
-# edited case all fail the job. It cannot prove the scores were not edited by hand. For pull
-# requests from people you do not trust (forks), review the run file, or use
-# `evalproof init --ci api-key`, which makes the run in CI.
+# edited case all fail the job. It also scores the stored outputs again with the suite's scorers
+# that need no model, so a deterministic score edited by hand fails the job too. It cannot check
+# model-judged scores or the stored outputs themselves. For pull requests from people you do not
+# trust (forks), review the run file, or use `evalproof init --ci api-key`, which makes the run
+# in CI.
 name: evalproof
 
 on:

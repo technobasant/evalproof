@@ -291,7 +291,8 @@ def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Opt
     repeated = any(len(s.repeats) > 1 for s in samples)
     results = [_collapse(s, opts.epochs, repeated) for s in samples]
     for sample, result in zip(samples, results, strict=True):
-        result.case_hash = imported_case_hash(sample.case_id, sample.input)
+        # An imported case carries no tags, so its content hash is its case hash.
+        result.case_hash = result.content_hash = imported_case_hash(sample.case_id, sample.input)
 
     environment = {"imported_from": fmt}
     if meta.schema:

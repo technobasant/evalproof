@@ -36,7 +36,8 @@ evalproof verify evals/runs/latest.json evals/suite.yaml
 ```
 
 `verify` exits 4 when the run file does not match the suite (system, judge, scorers, seed) or
-does not cover exactly the cases in `cases.jsonl`: a stale file, a `--limit` run, an edited case.
+does not cover exactly the cases in `cases.jsonl`: a stale file, a `--limit` run, an edited case
+(a tag change counts), or a deterministic score that re-scoring the stored output does not give.
 With no baseline to compare with (a first run), set `gate.min_pass_rate` or `gate.must_pass` in
 the suite and add `--gate` to `run`: it checks the run on its own and exits 1 when a floor is missed.
 
@@ -72,8 +73,9 @@ Append one JSON object per line to `evals/cases.jsonl`:
 - Adding or editing a case does not block the gate. Cases are paired by id and content: a new
   case has no baseline score, and an edited case (same id, new content) is left out of the
   comparison and listed in the report until the baseline is refreshed, which happens when the
-  change is merged. After changing cases, run the suite again and commit the new
-  `evals/runs/latest.json`, so `verify` finds it covers exactly the cases that are there.
+  change is merged. Adding or changing a tag is not an edit. After changing cases, run the suite
+  again and commit the new `evals/runs/latest.json`, so `verify` finds it covers exactly the
+  cases that are there.
 
 ## Exit codes
 
@@ -83,7 +85,7 @@ Append one JSON object per line to `evals/cases.jsonl`:
 | 1 | Regression: a large, significant drop | Report it to the human |
 | 2 | Usage error: bad suite, path or target | Fix the command or the suite |
 | 3 | Budget breach: p95 latency or cost over the limit | Report it to the human |
-| 4 | Cannot gate: too few paired cases, a metric with no scores, the judge changed, or `verify` found the run file does not match the suite and cases | Report it to the human; for a stale run file, run the suite again |
+| 4 | Cannot gate: too few paired cases, a metric with no scores, the judge changed, or `verify` found the run file does not match the suite and cases | Report it to the human; for a stale run file, run the suite again. A baseline written before evalproof 0.5 has no per-case hashes: `evalproof rehash BASELINE evals/suite.yaml` fixes it, with no model call, while the cases it scored are unchanged (appended cases are fine) |
 
 ## Rules
 

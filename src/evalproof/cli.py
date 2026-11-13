@@ -1,6 +1,7 @@
 """Command line.
 
-``evalproof init | run | import | compare | verify | calibrate | report | doctor | pairwise``
+``evalproof init | run | import | compare | verify | rehash | calibrate | report | doctor |
+pairwise``
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ from evalproof.gate import (
 from evalproof.importers import EPOCHS, FORMATS, import_run
 from evalproof.models import CaseResult
 from evalproof.providers import ProviderError, make_provider
+from evalproof.rehash import RehashError, rehash_run
 from evalproof.report import (
     calibration_markdown,
     comparison_markdown,
@@ -209,6 +211,20 @@ def cmd_verify(args: argparse.Namespace) -> int:
     result = verify_run(run, load_config(args.suite))
     _emit(verify_markdown(result, args.run, args.suite), args.markdown)
     return EXIT_PASS if result.ok else EXIT_CANNOT_GATE
+
+
+def cmd_rehash(args: argparse.Namespace) -> int:
+    run = load_run(args.run)
+    try:
+        rehashed = rehash_run(run, load_config(args.suite))
+    except RehashError as exc:
+        sys.stderr.write(f"evalproof: error: {exc}\n")
+        return EXIT_CANNOT_GATE
+    out = Path(args.out or args.run)
+    _check_writable(out)
+    save_run(rehashed, out)
+    sys.stderr.write(f"rehashed {len(rehashed.results)} cases in {out}\n")
+    return EXIT_PASS
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -507,6 +523,25 @@ def build_parser() -> argparse.ArgumentParser:
     ver.add_argument("suite")
     ver.add_argument("--markdown", help="also append the verdict to this file")
     ver.set_defaults(func=cmd_verify)
+
+    rh = sub.add_parser(
+        "rehash",
+        help="add per-case hashes to a run file written before evalproof 0.5, without calling "
+        "a model",
+        description="Add per-case hashes to RUN, a run file written before evalproof 0.5, so it "
+        "can be gated against a changed dataset. Run files do not store case inputs, so this "
+        "works only when the cases RUN scored are still in SUITE's dataset, unchanged and in "
+        "the same place (cases appended after them are fine), which the dataset_hash stored in "
+        "RUN proves. Otherwise check out the dataset as it was, for example on the base branch, "
+        "and rehash there. Scores, outputs and the suite hash are not "
+        "changed, so `verify` still needs a run made with evalproof 0.5 or newer. Safe to run "
+        "again on a file that already has hashes. Makes no model call. Exit 0 on success, 4 "
+        "when the dataset does not match the run, 2 for a usage error.",
+    )
+    rh.add_argument("run")
+    rh.add_argument("suite")
+    rh.add_argument("--out", help="write the result here instead of overwriting RUN")
+    rh.set_defaults(func=cmd_rehash)
 
     dr = sub.add_parser(
         "doctor",

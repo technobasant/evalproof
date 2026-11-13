@@ -157,8 +157,9 @@ def decide(cmp: Comparison, gate: GateConfig, candidate: Run | None = None) -> G
     if not cmp.comparable:
         refused.append(
             "the dataset changed between the runs and one of them predates per-case hashes, so "
-            "the cases that stayed the same cannot be told from the ones that changed: re-run "
-            "the baseline with evalproof 0.5 or newer"
+            "the cases that stayed the same cannot be told from the ones that changed: run "
+            "`evalproof rehash BASELINE SUITE` (no model calls; it needs the cases the baseline "
+            "scored unchanged), or re-run the baseline with evalproof 0.5 or newer"
         )
     if not cmp.same_judge:
         changes = "; ".join(cmp.judge_changes) or "unrecorded"
