@@ -10,9 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from evalproof.config import GenerationParams
+from evalproof.config import GenerationParams, Pricing
 from evalproof.models import Case, Score, SystemOutput
-from evalproof.providers import Message, Provider, ProviderError
+from evalproof.providers import Message, Provider, ProviderError, response_cost
 from evalproof.scorers.deterministic import extract_json
 
 DEFAULT_RUBRIC = (
@@ -78,9 +78,11 @@ class LLMJudge:
         params: GenerationParams,
         rubric: str = DEFAULT_RUBRIC,
         max_retries: int = 1,
+        pricing: Pricing | None = None,
     ) -> None:
         self.name = name
         self.provider = provider
+        self.pricing = pricing or Pricing()
         self.params = params
         self.rubric = rubric
         self.max_retries = max_retries
@@ -99,13 +101,20 @@ class LLMJudge:
             return Score(value=0.0, passed=False, reason=f"system error: {out.error[:200]}")
         messages = self.messages(case, out)
         tokens = 0
+        cost = 0.0
         last_text = ""
         for _attempt in range(self.max_retries + 1):
             try:
                 resp = self.provider.chat(messages, self.params)
             except ProviderError as exc:
-                return Score(value=None, reason=f"judge error: {exc}", judge_tokens=tokens)
+                return Score(
+                    value=None,
+                    reason=f"judge error: {exc}",
+                    judge_tokens=tokens,
+                    judge_cost_usd=cost,
+                )
             tokens += resp.tokens_in + resp.tokens_out
+            cost += response_cost(resp, self.pricing)
             last_text = resp.text
             try:
                 passed, value, reason = parse_verdict(resp.text)
@@ -116,11 +125,18 @@ class LLMJudge:
                     Message(role="user", content=RETRY_NUDGE),
                 ]
                 continue
-            return Score(value=value, passed=passed, reason=reason, judge_tokens=tokens)
+            return Score(
+                value=value,
+                passed=passed,
+                reason=reason,
+                judge_tokens=tokens,
+                judge_cost_usd=cost,
+            )
         return Score(
             value=None,
             reason=f"unparseable judge reply: {last_text[:200]!r}",
             judge_tokens=tokens,
+            judge_cost_usd=cost,
         )
 
 

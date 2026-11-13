@@ -114,7 +114,7 @@ def test_comparison_markdown_and_json() -> None:
     cmp = compare_runs(b, c)
     d = decide(cmp, GateConfig(metric="m", min_cases=30))
     md = comparison_markdown(cmp, d, "m")
-    assert "❌ fail" in md and "**m**" in md and "and 5 more" in md
+    assert "❌ fail" in md and "**m**" in md and "and 15 more" in md
     assert "-41.7 pts" in md
     payload = json.loads(to_json(cmp))
     assert payload["metrics"]["m"]["n_paired"] == 60

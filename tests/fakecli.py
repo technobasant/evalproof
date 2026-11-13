@@ -155,6 +155,7 @@ def claude_result(
     is_error: bool = False,
     api_error_status: int | None = None,
     extra_models: dict[str, int] | None = None,
+    cost_usd: float | None = 0.0123,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "type": "result",
@@ -178,6 +179,8 @@ def claude_result(
         usage_by_model[other] = {"inputTokens": 1, "outputTokens": out_tokens}
     if usage_by_model:
         result["modelUsage"] = usage_by_model
+    if cost_usd is not None:
+        result["total_cost_usd"] = cost_usd  # the CLI's API-equivalent estimate for the call
     return result
 
 

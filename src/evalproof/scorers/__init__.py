@@ -72,6 +72,7 @@ def make_scorer(
             suite.judge.params,
             rubric=rubric or DEFAULT_RUBRIC,
             max_retries=max_retries,
+            pricing=suite.judge.pricing,
         )
     try:
         scorer: Scorer = _SIMPLE[cfg.type](cfg.name, **params)

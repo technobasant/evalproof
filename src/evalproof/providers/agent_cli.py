@@ -382,12 +382,14 @@ class ClaudeCodeProvider(AgentCLIProvider):
             _int(usage.get(k))
             for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
         )
+        cost = result.get("total_cost_usd")
         return ChatResponse(
             text=text,
             model=self._resolved_model(result),
             tokens_in=tokens_in,
             tokens_out=_int(usage.get("output_tokens")),
             latency_ms=latency_ms,
+            cost_usd=float(cost) if isinstance(cost, int | float) and cost >= 0 else None,
         )
 
     def _resolved_model(self, result: dict[str, Any]) -> str:

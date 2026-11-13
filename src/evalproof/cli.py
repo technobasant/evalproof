@@ -1,4 +1,7 @@
-"""Command line: ``evalproof init | run | compare | verify | calibrate | report | pairwise``."""
+"""Command line.
+
+``evalproof init | run | import | compare | verify | calibrate | report | doctor | pairwise``
+"""
 
 from __future__ import annotations
 
@@ -10,11 +13,13 @@ import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.calibration import calibrate
 from evalproof.compare import compare_runs
-from evalproof.config import ConfigError, GateConfig, load_config
+from evalproof.config import ConfigError, GateConfig, format_validation_error, load_config
 from evalproof.dataset import DatasetError, load_dataset
 from evalproof.doctor import run_doctor
 from evalproof.gate import (
@@ -42,8 +47,10 @@ from evalproof.verify import verify_markdown, verify_run
 EXIT_INTERRUPTED = 130  # the shell's code for a process stopped by Ctrl-C
 
 
-def _emit(markdown: str, path: str | None) -> None:
-    sys.stdout.write(markdown)
+def _emit(markdown: str, path: str | None, *, quiet: bool = False) -> None:
+    """Print the report to stdout (unless ``quiet``) and append it to ``path`` if given."""
+    if not quiet:
+        sys.stdout.write(markdown)
     if path:
         # Append, so it can target $GITHUB_STEP_SUMMARY alongside other steps.
         with Path(path).open("a", encoding="utf-8") as fh:
@@ -83,6 +90,9 @@ def cmd_run(args: argparse.Namespace) -> int:
             override.label = args.label
         if args.system_prompt_file:
             override.system_prompt = Path(args.system_prompt_file).read_text(encoding="utf-8")
+            if not args.label:  # so two runs with different prompt files are told apart
+                base = override.label or override.target
+                override.label = f"{base} + {Path(args.system_prompt_file).name}"
 
     def progress(i: int, n: int, res: CaseResult) -> None:
         if not args.quiet:
@@ -102,7 +112,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     out = args.out or f"runs/{cfg.name}-{run.info.started_at.replace(':', '')}.json"
     save_run(run, out)
     sys.stderr.write(f"wrote {out}\n")
-    markdown = run_markdown(run)
+    markdown = run_markdown(run, args.show)
     failures: list[str] = []
     if args.gate and cfg.gate is not None:
         failures, notes = absolute_checks(run, cfg.gate)
@@ -142,11 +152,13 @@ def _gate_config(args: argparse.Namespace) -> GateConfig | None:
     }
     if base is None and "metric" not in overrides:
         return None
-    if base is None:
-        return GateConfig(**overrides)
     # Validate the merged config: model_copy would skip the check that a metric is named,
     # and an empty --metric (an unset variable in CI) would then gate nothing and pass.
-    return GateConfig.model_validate({**base.model_dump(), **overrides})
+    merged = overrides if base is None else {**base.model_dump(), **overrides}
+    try:
+        return GateConfig.model_validate(merged)
+    except ValidationError as exc:
+        raise ConfigError(format_validation_error(exc, "gate", GateConfig)) from exc
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
@@ -164,7 +176,16 @@ def cmd_compare(args: argparse.Namespace) -> int:
     decision = decide(cmp, gate, candidate) if gate else None
     if args.gate and decision is None:
         raise ConfigError("--gate needs a gate: pass --suite with a gate block, or --metric")
-    _emit(comparison_markdown(cmp, decision, gate.gated if gate else None), args.markdown)
+    _emit(
+        comparison_markdown(
+            cmp,
+            decision,
+            gate.gated if gate else None,
+            runs=(baseline, candidate),
+            show=args.show,
+        ),
+        args.markdown,
+    )
     if args.json:
         payload = {"comparison": json.loads(to_json(cmp))}
         if decision:
@@ -222,7 +243,7 @@ def cmd_import(args: argparse.Namespace) -> int:
     )
     save_run(run, args.out)
     sys.stderr.write(f"wrote {args.out}\n")
-    _emit(run_markdown(run), args.markdown)
+    _emit(run_markdown(run), args.markdown, quiet=args.quiet)
     return EXIT_PASS
 
 
@@ -260,7 +281,7 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
-    _emit(run_markdown(load_run(args.run)), args.markdown)
+    _emit(run_markdown(load_run(args.run), args.show), args.markdown)
     return EXIT_PASS
 
 
@@ -339,6 +360,13 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--markdown", help="also append the report to this file")
     r.add_argument("--quiet", action="store_true")
     r.add_argument(
+        "--show",
+        type=int,
+        default=10,
+        metavar="N",
+        help="list up to N failed cases in the report (default 10; 0 hides the list)",
+    )
+    r.add_argument(
         "--gate",
         action="store_true",
         help="apply the suite's absolute checks (gate.min_pass_rate, gate.must_pass) to this "
@@ -364,6 +392,11 @@ def build_parser() -> argparse.ArgumentParser:
         "pass) or any",
     )
     im.add_argument("--markdown", help="also append the report to this file")
+    im.add_argument(
+        "--quiet",
+        action="store_true",
+        help="do not print the report to stdout (--markdown still writes it)",
+    )
     tab = im.add_argument_group("jsonl and csv only")
     tab.add_argument("--id-field", help="column holding the case id (default: id)")
     tab.add_argument("--metric-field", help="column holding the metric name (default: metric)")
@@ -415,6 +448,14 @@ def build_parser() -> argparse.ArgumentParser:
         "between the runs; it is refused otherwise. A new CLI version alone only warns",
     )
     c.add_argument("--gate", action="store_true", help="exit non-zero when the gate fails")
+    c.add_argument(
+        "--show",
+        type=int,
+        default=5,
+        metavar="N",
+        help="show both outputs for up to N regressed cases of the gated metrics (default 5; "
+        "0 hides them)",
+    )
     c.add_argument("--seed", type=int, default=0)
     c.add_argument("--markdown")
     c.add_argument("--json")
@@ -438,6 +479,13 @@ def build_parser() -> argparse.ArgumentParser:
     rep = sub.add_parser("report", help="summarise one run")
     rep.add_argument("run")
     rep.add_argument("--markdown")
+    rep.add_argument(
+        "--show",
+        type=int,
+        default=10,
+        metavar="N",
+        help="list up to N failed cases (default 10; 0 hides the list)",
+    )
     rep.set_defaults(func=cmd_report)
 
     ver = sub.add_parser(

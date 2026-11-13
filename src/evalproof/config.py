@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import difflib
 import hashlib
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from evalproof.dataset import canonical_json
 
@@ -31,6 +32,8 @@ class ConfigError(ValueError):
 class Pricing(BaseModel):
     """USD per million tokens. Local models default to zero."""
 
+    model_config = ConfigDict(extra="forbid")
+
     input_per_mtok: float = 0.0
     output_per_mtok: float = 0.0
 
@@ -39,6 +42,8 @@ class Pricing(BaseModel):
 
 
 class GenerationParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     temperature: float = 0.0
     seed: int | None = 0
     max_tokens: int = 512
@@ -66,6 +71,8 @@ class TargetConfig(BaseModel):
     committed too.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     target: str
     label: str | None = None  # how reports name this system, e.g. "qwen3:1.7b + grounded prompt"
     system_prompt: str | None = None
@@ -85,6 +92,8 @@ class TargetConfig(BaseModel):
 
 
 class ScorerConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     type: ScorerType
     params: dict[str, Any] = Field(default_factory=dict)
@@ -93,6 +102,8 @@ class ScorerConfig(BaseModel):
 class CalibrationConfig(BaseModel):
     """How to calibrate a judge: against a labels file, or against another (trusted) scorer
     sampled down to ``gold_sample`` cases to mimic a small human-reviewed set."""
+
+    model_config = ConfigDict(extra="forbid")
 
     judge_scorer: str
     labels: str | None = None
@@ -113,6 +124,8 @@ class GateConfig(BaseModel):
     Holm-corrected so the chance of a false failure across the set stays at ``alpha``.
     Either may be omitted as long as one scorer is named; ``gated`` is the full list.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     metric: str | None = None
     metrics: list[str] = Field(default_factory=list)
@@ -177,6 +190,8 @@ class GateConfig(BaseModel):
 
 
 class SuiteConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     dataset: str
     system: TargetConfig
@@ -251,6 +266,46 @@ def suite_fingerprint(cfg: SuiteConfig, system_cfg: TargetConfig | None = None) 
     return hashlib.sha256(canonical_json(material).encode()).hexdigest()[:16]
 
 
+def _model_in(annotation: Any) -> type[BaseModel] | None:
+    """The pydantic model inside an annotation such as ``GateConfig | None`` or ``list[X]``."""
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+    for arg in get_args(annotation):
+        found = _model_in(arg)
+        if found is not None:
+            return found
+    return None
+
+
+def format_validation_error(
+    exc: ValidationError, path: str | Path, model: type[BaseModel] | None = None
+) -> str:
+    """One readable line per problem, ``<path>: <where>: <what>``, with no pydantic URLs. An
+    unknown key gets a suggestion when one is close, and the valid keys otherwise."""
+    lines = []
+    for err in exc.errors(include_url=False):
+        loc = err["loc"]
+        msg = err["msg"].removeprefix("Value error, ")
+        if err["type"] == "extra_forbidden":
+            current: type[BaseModel] | None = model or SuiteConfig
+            for part in loc[:-1]:
+                if isinstance(part, str) and current is not None:
+                    field = current.model_fields.get(part)
+                    current = _model_in(field.annotation) if field else None
+            valid = list(current.model_fields) if current else []
+            if current is TargetConfig:  # system and judge also take prompt text from a file
+                valid += ["system_prompt_file", "prompt_template_file"]
+            bad = str(loc[-1])
+            close = difflib.get_close_matches(bad, valid, n=1)
+            if close:
+                msg = f"unknown key (did you mean {close[0]!r}?)"
+            else:
+                msg = f"unknown key (valid keys: {', '.join(valid)})" if valid else "unknown key"
+        where = ".".join(str(part) for part in loc)
+        lines.append(f"{path}: {where}: {msg}" if where else f"{path}: {msg}")
+    return "\n".join(lines)
+
+
 def load_config(path: str | Path) -> SuiteConfig:
     path = Path(path)
     if not path.exists():
@@ -273,4 +328,4 @@ def load_config(path: str | Path) -> SuiteConfig:
     try:
         return SuiteConfig.model_validate(raw)
     except ValidationError as exc:
-        raise ConfigError(f"{path}: {exc}") from exc
+        raise ConfigError(format_validation_error(exc, path)) from exc

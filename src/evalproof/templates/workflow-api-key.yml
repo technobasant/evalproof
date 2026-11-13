@@ -2,14 +2,17 @@
 #
 # CI runs the suite itself with an API key kept in a repository secret, then compares the new
 # run with evals/runs/latest.json on the base branch. Every case is a model call, so the job
-# only runs when something under evals/ changes: add the paths that hold your system prompt.
-# Pull requests from forks get no secrets, so the run step fails for them.
+# only runs the suite when something you watch changed (see WATCH below). The workflow itself
+# starts on every pull request, so a required check never waits for a run that was filtered
+# out; when nothing changed it says so and stops.
+# Pull requests from forks get no secrets, so for them the job runs nothing and says so.
+# Responses are cached between runs (keyed on the contents of evals/), so a push that does not
+# change a prompt or a case is answered from the cache instead of the API. The cache is saved
+# only when the whole job passes.
 name: evalproof
 
 on:
   pull_request:
-    paths:
-      - evals/**
 
 permissions:
   contents: read
@@ -25,8 +28,31 @@ jobs:
           fetch-depth: 0 # the base branch has to be in the clone
           persist-credentials: false
 
+      - name: Check whether anything watched changed
+        id: changed
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          # Space-separated paths whose change should re-run the suite: the suite and the
+          # cases, plus whatever holds your system prompt or retrieval logic. Add yours.
+          # Run files under evals/runs/ never count: CI makes the run itself.
+          WATCH: evals/
+        run: |
+          set -euo pipefail
+          read -r -a watch <<< "$WATCH"
+          if [ -z "$(git diff --name-only "origin/$BASE_REF...HEAD" -- "${watch[@]}" ':(exclude)evals/runs/')" ]; then
+            echo "::notice title=evalproof::Nothing in $WATCH changed in this pull request, so the suite was not run."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip pull requests from forks
+        if: steps.changed.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        run: echo "::notice title=evalproof::This pull request comes from a fork, and GitHub gives forks no secrets, so the suite was not run. A maintainer can run it on a branch in this repository."
+
       - name: Take the baseline from the base branch
         id: baseline
+        if: steps.changed.outputs.changed == 'true'
         env:
           BASE_REF: ${{ github.base_ref }}
           BASELINE: ${{ runner.temp }}/evalproof-baseline.json
@@ -41,7 +67,7 @@ jobs:
           echo "found=true" >> "$GITHUB_OUTPUT"
 
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-        if: steps.baseline.outputs.found == 'true'
+        if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
 
 #@@IF cli
       # The judge's CLI version is recorded in the run file as judge_cli_version. A different
@@ -49,12 +75,21 @@ jobs:
       # advisory: it keeps CI close to the version your run file records.
 @@CLI_PIN_NOTE@@
       - name: Install @@CLI_BINARY@@
-        if: steps.baseline.outputs.found == 'true'
+        if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         run: npm install -g @@NPM_SPEC@@
 
 #@@END
+      - name: Restore the response cache
+        if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: evals/.evalproof/cache # the suite's cache_dir, next to the suite
+          key: evalproof-${{ hashFiles('evals/**') }}
+          restore-keys: |
+            evalproof-
+
       - name: Run the suite
-        if: steps.baseline.outputs.found == 'true'
+        if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
 #@@IF cli
           # The suite is written for a developer's own login and names no key. This tells the
@@ -67,7 +102,7 @@ jobs:
           uvx evalproof@@@PIP_VERSION@@ run evals/suite.yaml --out "$RUNNER_TEMP/evalproof-candidate.json" --quiet
 
       - name: Compare with the baseline and gate
-        if: steps.baseline.outputs.found == 'true'
+        if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         uses: technobasant/evalproof@@@ACTION_REF@@
         with:
           baseline: ${{ runner.temp }}/evalproof-baseline.json

@@ -28,11 +28,17 @@ echo "exit $?"
 ```
 
 If the gate passes and the change is meant to stay, replace the committed run with the new
-one, so the pull request carries it:
+one, so the pull request carries it, and check it the way CI will (no model calls):
 
 ```bash
 evalproof run evals/suite.yaml --out evals/runs/latest.json
+evalproof verify evals/runs/latest.json evals/suite.yaml
 ```
+
+`verify` exits 4 when the run file does not match the suite (system, judge, scorers, seed) or
+does not cover exactly the cases in `cases.jsonl`: a stale file, a `--limit` run, an edited case.
+With no baseline to compare with (a first run), set `gate.min_pass_rate` or `gate.must_pass` in
+the suite and add `--gate` to `run`: it checks the run on its own and exits 1 when a floor is missed.
 
 The model calls use the developer's own login or API key and cost quota or money. Run the
 suite once per change, not in a loop. Responses are cached, so an unchanged case is free
@@ -40,12 +46,17 @@ the second time.
 
 ## Read the result
 
-- `run` prints a pass rate per scorer with a 95% interval, the cases that errored or were
-  undecided, and latency. Errored cases count as failures.
-- `compare` prints the change per scorer with its interval and p-value, then the gate
-  verdict. Read the warnings: "dropped but not distinguishable from noise" means there are
-  too few cases to tell, not that the change is safe.
-- A case that fails is worth reading: open the run file, find its `output` and `scores`.
+- `run` prints a pass rate per scorer with a 95% interval and latency, then a "Failed cases"
+  list (id, scorer, reason; `--show N` changes how many). Errored cases count as failures, and
+  a run where every case errored exits 2.
+- `compare` prints the change per scorer with its interval and p-value, the ids that regressed
+  on each metric, and for a few of them (`--show N`) both answers and the scorer's reason. Then
+  the gate verdict: "cannot gate" (exit 4) means it did not decide, which is not a regression.
+  Read the warnings: "dropped but not distinguishable from noise" means there are too few
+  cases to tell, not that the change is safe.
+- The gate also fails on `gate.max_new_failures` (cases that passed before and fail now, even
+  when the statistics would pass), `gate.min_pass_rate` (a floor, per scorer or for all) and
+  `gate.must_pass` (tags whose cases must all pass). Those are the owner's; do not change them.
 
 ## Add a case
 
@@ -58,9 +69,11 @@ Append one JSON object per line to `evals/cases.jsonl`:
 - `id` is unique and stays the same for the life of the case.
 - `reference` is what the judge compares against. `accept` feeds the `contains` scorer.
 - Add cases for real failures: a bug report, a bad answer from production, a regression.
-- Changing the cases changes the dataset hash. Runs on the old and the new set cannot be
-  compared (exit 4), so after adding cases run the suite again and commit the new
-  `evals/runs/latest.json`.
+- Adding or editing a case does not block the gate. Cases are paired by id and content: a new
+  case has no baseline score, and an edited case (same id, new content) is left out of the
+  comparison and listed in the report until the baseline is refreshed, which happens when the
+  change is merged. After changing cases, run the suite again and commit the new
+  `evals/runs/latest.json`, so `verify` finds it covers exactly the cases that are there.
 
 ## Exit codes
 
@@ -70,7 +83,7 @@ Append one JSON object per line to `evals/cases.jsonl`:
 | 1 | Regression: a large, significant drop | Report it to the human |
 | 2 | Usage error: bad suite, path or target | Fix the command or the suite |
 | 3 | Budget breach: p95 latency or cost over the limit | Report it to the human |
-| 4 | Cannot gate: too few cases, different data, a metric with no scores, or the judge changed | Report it to the human |
+| 4 | Cannot gate: too few paired cases, a metric with no scores, the judge changed, or `verify` found the run file does not match the suite and cases | Report it to the human; for a stale run file, run the suite again |
 
 ## Rules
 
@@ -82,5 +95,5 @@ Append one JSON object per line to `evals/cases.jsonl`:
   what you changed. Do not work around it by switching the judge, running a subset
   (`--limit`) or re-running until it passes.
 - Do not commit a run made with `--limit` or `--system` as `latest.json`.
-- A different judge model or CLI version makes runs incomparable. Changing it is the
-  human's decision.
+- A different judge model makes runs incomparable (a new judge CLI version alone only warns).
+  Changing the judge is the human's decision.

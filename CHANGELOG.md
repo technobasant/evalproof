@@ -4,6 +4,68 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+Breaking, in the order a user is likely to hit them:
+
+- Unknown keys in a suite are now errors (`extra="forbid"` on every config model). A typo such
+  as `gate.max_drops` used to be ignored and now fails, naming the key and the closest valid one.
+- `evalproof run` exits 2 when every case errored. It still writes the run file and prints the
+  report first. Before, it exited 0.
+- The cache keys of agent-CLI calls (`claude-code`, `codex`, `opencode`, `cursor`, `copilot`)
+  change once: the CLI version is no longer part of the key, so a CLI that updates itself keeps
+  its cached replies. Cached replies from 0.4.x are not reused; `--no-cache` always asks again.
+- `evalproof compare --metric NAME` exits 2 when neither run has a scorer called `NAME`.
+  Before, it exited 4.
+- `compare` no longer exits 4 because the dataset changed, when both runs carry per-case hashes
+  (runs written by 0.5 and later do). Edited cases are excluded and listed instead.
+
+### Added
+
+- Per-case `case_hash` in run files (runner and importers). `compare` pairs cases by id and
+  hash: a new case is not compared, an edited case is excluded and listed, so adding or editing
+  cases no longer blocks the gate. A `--limit` run pairs with a full baseline.
+- `evalproof verify RUN SUITE [--markdown FILE]`: no model call; checks that a run file was
+  made with the suite's system, judge, scorers and seed (`RunInfo.suite_hash`) and covers
+  exactly the dataset's cases. Exit 0 on a match, 4 on a mismatch. The action runs it before
+  comparing (input `verify-candidate`, default `"true"`).
+- Gate checks that need no baseline: `gate.min_pass_rate` (a number or a dict by scorer),
+  `gate.must_pass` (case tags) and `gate.max_new_failures`, with `compare --min-pass-rate`,
+  `--must-pass` and `--max-new-failures`. `evalproof run --gate` applies the first two to a
+  single run.
+- `run` and `report` end with a "Failed cases" list (`--show N`, default 10). `compare` lists
+  the regressed ids of every compared metric and, with `--show N` (default 5), prints both
+  answers and the candidate scorer's reason for that many regressed cases of the gated metrics.
+- `ChatResponse.cost_usd`: the `claude-code` provider reports the CLI's `total_cost_usd`, which
+  the run records as the call's cost when the suite gives no pricing for that target. Under a
+  subscription login it is an API-equivalent estimate, not a bill. The judge's cost is now
+  computed from its `pricing` and counts toward `max_cost_usd`.
+- `import --quiet` keeps the report off stdout. `compare` and `run --gate` print a warning
+  when a `must_pass` tag matches no case.
+- `docs/specs/0.5.0-dev-workflow.md`.
+
+### Changed
+
+- A new judge CLI version alone only warns (`judge_cli_version`); the gate still refuses when
+  the resolved model, target, CLI or isolation changes.
+- The report says "cannot gate" for exit 4 instead of "fail", and lists up to ten regressed ids
+  per metric (it listed twenty, for gated metrics only).
+- `run --system-prompt-file F` without `--label` labels the run `<system> + F` so two prompt
+  files are told apart.
+- `evalproof init --ci api-key` writes a workflow with no `paths:` filter: a first step runs the
+  suite only when `WATCH` (default `evals/`) changed, forks are skipped with a notice, and
+  responses are cached in `evals/.evalproof/cache` with `actions/cache`. The keyless workflow
+  names what `verify` checks and what it cannot prove.
+- An unexpected exception prints one line and a hint (`EVALPROOF_DEBUG=1` shows the traceback)
+  instead of a traceback. Ctrl-C exits 130. Label file errors in `calibrate` carry `file:line`.
+- The agent skill and the `evals/README.md` that `init` writes explain adding cases, reading a
+  result, `verify`, `run --gate`, `must_pass` and `max_new_failures`.
+
+### Fixed
+
+- A `--limit` run, a stale run file and an edited case no longer pass the keyless gate
+  unnoticed: `verify` fails the job.
+- A run whose `--out` could not be written failed after every case had run; the path is now
+  checked before the first case.
+
 ## [0.4.1] — 2026-11-13
 
 ### Fixed
