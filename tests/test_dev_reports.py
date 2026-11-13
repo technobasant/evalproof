@@ -117,6 +117,13 @@ def test_compare_examples_escape_the_case_id_in_html() -> None:
     assert "<summary><code>&lt;b&gt;0&lt;/b&gt;</code> regressed on m</summary>" in md
 
 
+def test_compare_examples_escape_the_reason() -> None:
+    base, cand = _compare_pair(regress=1)
+    cand.results[0].scores["m"] = Score(value=0.0, passed=False, reason="</details> broke <it>")
+    md = comparison_markdown(compare_runs(base, cand), None, ["m"], runs=(base, cand), show=1)
+    assert "&lt;/details&gt; broke &lt;it&gt;" in md and md.count("</details>") == 1
+
+
 def test_compare_examples_cover_only_gated_metrics() -> None:
     base, cand = _compare_pair()
     md = comparison_markdown(compare_runs(base, cand), None, ["s"], runs=(base, cand), show=5)

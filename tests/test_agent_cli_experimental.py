@@ -533,11 +533,13 @@ def _gone(pid: int, wait_s: float = 3.0) -> bool:
 
 def test_timeout_kills_the_whole_process_group(cli: Case) -> None:
     cli.set_replies(reply(sleep=30, spawn_child=True))
-    provider = cli.provider(timeout_s=1.0)
+    # 3 s, not 1: the fake CLI is a Python script, and on a loaded machine it can take over a
+    # second to start and record its call, which this test then reads.
+    provider = cli.provider(timeout_s=3.0)
     start = time.monotonic()
-    with pytest.raises(ProviderError, match="timed out after 1s"):
+    with pytest.raises(ProviderError, match="timed out after 3s"):
         provider.chat(USER, PARAMS)
-    assert time.monotonic() - start < 10
+    assert time.monotonic() - start < 15
     call = cli.fake.last()
     assert _gone(call["pid"]) and _gone(call["child_pid"])
     assert len(cli.fake.calls()) == 1  # a timeout is not retried

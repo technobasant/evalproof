@@ -28,6 +28,7 @@ from evalproof.gate import (
     EXIT_REGRESSION,
     EXIT_USAGE,
     absolute_checks,
+    continuous_floors,
     decide,
 )
 from evalproof.importers import EPOCHS, FORMATS, import_run
@@ -65,6 +66,8 @@ def _clip(text: str, limit: int = 200) -> str:
 def _check_writable(path: Path) -> None:
     """Fail before any case runs if the run file cannot be written: create the parent, then
     create and delete a file in it."""
+    if path.is_dir():
+        raise ConfigError(f"cannot write the run file {path}: it is a directory")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".evalproof-write-check-"):
@@ -114,9 +117,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     sys.stderr.write(f"wrote {out}\n")
     markdown = run_markdown(run, args.show)
     failures: list[str] = []
+    refused: list[str] = []
     if args.gate and cfg.gate is not None:
+        refused = continuous_floors(run, cfg.gate)
         failures, notes = absolute_checks(run, cfg.gate)
-        verdict = "❌ fail" if failures else "✅ pass"
+        failures = refused + failures
+        verdict = "⚠️ cannot gate" if refused else ("❌ fail" if failures else "✅ pass")
         markdown += f"\n**Gate (absolute checks only): {verdict}**\n\n"
         markdown += "".join(f"- {r}\n" for r in failures)
         markdown += "".join(f"- ⚠️ {w}\n" for w in notes)
@@ -125,6 +131,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         first = _clip(next(r.output.error or "" for r in run.results))
         sys.stderr.write(f"evalproof: error: every case errored; the first error: {first}\n")
         return EXIT_USAGE
+    if refused:
+        return EXIT_CANNOT_GATE
     return EXIT_REGRESSION if failures else EXIT_PASS
 
 

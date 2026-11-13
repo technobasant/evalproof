@@ -10,8 +10,9 @@ from a setup problem:
   not pass
 * ``3``  budget breach: candidate p95 latency or total cost over the limit
 * ``4``  cannot gate: too few paired cases, metric missing, the dataset changed and a run predates
-  per-case hashes, or the judge's target, CLI, isolation or resolved model changed (unless the
-  gate sets ``allow_judge_change``). A new judge CLI version only warns: it is advisory.
+  per-case hashes, ``min_pass_rate`` on a metric with only continuous scores, or the judge's
+  target, CLI, isolation or resolved model changed (unless the gate sets
+  ``allow_judge_change``). A new judge CLI version only warns: it is advisory.
 * ``2``  usage or configuration error (raised by the CLI, not here)
 
 Cases added, removed or edited between the runs are left out of the comparison, with a warning;
@@ -66,15 +67,38 @@ def pass_counts(run: Run, name: str) -> tuple[int, int]:
     return passed, counted
 
 
+def _only_continuous(run: Run, name: str) -> bool:
+    scores = [r.scores[name] for r in run.results if name in r.scores]
+    return any(s.value is not None for s in scores) and all(s.passed is None for s in scores)
+
+
+def continuous_floors(run: Run, gate: GateConfig) -> list[str]:
+    """``min_pass_rate`` metrics that cannot have a pass rate: the run has scores for them, but
+    only continuous ones (no pass/fail). A setup problem, not a regression."""
+    bad: list[str] = []
+    for name in gate.pass_rate_floors:
+        if _only_continuous(run, name):
+            bad.append(
+                f"min_pass_rate needs a pass/fail metric, and {name!r} has only continuous "
+                "scores: gate a pass/fail scorer (a retrieval scorer takes params.pass_threshold), "
+                "or drop it from min_pass_rate"
+            )
+    return bad
+
+
 def absolute_checks(run: Run, gate: GateConfig) -> tuple[list[str], list[str]]:
     """The checks that need no baseline, as ``(failures, warnings)``.
 
     ``min_pass_rate``: the run's pass rate on each metric it names. ``must_pass``: a case with
     one of the tags must pass every gated metric; erroring or being undecided is failing.
-    Used by ``evalproof run --gate`` on its own run and by ``decide`` on the candidate."""
+    Used by ``evalproof run --gate`` on its own run and by ``decide`` on the candidate. A
+    metric ``continuous_floors`` names is skipped here; the callers refuse to gate on it."""
     failures: list[str] = []
     warnings: list[str] = []
+    skip = {name for name in gate.pass_rate_floors if _only_continuous(run, name)}
     for name, floor in gate.pass_rate_floors.items():
+        if name in skip:
+            continue
         passed, counted = pass_counts(run, name)
         if not counted:
             failures.append(
@@ -147,6 +171,8 @@ def decide(cmp: Comparison, gate: GateConfig, candidate: Run | None = None) -> G
             )
     if gate.has_absolute_checks and candidate is None:
         refused.append("min_pass_rate and must_pass need the candidate run, which was not given")
+    elif candidate is not None:
+        refused.extend(continuous_floors(candidate, gate))
     if refused:
         return GateDecision("fail", EXIT_CANNOT_GATE, refused)
     warnings.extend(cmp.judge_warnings)
@@ -214,7 +240,12 @@ def decide(cmp: Comparison, gate: GateConfig, candidate: Run | None = None) -> G
     if gate.max_new_failures is not None:
         for name in names:
             mc = cmp.metrics[name]
-            if mc.kind == "binary" and len(mc.regressed) > gate.max_new_failures:
+            if mc.kind != "binary":
+                warnings.append(
+                    f"max_new_failures counts pass/fail cases, and {name!r} is continuous, so "
+                    "it was not checked on it"
+                )
+            elif len(mc.regressed) > gate.max_new_failures:
                 reasons.append(
                     f"{name}: {len(mc.regressed)} case(s) newly failing, more than the "
                     f"{gate.max_new_failures} allowed: {_ids(mc.regressed)}"

@@ -87,7 +87,8 @@ def _examples(
             "",
             _fence(_clip(cand.output.output, EXAMPLE_CHARS) or "(empty)"),
             "",
-            f"**Candidate's {name} reason:** {_clip(reason, EXAMPLE_CHARS)}",
+            f"**Candidate's {html.escape(name)} reason:** "
+            f"{html.escape(_clip(reason, EXAMPLE_CHARS), quote=False)}",
             "",
             "</details>",
         ]

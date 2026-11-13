@@ -77,9 +77,32 @@ def test_undecided_cases_are_left_out_of_the_rate() -> None:
 
 
 def test_a_metric_with_no_decided_scores_fails() -> None:
-    cand = make_run({"a": {"m": None}, "b": {"m": 0.5}})  # undecided, and continuous
+    cand = make_run({"a": {"m": None}, "b": {"m": None}}, errors={"b"})  # undecided, errored
     failures, _ = absolute_checks(cand, GateConfig(metric="m", min_pass_rate=0.5))
+    assert "pass rate 0.000 below the minimum 0.500 (0/1 cases)" in failures[0]
+    undecided = make_run({"a": {"m": None}, "b": {"m": None}})
+    failures, _ = absolute_checks(undecided, GateConfig(metric="m", min_pass_rate=0.5))
     assert "no case has a decided pass/fail score" in failures[0]
+
+
+def test_min_pass_rate_on_a_continuous_metric_cannot_gate() -> None:
+    # A setup problem, not a regression: exit 4 with the fix, never exit 1.
+    ids = _ids(12)
+    base = make_run({i: {"m": 0.9} for i in ids})
+    gate = GateConfig(metric="m", min_cases=10, min_pass_rate=0.5)
+    assert absolute_checks(base, gate) == ([], [])
+    d = decide(compare_runs(base, base), gate, base)
+    assert d.exit_code == EXIT_CANNOT_GATE
+    assert "min_pass_rate needs a pass/fail metric" in d.reasons[0]
+
+
+def test_max_new_failures_on_a_continuous_metric_warns() -> None:
+    ids = _ids(12)
+    base = make_run({i: {"m": 0.9} for i in ids})
+    cand = make_run({i: {"m": 0.1 if n < 3 else 0.9} for n, i in enumerate(ids)})
+    gate = GateConfig(metric="m", min_cases=10, max_new_failures=0, max_drop=1.0)
+    d = decide(compare_runs(base, cand), gate, cand)
+    assert any("max_new_failures counts pass/fail cases" in w for w in d.warnings)
 
 
 def test_min_pass_rate_is_validated() -> None:
@@ -282,6 +305,28 @@ def test_run_gate_applies_must_pass(tmp_path: Path, capsys) -> None:
     assert "1 must-pass case(s)" in capsys.readouterr().out
 
 
+def test_run_gate_with_min_pass_rate_on_a_continuous_metric_exits_4(tmp_path: Path, capsys) -> None:
+    (tmp_path / "cases.jsonl").write_text(
+        "".join(
+            json.dumps({"id": f"c{i}", "input": "q", "relevant": ["a"]}) + "\n" for i in range(3)
+        ),
+        "utf-8",
+    )
+    (tmp_path / "rag.py").write_text(
+        "def ask(x):\n    return {'output': 'x', 'retrieved': ['a']}\n", "utf-8"
+    )
+    suite = tmp_path / "suite.yaml"
+    suite.write_text(
+        "name: s\ndataset: cases.jsonl\nsystem: {target: 'python:rag:ask'}\n"
+        "scorers: [{name: r, type: mrr}]\ngate: {metric: r, min_pass_rate: 0.5}\n",
+        "utf-8",
+    )
+    code = main(["run", str(suite), "--out", str(tmp_path / "r.json"), "--quiet", "--gate"])
+    out = capsys.readouterr().out
+    assert code == EXIT_CANNOT_GATE
+    assert "cannot gate" in out and "min_pass_rate needs a pass/fail metric" in out
+
+
 def test_without_gate_the_run_does_not_apply_the_checks(tmp_path: Path) -> None:
     suite = _suite(tmp_path, "{metric: m, min_pass_rate: 0.99}")
     assert main(["run", str(suite), "--out", str(tmp_path / "r.json"), "--quiet"]) == EXIT_PASS
@@ -329,6 +374,10 @@ def test_the_out_directory_is_checked_before_any_case_runs(
     code = main(["run", str(suite), "--out", str(blocker / "r.json"), "--quiet"])
     assert code == EXIT_USAGE and not marker.exists()
     assert "cannot write the run file" in capsys.readouterr().err
+    # An --out that is an existing directory is refused up front too.
+    code = main(["run", str(suite), "--out", str(tmp_path), "--quiet"])
+    assert code == EXIT_USAGE and not marker.exists()
+    assert "it is a directory" in capsys.readouterr().err
     # A missing parent is created, and the check leaves nothing behind.
     deep = tmp_path / "new" / "dir" / "r.json"
     assert main(["run", str(suite), "--out", str(deep), "--quiet"]) == EXIT_PASS

@@ -453,9 +453,13 @@ changed, and the gate exits 4 asking for a fresh baseline. A dataset change is a
 gate:
   metric: judge
   min_pass_rate: 0.8           # a floor for the candidate; or per scorer: {judge: 0.8, answer_key: 0.9}
-  must_pass: [critical]        # every case with this tag must pass every gated metric
+  must_pass: [critical]        # every case with this tag must pass every pass/fail gated metric
   max_new_failures: 0          # most cases that may go from pass to fail on a pass/fail metric
 ```
+
+`min_pass_rate`, `must_pass` and `max_new_failures` need a pass/fail metric. On a continuous one
+`min_pass_rate` cannot gate (exit 4), `max_new_failures` is skipped with a warning, and
+`must_pass` fails only an errored or undecided case.
 
 `evalproof run suite.yaml --gate` applies `min_pass_rate` and `must_pass` to the run alone and
 exits 1 when one fails (a usage error if the suite sets neither), which is the gate for a first
@@ -590,7 +594,7 @@ The composite action runs `compare --gate`, appends the report to the job summar
 fails the job on exit codes 1, 3 or 4:
 
 ```yaml
-- uses: technobasant/evalproof@v0.4.1
+- uses: technobasant/evalproof@v0.5.0
   with:
     baseline: eval/baseline.json     # produced on main, e.g. as a build artifact
     candidate: eval/candidate.json   # produced on this branch
@@ -617,8 +621,8 @@ request (a path filter would leave a required check pending), and its first step
 against the base branch: when nothing in `WATCH` changed it says so and runs nothing. Pull
 requests from forks get no secrets, so for them it runs nothing and says so. Responses are
 cached in `evals/.evalproof/cache` between runs, keyed on the contents of `evals/`, so a push
-that changes no prompt or case is answered from the cache; the cache is saved only when the
-job passes.
+that changes no prompt or case is answered from the cache. The cache is saved right after the
+run, before the gate, so a pull request that fails the gate keeps it too.
 
 If the judge is a Claude Code or Codex CLI, `evalproof init --ci api-key` writes a workflow that
 installs the CLI at the version found at init time and runs `evals/suite.yaml` as it is. The run

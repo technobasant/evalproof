@@ -659,11 +659,13 @@ def test_timeout_kills_the_whole_process_group(
         version="v",
         responses=[reply(sleep=30, spawn_child=True)],
     )
-    provider = ClaudeCodeProvider("haiku", timeout_s=1.0, sleep=no_sleep)
+    # 3 s, not 1: the fake CLI is a Python script, and on a loaded machine it can take over a
+    # second to start and record its call, which this test then reads.
+    provider = ClaudeCodeProvider("haiku", timeout_s=3.0, sleep=no_sleep)
     start = time.monotonic()
-    with pytest.raises(ProviderError, match="timed out after 1s"):
+    with pytest.raises(ProviderError, match="timed out after 3s"):
         provider.chat(USER, PARAMS)
-    assert time.monotonic() - start < 10
+    assert time.monotonic() - start < 15
     call = fake.last()
     assert _gone(call["pid"]) and _gone(call["child_pid"])
     assert len(fake.calls()) == 1  # a timeout is not retried
