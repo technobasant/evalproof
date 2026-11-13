@@ -5,7 +5,9 @@ from a setup problem:
 
 * ``0``  pass (possibly with warnings)
 * ``1``  quality regression: drop >= ``max_drop`` and p < ``alpha`` (Holm-adjusted p when
-  several metrics are gated)
+  several metrics are gated); or more than ``max_new_failures`` cases newly failing; or an
+  absolute check failed: a pass rate below ``min_pass_rate``, a ``must_pass`` case that did
+  not pass
 * ``3``  budget breach: candidate p95 latency or total cost over the limit
 * ``4``  cannot gate: too few paired cases, metric missing, the dataset changed and a run predates
   per-case hashes, or the judge's target, CLI, isolation or resolved model changed (unless the
@@ -22,6 +24,7 @@ from dataclasses import dataclass, field
 
 from evalproof.compare import Comparison, dataset_change_note
 from evalproof.config import GateConfig
+from evalproof.models import Run
 from evalproof.stats import holm
 
 EXIT_PASS = 0
@@ -41,7 +44,74 @@ class GateDecision:
     adjusted_p: dict[str, float] = field(default_factory=dict)
 
 
-def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
+SHOW_IDS = 10
+
+
+def _ids(ids: list[str]) -> str:
+    shown = ", ".join(f"`{i}`" for i in ids[:SHOW_IDS])
+    return shown + (f" and {len(ids) - SHOW_IDS} more" if len(ids) > SHOW_IDS else "")
+
+
+def pass_counts(run: Run, name: str) -> tuple[int, int]:
+    """``(passed, counted)`` for one scorer: every case with a decided binary score, and every
+    errored case, which counts as a failure whatever the scorer made of its empty output."""
+    passed = counted = 0
+    for r in run.results:
+        score = r.scores.get(name)
+        if r.output.error:
+            counted += 1
+        elif score is not None and score.passed is not None:
+            counted += 1
+            passed += bool(score.passed)
+    return passed, counted
+
+
+def absolute_checks(run: Run, gate: GateConfig) -> tuple[list[str], list[str]]:
+    """The checks that need no baseline, as ``(failures, warnings)``.
+
+    ``min_pass_rate``: the run's pass rate on each metric it names. ``must_pass``: a case with
+    one of the tags must pass every gated metric; erroring or being undecided is failing.
+    Used by ``evalproof run --gate`` on its own run and by ``decide`` on the candidate."""
+    failures: list[str] = []
+    warnings: list[str] = []
+    for name, floor in gate.pass_rate_floors.items():
+        passed, counted = pass_counts(run, name)
+        if not counted:
+            failures.append(
+                f"{name}: no case has a decided pass/fail score, so the pass rate is unknown"
+            )
+            continue
+        rate = passed / counted
+        if rate < floor:
+            failures.append(
+                f"{name}: pass rate {rate:.3f} below the minimum {floor:.3f} "
+                f"({passed}/{counted} cases)"
+            )
+    if gate.must_pass:
+        wanted = set(gate.must_pass)
+        carried = set().union(*(set(r.tags) for r in run.results))
+        for tag in gate.must_pass:
+            if tag not in carried:
+                warnings.append(f"no case carries the must_pass tag {tag!r}")
+        bad: list[str] = []
+        for r in run.results:
+            if not wanted & set(r.tags):
+                continue
+            verdicts = [r.scores.get(name) for name in gate.gated]
+            if r.output.error or any(s is None or s.passed is not True for s in verdicts):
+                bad.append(r.case_id)
+        if bad:
+            failures.append(
+                f"{len(bad)} must-pass case(s) failed, errored or were undecided on a gated "
+                f"metric: {_ids(bad)}"
+            )
+    return failures, warnings
+
+
+def decide(cmp: Comparison, gate: GateConfig, candidate: Run | None = None) -> GateDecision:
+    """Decide the gate. ``candidate`` is the candidate run; the absolute checks
+    (``min_pass_rate``, ``must_pass``) need its scores, so a gate that sets one cannot be
+    decided without it."""
     reasons: list[str] = []
     warnings: list[str] = []
 
@@ -61,6 +131,8 @@ def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
                 f"the judge changed between the runs, so the scores are not comparable: {changes}"
                 " (pass --allow-judge-change or set gate.allow_judge_change to accept it)"
             )
+    if gate.has_absolute_checks and candidate is None:
+        refused.append("min_pass_rate and must_pass need the candidate run, which was not given")
     if refused:
         return GateDecision("fail", EXIT_CANNOT_GATE, refused)
     warnings.extend(cmp.judge_warnings)
@@ -124,6 +196,22 @@ def decide(cmp: Comparison, gate: GateConfig) -> GateDecision:
                 f"{name} dropped {mc.delta:+.3f} (significant, {p_text}) but within "
                 f"the {gate.max_drop:.3f} tolerance"
             )
+
+    if gate.max_new_failures is not None:
+        for name in names:
+            mc = cmp.metrics[name]
+            if mc.kind == "binary" and len(mc.regressed) > gate.max_new_failures:
+                reasons.append(
+                    f"{name}: {len(mc.regressed)} case(s) newly failing, more than the "
+                    f"{gate.max_new_failures} allowed: {_ids(mc.regressed)}"
+                )
+                exit_code = EXIT_REGRESSION
+    if candidate is not None and gate.has_absolute_checks:
+        failures, notes = absolute_checks(candidate, gate)
+        reasons.extend(failures)
+        warnings.extend(notes)
+        if failures:
+            exit_code = EXIT_REGRESSION
 
     if (
         gate.max_p95_latency_ms is not None

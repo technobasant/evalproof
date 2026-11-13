@@ -126,6 +126,25 @@ class GateConfig(BaseModel):
     # incomparable, so the gate refuses unless told to accept it. A new CLI version alone only
     # warns, so a pinned CLI version is advisory.
     allow_judge_change: bool = False
+    # Absolute checks on the candidate alone (``evalproof run --gate`` applies just these).
+    # ``min_pass_rate`` is the lowest candidate pass rate per gated metric (a float for all of
+    # them, or a dict by scorer name); errored cases count as failures. ``must_pass`` lists
+    # case tags: a case with one must pass every gated metric. ``max_new_failures`` is the most
+    # cases that may go from pass to fail on a binary gated metric, whatever the p-value; 0
+    # suits deterministic scorers.
+    min_pass_rate: float | dict[str, float] | None = None
+    must_pass: list[str] = Field(default_factory=list)
+    max_new_failures: int | None = None
+
+    @model_validator(mode="after")
+    def _check_absolute(self) -> GateConfig:
+        floors = self.min_pass_rate
+        for value in floors.values() if isinstance(floors, dict) else [floors]:
+            if value is not None and not 0.0 <= value <= 1.0:
+                raise ValueError(f"min_pass_rate must be between 0 and 1, got {value}")
+        if self.max_new_failures is not None and self.max_new_failures < 0:
+            raise ValueError("max_new_failures must be >= 0")
+        return self
 
     @model_validator(mode="after")
     def _name_a_metric(self) -> GateConfig:
@@ -141,6 +160,20 @@ class GateConfig(BaseModel):
         """The scorers to gate on, ``metric`` first, without repeats."""
         names = [self.metric] if self.metric else []
         return list(dict.fromkeys([*names, *self.metrics]))
+
+    @property
+    def pass_rate_floors(self) -> dict[str, float]:
+        """The minimum pass rate per scorer: a float applies to every gated metric."""
+        if self.min_pass_rate is None:
+            return {}
+        if isinstance(self.min_pass_rate, dict):
+            return dict(self.min_pass_rate)
+        return {name: self.min_pass_rate for name in self.gated}
+
+    @property
+    def has_absolute_checks(self) -> bool:
+        """True when the gate sets a check that needs no baseline."""
+        return self.min_pass_rate is not None or bool(self.must_pass)
 
 
 class SuiteConfig(BaseModel):
@@ -168,6 +201,10 @@ class SuiteConfig(BaseModel):
                 if name not in names:
                     where = "gate.metric" if i == 0 else "gate.metrics"
                     raise ValueError(f"{where} {name!r} is not a scorer name")
+            if isinstance(self.gate.min_pass_rate, dict):
+                for name in self.gate.min_pass_rate:
+                    if name not in names:
+                        raise ValueError(f"gate.min_pass_rate {name!r} is not a scorer name")
         if self.calibration:
             for field in ("judge_scorer", "gold_scorer"):
                 ref = getattr(self.calibration, field)
