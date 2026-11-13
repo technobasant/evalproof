@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 from collections.abc import Sequence
 from dataclasses import asdict
@@ -75,7 +76,8 @@ def _examples(
         reason = reason or (score.reason if score and score.reason else "none recorded")
         lines += [
             "",
-            f"<details><summary><code>{cid}</code> regressed on {name}</summary>",
+            f"<details><summary><code>{html.escape(cid)}</code> regressed on "
+            f"{html.escape(name)}</summary>",
             "",
             "**Baseline output**",
             "",

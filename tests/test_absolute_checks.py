@@ -141,6 +141,22 @@ def test_must_pass_needs_every_gated_metric_and_lists_at_most_ten() -> None:
     assert reason.count("`c") == 10
 
 
+def test_must_pass_on_a_continuous_metric_fails_only_errors_and_undecided() -> None:
+    # A continuous score has no pass/fail, so a scored case is not a failure; an errored or
+    # undecided one still is, and the gate says must_pass checked nothing more.
+    tags = {i: ["core"] for i in "abcd"}
+    gate = GateConfig(metric="m", must_pass=["core"])
+    scored = make_run({"a": {"m": 0.2}, "b": {"m": 0.9}}, tags=tags)
+    failures, warnings = absolute_checks(scored, gate)
+    assert failures == []
+    assert any("must_pass needs a pass/fail gated metric" in w for w in warnings)
+    mixed = make_run({"a": {"m": 0.2}, "c": {"m": None}, "d": {"m": 0.7}}, tags=tags, errors={"d"})
+    failures, warnings = absolute_checks(mixed, gate)
+    assert len(failures) == 1 and "`c`" in failures[0] and "`d`" in failures[0]
+    assert "`a`" not in failures[0]
+    assert any("must_pass needs a pass/fail gated metric" in w for w in warnings)
+
+
 def test_a_must_pass_tag_no_case_carries_is_a_warning() -> None:
     run = make_run({"a": {"m": True}}, tags={"a": ["real"]})
     failures, warnings = absolute_checks(run, GateConfig(metric="m", must_pass=["typo"]))

@@ -8,7 +8,7 @@
 # Pull requests from forks get no secrets, so for them the job runs nothing and says so.
 # Responses are cached between runs (keyed on the contents of evals/), so a push that does not
 # change a prompt or a case is answered from the cache instead of the API. The cache is saved
-# only when the whole job passes.
+# as soon as the suite has run, so a pull request that fails the gate keeps it too.
 name: evalproof
 
 on:
@@ -80,8 +80,9 @@ jobs:
 
 #@@END
       - name: Restore the response cache
+        id: cache
         if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: evals/.evalproof/cache # the suite's cache_dir, next to the suite
           key: evalproof-${{ hashFiles('evals/**') }}
@@ -100,6 +101,15 @@ jobs:
         run: |
           set -euo pipefail
           uvx evalproof@@@PIP_VERSION@@ run evals/suite.yaml --out "$RUNNER_TEMP/evalproof-candidate.json" --quiet
+
+      # Saved right after the run, before the gate, so a pull request that fails the gate still
+      # keeps the answers it paid for.
+      - name: Save the response cache
+        if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: evals/.evalproof/cache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
       - name: Compare with the baseline and gate
         if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository

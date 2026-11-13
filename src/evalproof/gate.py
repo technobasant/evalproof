@@ -12,10 +12,10 @@ from a setup problem:
 * ``4``  cannot gate: too few paired cases, metric missing, the dataset changed and a run predates
   per-case hashes, or the judge's target, CLI, isolation or resolved model changed (unless the
   gate sets ``allow_judge_change``). A new judge CLI version only warns: it is advisory.
+* ``2``  usage or configuration error (raised by the CLI, not here)
 
 Cases added, removed or edited between the runs are left out of the comparison, with a warning;
 the gate decides on the cases both runs share.
-* ``2``  usage or configuration error (raised by the CLI, not here)
 """
 
 from __future__ import annotations
@@ -94,12 +94,26 @@ def absolute_checks(run: Run, gate: GateConfig) -> tuple[list[str], list[str]]:
             if tag not in carried:
                 warnings.append(f"no case carries the must_pass tag {tag!r}")
         bad: list[str] = []
+        binary_seen = False
         for r in run.results:
             if not wanted & set(r.tags):
                 continue
             verdicts = [r.scores.get(name) for name in gate.gated]
-            if r.output.error or any(s is None or s.passed is not True for s in verdicts):
+            binary_seen = binary_seen or any(
+                s is not None and s.passed is not None for s in verdicts
+            )
+            # A failed pass/fail verdict, an undecided score or a missing one fails the case. A
+            # continuous score with a value has no pass/fail of its own, so it neither passes nor
+            # fails a must-pass case.
+            if r.output.error or any(
+                s is None or s.value is None or s.passed is False for s in verdicts
+            ):
                 bad.append(r.case_id)
+        if carried & wanted and not binary_seen:
+            warnings.append(
+                "must_pass needs a pass/fail gated metric; the gated metrics are continuous, "
+                "so must_pass checked only for errors and undecided scores"
+            )
         if bad:
             failures.append(
                 f"{len(bad)} must-pass case(s) failed, errored or were undecided on a gated "

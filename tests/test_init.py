@@ -544,8 +544,10 @@ def test_api_key_workflow_caches_responses_with_a_pinned_action(
     run_init(tmp_path, capsys, "--ci", "api-key", "--judge", "openai:gpt-5")
     path = tmp_path / WORKFLOW
     step = next(s for s in _steps(path) if s.get("name") == "Restore the response cache")
-    assert re.fullmatch(r"actions/cache@[0-9a-f]{40}", step["uses"])  # a commit, not a tag
-    assert re.search(r"actions/cache@[0-9a-f]{40} # v\d+\.\d+\.\d+", path.read_text("utf-8"))
+    assert re.fullmatch(r"actions/cache/restore@[0-9a-f]{40}", step["uses"])  # a commit
+    text = path.read_text("utf-8")
+    assert re.search(r"actions/cache/restore@[0-9a-f]{40} # v\d+\.\d+\.\d+", text)
+    assert re.search(r"actions/cache/save@[0-9a-f]{40} # v\d+\.\d+\.\d+", text)
     assert step["with"]["path"] == "evals/.evalproof/cache"
     assert step["with"]["key"] == "evalproof-${{ hashFiles('evals/**') }}"
     assert step["with"]["restore-keys"].strip() == "evalproof-"
@@ -554,6 +556,15 @@ def test_api_key_workflow_caches_responses_with_a_pinned_action(
     assert (Path("evals") / cfg.cache_dir).as_posix() == step["with"]["path"]
     names = [s.get("name", "") for s in _steps(path)]
     assert names.index("Restore the response cache") < names.index("Run the suite")
+    # Saved before the gate, so a pull request that fails the gate keeps what it paid for.
+    save = next(s for s in _steps(path) if s.get("name") == "Save the response cache")
+    assert names.index("Run the suite") < names.index("Save the response cache")
+    assert names.index("Save the response cache") < names.index(
+        "Compare with the baseline and gate"
+    )
+    assert save["with"]["path"] == step["with"]["path"]
+    assert save["with"]["key"] == "${{ steps.cache.outputs.cache-primary-key }}"
+    assert step["id"] == "cache" and "cache-hit != 'true'" in save["if"]
 
 
 # --- the keyless workflow, run for real ---------------------------------------------------

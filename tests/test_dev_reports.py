@@ -110,6 +110,13 @@ def test_compare_shows_outputs_and_reason_for_regressed_cases() -> None:
     assert "<details>" not in comparison_markdown(cmp, None, ["m"])
 
 
+def test_compare_examples_escape_the_case_id_in_html() -> None:
+    base = make_run({f"<b>{i}</b>": {"m": True} for i in range(10)})
+    cand = make_run({f"<b>{i}</b>": {"m": i > 0} for i in range(10)})
+    md = comparison_markdown(compare_runs(base, cand), None, ["m"], runs=(base, cand), show=1)
+    assert "<summary><code>&lt;b&gt;0&lt;/b&gt;</code> regressed on m</summary>" in md
+
+
 def test_compare_examples_cover_only_gated_metrics() -> None:
     base, cand = _compare_pair()
     md = comparison_markdown(compare_runs(base, cand), None, ["s"], runs=(base, cand), show=5)
