@@ -21,6 +21,7 @@ from evalproof.config import (
     ScorerConfig,
     load_config,
 )
+from evalproof.gate import EXIT_PASS, decide
 from evalproof.models import Case, Score, SystemOutput
 from evalproof.providers import Message, ProviderError
 from evalproof.runner import run_suite, score_case
@@ -209,6 +210,16 @@ def test_case_rubrics_join_the_base_and_replace_by_id() -> None:
     assert [(r.id, r.text) for r in got] == [("a", "case a"), ("b", "b"), ("c", "c")]
     off = judge(ScriptedProvider([]), rubrics=[{"id": "a", "text": "base a"}], case_rubrics=False)
     assert [r.text for r in off.rubrics_for(case)] == ["base a"]
+
+
+def test_case_rubric_strings_are_added_not_swapped_for_base_strings() -> None:
+    scorer = judge(ScriptedProvider([]), rubrics=["base one", "base two"])
+    got = scorer.rubrics_for(case_with(["case one"]))
+    assert [(r.id, r.text) for r in got] == [
+        ("r1", "base one"),
+        ("r2", "base two"),
+        ("c1", "case one"),
+    ]
 
 
 def test_a_malformed_case_rubrics_field_names_the_case() -> None:
@@ -585,6 +596,9 @@ def test_per_rubric_metrics_reach_the_run_compare_and_the_cost(tmp_path: Path) -
     assert first.scores["rs"].judge_tokens == 50 and first.scores["rs/tone"].judge_tokens == 0
     comparison = compare_runs(run, run, metrics=["rs/tone"])
     assert list(comparison.metrics) == ["rs/tone"]
+    assert cfg.gate is not None and cfg.gate.gated == ["rs/tone"]
+    decision = decide(compare_runs(run, run), cfg.gate)
+    assert decision.exit_code == EXIT_PASS, decision.reasons
 
 
 def test_score_case_merges_every_metric_a_scorer_writes() -> None:

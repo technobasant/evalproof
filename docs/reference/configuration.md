@@ -180,7 +180,7 @@ The parameters of each type:
 | `llm_judge` | `rubric_file` | none | a file holding the rubric, relative to the suite file |
 | `llm_judge` | `max_retries` | `1` | retries when the judge's reply cannot be read |
 | `llm_judge` | `rubrics` | none | base rubrics for [rubric-set mode](#rubric-sets): strings (given the ids `r1`, `r2`, ...) or `{id, text, weight?, type?}` objects |
-| `llm_judge` | `case_rubrics` | `true` | in rubric-set mode, merge the case's own `rubrics` field; a case rubric with the id of a base rubric replaces it for that case. `case_rubrics: true` alone turns rubric-set mode on |
+| `llm_judge` | `case_rubrics` | `true` | in rubric-set mode, merge the case's own `rubrics` field (strings get the ids `c1`, `c2`, ..., so they are added); a case rubric with the explicit id of a base rubric replaces it for that case. `case_rubrics: true` alone turns rubric-set mode on |
 | `llm_judge` | `rubric_types` | all | keep only rubrics whose `type` is in this list; a rubric with no type is always kept |
 | `llm_judge` | `mode` | `batched` | `batched` asks about every rubric in one call; `per_rubric` makes one call per rubric |
 | `llm_judge` | `num_samples` | `1` | ask the judge this many times; each rubric passes by majority, and a tie fails |

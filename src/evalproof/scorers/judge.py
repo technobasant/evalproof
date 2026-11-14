@@ -193,9 +193,10 @@ class Rubric:
     type: str | None = None
 
 
-def normalize_rubrics(items: Any, path: str = "rubrics") -> list[Rubric]:
-    """Read a list of rubrics: strings (given the ids ``r1``, ``r2``, ... by position) or
-    ``{id, text, weight?, type?}`` objects. Raises ``ValueError`` naming ``path``."""
+def normalize_rubrics(items: Any, path: str = "rubrics", prefix: str = "r") -> list[Rubric]:
+    """Read a list of rubrics: strings (given the ids ``r1``, ``r2``, ... by position, or
+    ``<prefix>1``, ...) or ``{id, text, weight?, type?}`` objects. Raises ``ValueError`` naming
+    ``path``."""
     if not isinstance(items, list):
         raise ValueError(f"{path} must be a list")
     rubrics: list[Rubric] = []
@@ -204,7 +205,7 @@ def normalize_rubrics(items: Any, path: str = "rubrics") -> list[Rubric]:
         if isinstance(item, str):
             if not item.strip():
                 raise ValueError(f"{where} is empty")
-            rubrics.append(Rubric(id=f"r{position}", text=item))
+            rubrics.append(Rubric(id=f"{prefix}{position}", text=item))
             continue
         if not isinstance(item, dict):
             raise ValueError(f"{where} must be a string or an object with 'text'")
@@ -217,7 +218,7 @@ def normalize_rubrics(items: Any, path: str = "rubrics") -> list[Rubric]:
         text = item.get("text")
         if not isinstance(text, str) or not text.strip():
             raise ValueError(f"{where}.text must be a non-empty string")
-        rid = item.get("id", f"r{position}")
+        rid = item.get("id", f"{prefix}{position}")
         if not isinstance(rid, str) or not rid.strip():
             raise ValueError(f"{where}.id must be a non-empty string")
         weight = item.get("weight", 1.0)
@@ -332,11 +333,13 @@ def parse_rubric_verdicts(text: str, ids: list[str]) -> dict[str, tuple[bool, st
 
 
 def _case_rubrics(case: Case) -> list[Rubric]:
+    """A case's own rubrics. One without an id is numbered ``c1``, ``c2``, ... so it is added
+    beside the base rubrics; only an explicit id equal to a base id replaces that rubric."""
     raw = case.field("rubrics")
     if raw is None:
         return []
     try:
-        return normalize_rubrics(raw, "rubrics")
+        return normalize_rubrics(raw, "rubrics", prefix="c")
     except ValueError as exc:
         raise ValueError(f"case {case.id!r}: {exc}") from exc
 
