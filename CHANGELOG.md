@@ -4,7 +4,39 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
-Nothing yet. Changes merged after 0.7.1 are listed here until the next release.
+Changes merged after 0.7.1 are listed here until the next release.
+
+### Added
+
+- Rubric sets for the `llm_judge` scorer. Give it `rubrics` (strings, or `{id, text, weight?,
+  type?}` objects) and, with `case_rubrics: true`, let each case add its own under `rubrics`. The
+  judge grades every rubric on its own, and the score is the weighted fraction that passed;
+  `min_score` sets where a case passes. `mode: batched` (the default) asks about every rubric in
+  one call, `per_rubric` makes one call per rubric. `num_samples` asks the judge several times and
+  a rubric passes by majority (a tie fails); each sample uses its own seed offset. `rubric_types`
+  keeps only the listed types (untyped rubrics always apply). A suite with a single `rubric` or
+  `rubric_file` behaves as before.
+- `per_rubric_metrics: true` on a rubric set also writes one `<scorer>/<id>` metric per base
+  rubric. The gate, `min_pass_rate`, calibration and `compare` accept those names, so a change
+  that breaks one rubric shows up on its own. The extra metrics carry no judge cost.
+- A scorer may define `score_all(case, out)` to write more than one metric. The runner merges the
+  result; every extra name must be `<scorer>/<id>`, so it cannot collide with another scorer.
+- The `facts` scorer: numbers a response must contain (`facts`, each a number or `{value,
+  rel_tol?, abs_tol?, required?, label?}`) and phrases it must mention (`must_mention`). The value
+  is the share found. It is deterministic, so `evalproof verify` re-scores it, and `readiness`
+  counts it as correctness.
+- `readiness` counts case tags stored in a run file (`--run`) as well as the dataset's, so an
+  imported run with `safety` or `robustness` tags is covered without a dataset. The evidence names
+  both sources.
+
+### Changed
+
+- The parameters of an `llm_judge` scorer are checked when the suite loads: an unknown key (with
+  a "did you mean" hint), a wrong type, `mode` or `min_score` out of range, rubric-set parameters
+  without `rubrics` or `case_rubrics: true`, and `rubric` or `rubric_file` combined with a rubric
+  set now fail at load. An unknown key used to fail only when the scorer was built.
+- With `num_samples` above 1 and a judge `temperature` of 0, loading the suite warns that the
+  samples will agree.
 
 ## [0.7.1] — 2026-11-14
 

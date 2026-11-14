@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from evalproof.config import ConfigError, GenerationParams, ScorerConfig, SuiteConfig, TargetConfig
 from evalproof.models import Case, SystemOutput
@@ -195,9 +196,13 @@ def test_make_scorer(tmp_path) -> None:
     assert isinstance(judge, LLMJudge) and judge.rubric == "custom rubric"
     with pytest.raises(ConfigError):
         make_scorer(suite.scorers[0], suite, None)
-    with pytest.raises(ConfigError):
+    with pytest.raises(ValidationError, match="unknown key"):  # a typo now fails at load
+        ScorerConfig(name="j", type="llm_judge", params={"x": 1})
+    with pytest.raises(ConfigError):  # and make_scorer still refuses one that got past the loader
         make_scorer(
-            ScorerConfig(name="j", type="llm_judge", params={"x": 1}), suite, ScriptedProvider([])
+            ScorerConfig.model_construct(name="j", type="llm_judge", params={"x": 1}),
+            suite,
+            ScriptedProvider([]),
         )
     with pytest.raises(ConfigError):
         make_scorer(ScorerConfig(name="e", type="exact_match", params={"bogus": 1}), suite)

@@ -125,7 +125,7 @@ Local models cost nothing unless you set a price.
 
 ## Scorers
 
-Each entry of `scorers` has a `name`, a `type` and a `params` object. The name is what the gate, `calibrate` and the reports refer to. A `checks` or `python` scorer has its params checked when the suite loads; the others are checked when the run starts.
+Each entry of `scorers` has a `name`, a `type` and a `params` object. The name is what the gate, `calibrate` and the reports refer to. A `checks`, `python` or `llm_judge` scorer has its params checked when the suite loads, so a typo fails at once; the others are checked when the run starts.
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
@@ -140,8 +140,9 @@ Each entry of `scorers` has a `name`, a `type` and a `params` object. The name i
 | `regex` | the output matches a pattern | pass/fail |
 | `json_schema` | the output is JSON that matches a schema | pass/fail |
 | `numeric_tolerance` | a number in the output is close to the expected one | pass/fail |
+| `facts` | the output holds every listed number and phrase | pass/fail, with the share found as the value |
 | `recall_at_k`, `mrr`, `ndcg` | the ranked ids the system retrieved against the relevant ids | continuous, pass/fail with `pass_threshold` |
-| `llm_judge` | a model grades the output against a rubric | pass/fail |
+| `llm_judge` | a model grades the output against a rubric, or against a set of rubrics | pass/fail, with the weighted share of rubrics that passed as the value in rubric-set mode |
 | `checks` | checks on the trace: tool calls, order, arguments, replies | pass/fail, or the fraction of checks passed |
 | `python` | your function | a `Score`, a bool, a number from 0 to 1 or a `(bool, reason)` pair |
 
@@ -167,12 +168,24 @@ The parameters of each type:
 | `numeric_tolerance` | `abs_tol` | `0.0` | absolute tolerance |
 | `numeric_tolerance` | `rel_tol` | `0.0` | relative tolerance |
 | `numeric_tolerance` | `pick` | `first` | which number in the output counts: `first`, `last` or `any` |
+| `facts` | `field` | `facts` | the case field holding a list of numbers, or of `{value, rel_tol?, abs_tol?, required?, label?}` objects (`required` defaults to `true`); `value` may be a numeric string such as `"1,234"`; each must match a number in the output |
+| `facts` | `mention_field` | `must_mention` | the case field holding a list of strings that must appear in the output |
+| `facts` | `rel_tol` | `0.0` | relative tolerance for a fact that sets none |
+| `facts` | `abs_tol` | `0.0` | absolute tolerance for a fact that sets none |
+| `facts` | `normalize` | `true` | match mentions as substrings after lower-casing, collapsing whitespace and trimming surrounding punctuation; `false` matches the text as written |
 | `recall_at_k`, `mrr`, `ndcg` | `k` | `10` | how many ranked ids to look at; at least 1 |
 | `recall_at_k`, `mrr`, `ndcg` | `field` | `relevant` | the case field holding the relevant ids |
 | `recall_at_k`, `mrr`, `ndcg` | `pass_threshold` | none | the value at or above which a case passes; with none the score is continuous only |
 | `llm_judge` | `rubric` | built in | the grading instructions |
 | `llm_judge` | `rubric_file` | none | a file holding the rubric, relative to the suite file |
 | `llm_judge` | `max_retries` | `1` | retries when the judge's reply cannot be read |
+| `llm_judge` | `rubrics` | none | base rubrics for [rubric-set mode](#rubric-sets): strings (given the ids `r1`, `r2`, ...) or `{id, text, weight?, type?}` objects |
+| `llm_judge` | `case_rubrics` | `true` | in rubric-set mode, merge the case's own `rubrics` field; a case rubric with the id of a base rubric replaces it for that case. `case_rubrics: true` alone turns rubric-set mode on |
+| `llm_judge` | `rubric_types` | all | keep only rubrics whose `type` is in this list; a rubric with no type is always kept |
+| `llm_judge` | `mode` | `batched` | `batched` asks about every rubric in one call; `per_rubric` makes one call per rubric |
+| `llm_judge` | `num_samples` | `1` | ask the judge this many times; each rubric passes by majority, and a tie fails |
+| `llm_judge` | `min_score` | `1.0` | the case passes when the weighted share of rubrics that passed is at least this, between 0 and 1 |
+| `llm_judge` | `per_rubric_metrics` | `false` | also write one metric `<scorer>/<id>` per base rubric, which the gate and `compare` treat like any scorer |
 | `checks` | `checks` | none | checks applied to every case, in the vocabulary of [Testing agents](../guides/testing-agents.md#testing-agents) |
 | `checks` | `field` | `expect` | the case field holding per-case checks |
 | `checks` | `on_missing` | `pass` | what a case with no checks scores: `pass` or `skip` |
@@ -180,6 +193,29 @@ The parameters of each type:
 | `python` | `fn` | required | the function, as `module:function` |
 | `python` | `deterministic` | `false` | declare that the function always returns the same score for the same output, so `verify` can re-score it offline |
 | `python` | `threshold` | `0.5` | a number from 0 to 1: a function that returns a number passes at or above it |
+
+### Rubric sets
+
+A rubric set turns one judge into several yes/no checks, each with its own text, so a failing case says which one failed. It is on when the scorer has `rubrics`, or `case_rubrics: true` to read them from the cases, and it cannot be combined with `rubric` or `rubric_file`.
+
+```yaml title="suite.yaml (excerpt)"
+scorers:
+  - name: quality
+    type: llm_judge
+    params:
+      rubrics:
+        - {id: grounded, text: "Every claim is supported by the reference answer."}
+        - {id: tone, text: "The reply is polite and brief.", weight: 0.5}
+      mode: batched
+      per_rubric_metrics: true     # also writes quality/grounded and quality/tone
+gate:
+  metrics: [quality, quality/grounded]
+```
+
+* The value is the weighted share of rubrics that passed, and the case passes when that share is at least `min_score`. The reason reads `2/3 rubrics; failed: tone (too curt)`. A case left with no rubrics is undecided (`no rubrics`).
+* A call the judge cannot answer (a provider error, or a reply that stays unreadable after the retries) makes the whole score undecided: a case is never scored on part of its rubrics. `judge_tokens` and `judge_cost_usd` add up every call.
+* `num_samples` above 1 at a judge `temperature` of 0 asks the same question every time, so loading the suite warns. Each sample after the first shifts the judge's seed by its number, as repeated trials do.
+* `evalproof calibrate` reads the aggregated pass/fail of the scorer. `per_rubric_metrics` names only base rubrics: rubrics that exist only in a case change from case to case and get no metric of their own.
 
 ## Calibration
 
@@ -228,7 +264,8 @@ A variant is one way to run the same cases, scorers and gate with another model,
 
 * Scorer names are unique, and so are variant names.
 * An `llm_judge` scorer needs a `judge` target.
-* Every name in `gate.metric`, `gate.metrics`, `gate.min_pass_rate` and `calibration` (`judge_scorer`, `gold_scorer`) is a scorer name.
+* Every name in `gate.metric`, `gate.metrics`, `gate.min_pass_rate` and `calibration` (`judge_scorer`, `gold_scorer`) is a scorer name, or `<scorer>/<id>` for a base rubric of a rubric-set `llm_judge` with `per_rubric_metrics: true`.
+* An `llm_judge` scorer has only the parameters listed above; the rubric-set parameters need `rubrics` or `case_rubrics: true`, `rubric` and `rubric_file` cannot be combined with them, and `per_rubric_metrics` needs base `rubrics`.
 * A gate names at least one scorer.
 * `calibration` has exactly one of `labels` and `gold_scorer`.
 * `concurrency` is at least 1, and `trials` is 1 to 100.
