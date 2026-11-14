@@ -1,5 +1,5 @@
 ---
-description: Turn promptfoo, Inspect, DeepEval, lm-eval, garak, CSV and JSONL results into run files that compare and the gate read.
+description: Turn promptfoo, Inspect, DeepEval, lm-eval, garak, Google ADK, CSV and JSONL results into run files that compare and the gate read.
 ---
 
 # Import results from other tools
@@ -13,6 +13,7 @@ evalproof import inspect logs/task.eval --out runs/candidate.json
 evalproof import deepeval .deepeval/.latest_test_run.json --out runs/candidate.json
 evalproof import lm-eval results/gpt2/samples_hellaswag_2026-11-12T10-20-30.jsonl --out runs/gpt2.json
 evalproof import garak garak.report.jsonl --out runs/scan.json
+evalproof import adk .adk/eval_history/app_evalset_1788817991.2.evalset_result.json --out runs/adk.json
 evalproof import csv results.csv --system a --out runs/a.json       # id,metric,passed,score,...
 evalproof import jsonl results.jsonl --wide --id-field case --out runs/a.json  # one column per metric
 ```
@@ -42,6 +43,12 @@ Import each side with the same importer, then gate as usual, for example
   scan's `eval_threshold`, else 0.5. The raw score is kept in the metric's reason, and an output
   a detector could not score stays undecided. Attempts garak never scored (no status-2 entry)
   are skipped with a warning.
+* Google ADK eval results (`*.evalset_result.json`, from `.adk/eval_history`) import one case per
+  eval case, with its runs (`repetition_index` order) as repeats. One metric per ADK metric,
+  scored as ADK scored it (a 1 to 5 metric stays 1 to 5, and the import names it); passed and
+  failed follow ADK's status, and a metric ADK did not evaluate is undecided. The tool calls come
+  from the session's events, or from each invocation's intermediate data. This importer is
+  experimental: it was written from ADK's source and no real result file was available.
 
 ## Next steps
 
