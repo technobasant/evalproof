@@ -37,7 +37,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/technobasant/evalproof"
-Documentation = "https://github.com/technobasant/evalproof#readme"
+Documentation = "https://basantbhattarai.com.np/evalproof/"
 Source = "https://github.com/technobasant/evalproof"
 Issues = "https://github.com/technobasant/evalproof/issues"
 Changelog = "https://github.com/technobasant/evalproof/blob/main/CHANGELOG.md"
@@ -63,8 +63,9 @@ docs = [
 [tool.hatch.version]
 path = "src/evalproof/_version.py"
 
-# PyPI renders the README but cannot follow relative links or draw Mermaid, so the copy
-# published there points both at GitHub. The README in the repository stays as written.
+# PyPI renders the README but cannot follow relative links, so the copy published there
+# points them at GitHub. The README in the repository stays as written. The full documentation
+# is the MkDocs site in docs/, which is not part of the wheel or the sdist.
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
 content-type = "text/markdown"
 
@@ -76,10 +77,6 @@ path = "README.md"
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
 pattern = '\[!\[(PyPI|Python)\]\(https://img\.shields\.io/pypi/[^)]+\)\]\([^)]+\)\n'
 replacement = ''
-
-[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
-pattern = '(?s)```mermaid\n.*?```'
-replacement = "The architecture diagram is in the [README on GitHub](https://github.com/technobasant/evalproof#architecture)."
 
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
 pattern = '\]\((?!https?://|#)([^)]+)\)'
