@@ -89,7 +89,7 @@ evalproof import FORMAT FILE --out PATH [options]
 
 | Argument | Required | What it is |
 |---|---|---|
-| `FORMAT` | yes | the tool or table layout the file is from: `promptfoo`, `inspect`, `deepeval`, `lm-eval`, `jsonl`, `csv` |
+| `FORMAT` | yes | the tool or table layout the file is from: `promptfoo`, `inspect`, `deepeval`, `lm-eval`, `garak`, `jsonl`, `csv` |
 | `FILE` | yes | the results file to import |
 
 | Flag | Type | Default | What it does |
@@ -99,6 +99,7 @@ evalproof import FORMAT FILE --out PATH [options]
 | `--epochs` | one of `mean`, `first`, `all`, `any`, `trials` | `mean` | how repeats of one case collapse: mean (default), first, all (every repeat must pass) or any; or trials, which keeps each repeat as its own trial of the case |
 | `--markdown` | string | none | also append the report to this file |
 | `--quiet` | flag | off | do not print the report to stdout (`--markdown` still writes it) |
+| `--threshold` | number | none | garak only: the detector score at which an output counts as a hit (default: the run's eval_threshold, else 0.5) |
 | `--id-field` | string | none | column holding the case id (default: id) |
 | `--metric-field` | string | none | column holding the metric name (default: metric) |
 | `--score-field` | string | none | column holding the continuous score (default: score) |

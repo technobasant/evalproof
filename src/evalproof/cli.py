@@ -469,6 +469,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         warn=warn,
         fields=fields,
         wide=args.wide,
+        threshold=args.threshold,
     )
     save_run(run, args.out)
     sys.stderr.write(f"wrote {args.out}\n")
@@ -654,6 +655,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--quiet",
         action="store_true",
         help="do not print the report to stdout (--markdown still writes it)",
+    )
+    im.add_argument(
+        "--threshold",
+        type=float,
+        help="garak only: the detector score at which an output counts as a hit (default: the "
+        "run's eval_threshold, else 0.5)",
     )
     tab = im.add_argument_group("jsonl and csv only")
     tab.add_argument("--id-field", help="column holding the case id (default: id)")

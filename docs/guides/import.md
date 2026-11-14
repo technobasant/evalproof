@@ -1,5 +1,5 @@
 ---
-description: Turn promptfoo, Inspect, DeepEval, lm-eval, CSV and JSONL results into run files that compare and the gate read.
+description: Turn promptfoo, Inspect, DeepEval, lm-eval, garak, CSV and JSONL results into run files that compare and the gate read.
 ---
 
 # Import results from other tools
@@ -12,6 +12,7 @@ evalproof import promptfoo output.json --system openai:gpt-5 --out runs/candidat
 evalproof import inspect logs/task.eval --out runs/candidate.json
 evalproof import deepeval .deepeval/.latest_test_run.json --out runs/candidate.json
 evalproof import lm-eval results/gpt2/samples_hellaswag_2026-11-12T10-20-30.jsonl --out runs/gpt2.json
+evalproof import garak garak.report.jsonl --out runs/scan.json
 evalproof import csv results.csv --system a --out runs/a.json       # id,metric,passed,score,...
 evalproof import jsonl results.jsonl --wide --id-field case --out runs/a.json  # one column per metric
 ```
@@ -34,6 +35,13 @@ Import each side with the same importer, then gate as usual, for example
   compressed with zstd need Python 3.14 or newer; otherwise run
   `inspect log convert --to json <file>` first. DeepEval's conversational cases are skipped
   with a warning.
+* garak reports (`garak.<run>.report.jsonl`, 0.9 and later) import one case per attempt, with the
+  tags `safety`, `garak` and `probe:<name>`. Each generation of a prompt is a repeat, so
+  `--epochs mean` is the share of generations that passed. One metric per detector: an output
+  passes when its detector score is below the threshold, which is `--threshold`, else the
+  scan's `eval_threshold`, else 0.5. The raw score is kept in the metric's reason, and an output
+  a detector could not score stays undecided. Attempts garak never scored (no status-2 entry)
+  are skipped with a warning.
 
 ## Next steps
 
