@@ -750,17 +750,23 @@ def test_openai_pairs_by_order_without_call_ids_and_error_hook() -> None:
         out_item(None, "first"),
         out_item(None, "An error occurred while running the tool. Please try again."),
     ]
+    # The SDK reports a raised tool as its fixed default text: failed out of the box.
     plain = calls_of(oa.from_result(run_result(items, "x")))
     assert [(c.name, c.result, c.ok) for c in plain] == [
         ("a", "first", True),
-        ("b", "An error occurred while running the tool. Please try again.", True),
+        ("b", oa.DEFAULT_TOOL_ERROR, False),
     ]
-    assert plain[1].args == {"input": "not json"}  # the SDK reports a failure as plain text
+    assert plain[1].error == oa.DEFAULT_TOOL_ERROR
+    assert plain[1].args == {"input": "not json"}
+    # Only the exact text counts; a custom failure text needs error_if, which replaces the test.
+    custom = [*items[:3], out_item(None, "tool failed: quota")]
+    assert [c.ok for c in calls_of(oa.from_result(run_result(custom, "x")))] == [True, True]
     hooked = calls_of(
-        oa.from_result(run_result(items, "x"), error_if=lambda out: str(out).startswith("An error"))
+        oa.from_result(run_result(custom, "x"), error_if=lambda out: str(out).startswith("tool f"))
     )
-    assert [c.ok for c in hooked] == [True, False]
-    assert hooked[1].error == "An error occurred while running the tool. Please try again."
+    assert [c.ok for c in hooked] == [True, False] and hooked[1].error == "tool failed: quota"
+    off = calls_of(oa.from_result(run_result(items, "x"), error_if=lambda out: False))
+    assert [c.ok for c in off] == [True, True]
 
 
 def test_openai_final_output_variants_and_missing_attributes() -> None:

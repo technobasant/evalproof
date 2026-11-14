@@ -15,9 +15,11 @@ under agents/:
   "tool_call_output_item"``, :437 ``output`` (whatever the tool returned), :448-454 ``call_id``.
 
 The SDK has no field that says a tool failed. A function tool that raises is turned into a
-plain string by its ``failure_error_function`` (tool.py:696-710, 1997-2002; the text can be
-customised) and arrives as an ordinary ``output``, so every call is ``ok`` unless ``error_if``,
-a function of the output that returns True for a failure, says otherwise. The SDK reports no
+plain string by its ``failure_error_function`` (tool.py:697-711) and arrives as an ordinary
+``output``. By default that string is the fixed ``DEFAULT_TOOL_ERROR`` (tool.py:1997-2002), so an
+output exactly equal to it marks the call failed. A tool with a custom failure text needs
+``error_if``, a function of the output that returns True for a failure; it replaces the default
+test (``error_if=lambda output: False`` turns failure detection off). The SDK reports no
 cost, and its usage is not split by model, so the usage entry has no model and no cost.
 A turn is a ``RunResult``: pass a list of results (one per user turn) for a multi-turn case.
 Results that share one ``Usage`` object (the same ``RunContextWrapper`` passed to every run)
@@ -32,6 +34,13 @@ from typing import Any
 
 from evalproof.adapters._common import AgentResult, Ledger, count, get, jsonable, text_of
 from evalproof.models import ModelUsage, Trace
+
+DEFAULT_TOOL_ERROR = "An error occurred while running the tool. Please try again."
+"""What the SDK's ``default_tool_error_function`` returns for a tool that raised (tool.py:2002)."""
+
+
+def _is_default_failure(output: Any) -> bool:
+    return isinstance(output, str) and output == DEFAULT_TOOL_ERROR
 
 
 def _message_text(item: Any) -> str:
@@ -60,6 +69,7 @@ def from_result(result: Any, *, error_if: Callable[[Any], bool] | None = None) -
     when it is not a string), else the text of the last message. Tokens come from
     ``context_wrapper.usage`` and ``rounds`` is the number of ``raw_responses``.
     """
+    failed_if = error_if if error_if is not None else _is_default_failure
     results = list(result) if isinstance(result, list | tuple) else [result]
     ledger = Ledger()
     responses: list[str] = []
@@ -87,7 +97,7 @@ def from_result(result: Any, *, error_if: Callable[[Any], bool] | None = None) -
                 output = get(item, "output")
                 if output is None:
                     output = get(raw, "output")
-                failed = bool(error_if(output)) if error_if is not None else False
+                failed = bool(failed_if(output))
                 ledger.result(
                     get(item, "call_id") or get(raw, "call_id") or get(raw, "id"),
                     None,
@@ -126,4 +136,4 @@ def from_result(result: Any, *, error_if: Callable[[Any], bool] | None = None) -
     return {"output": responses[-1] if responses else "", "trace": trace}
 
 
-__all__ = ["from_result"]
+__all__ = ["DEFAULT_TOOL_ERROR", "from_result"]
