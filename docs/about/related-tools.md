@@ -16,5 +16,6 @@ frameworks.
 evalproof is deliberately narrow: it is the measurement layer — how much a judge's verdict
 is worth, and whether a difference between two runs is real. Its run file is plain,
 documented JSON, so it can sit beside an existing harness: produce the per-case verdicts
-however you like, then calibrate and gate here. For promptfoo, Inspect, DeepEval and
-lm-eval you do not even need to do that: evalproof [imports their results](../guides/import.md#import-results-from-other-tools).
+however you like, then calibrate and gate here. For promptfoo, Inspect, DeepEval, lm-eval,
+garak, Google ADK and Claude Code plugin evals you do not even need to do that: evalproof
+[imports their results](../guides/import.md#import-results-from-other-tools).

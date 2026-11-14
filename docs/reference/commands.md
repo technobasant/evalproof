@@ -13,6 +13,7 @@ Every `evalproof` subcommand, its arguments and every flag with its type and def
 | [`evalproof init`](#evalproof-init) | write a starter suite, a CI workflow and an agent skill into a repository |
 | [`evalproof run`](#evalproof-run) | run a suite and write a run artifact |
 | [`evalproof import`](#evalproof-import) | turn another tool's results into a run artifact you can compare and gate |
+| [`evalproof import-dataset`](#evalproof-import-dataset) | turn another tool's test set into a dataset you can run |
 | [`evalproof compare`](#evalproof-compare) | compare two runs, or several candidates with one baseline; `--gate` turns the result into an exit code |
 | [`evalproof calibrate`](#evalproof-calibrate) | measure a judge against gold labels and correct its rate |
 | [`evalproof report`](#evalproof-report) | summarise one run |
@@ -99,7 +100,7 @@ evalproof import FORMAT FILE --out PATH [options]
 | `--epochs` | one of `mean`, `first`, `all`, `any`, `trials` | `mean` | how repeats of one case collapse: mean (default), first, all (every repeat must pass) or any; or trials, which keeps each repeat as its own trial of the case |
 | `--markdown` | string | none | also append the report to this file |
 | `--quiet` | flag | off | do not print the report to stdout (`--markdown` still writes it) |
-| `--threshold` | number | none | garak only: the detector score at which an output counts as a hit (default: the run's eval_threshold, else 0.5) |
+| `--threshold` | number | none | garak only (any other format refuses it): the detector score at which an output counts as a hit; without it the scan's `eval_threshold`, else 0.5. The one used and its source (`cli`, `eval_threshold` or `default`) are recorded in the run's `environment.threshold` and `environment.threshold_source` |
 | `--id-field` | string | none | column holding the case id (default: id) |
 | `--metric-field` | string | none | column holding the metric name (default: metric) |
 | `--score-field` | string | none | column holding the continuous score (default: score) |
@@ -111,7 +112,30 @@ evalproof import FORMAT FILE --out PATH [options]
 evalproof import promptfoo results.json --out runs/promptfoo.json
 ```
 
-Exit 0, or 2 for a usage error such as an unreadable file.
+Exit 0, or 2 for a usage error such as an unreadable file. `adk` and `claude-plugin-eval` are experimental: they print a note once and set `environment.import_experimental` in the run.
+
+## evalproof import-dataset
+
+Turns another tool's test set, which holds no results, into a JSONL dataset that `evalproof run` reads. `adk` reads a Google ADK eval set (`*.evalset.json`) or the flat `*.test.json` list; any other shape is refused. See [Google ADK eval sets as a dataset](../guides/import.md#google-adk-eval-sets-as-a-dataset).
+
+```bash title="Terminal"
+evalproof import-dataset FORMAT FILE --out PATH
+```
+
+| Argument | Required | What it is |
+|---|---|---|
+| `FORMAT` | yes | the tool the file is from: `adk` |
+| `FILE` | yes | the test set to import |
+
+| Flag | Type | Default | What it does |
+|---|---|---|---|
+| `--out` | string, required | none | where to write the dataset; an existing file is replaced |
+
+```bash title="Example"
+evalproof import-dataset adk evals/home_automation.evalset.json --out datasets/home.jsonl
+```
+
+The cases that cannot be replayed (ADK user-simulation cases) are skipped with one warning on stderr. Exit 0, or 2 for a usage error, an unreadable file, an unsupported shape or a file with no case to import.
 
 ## evalproof compare
 
