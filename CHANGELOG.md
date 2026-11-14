@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+Nothing yet. Changes merged after 0.7.1 are listed here until the next release.
+
 ## [0.7.1] — 2026-11-14
 
 Documentation. No change to behaviour, the run file or the cache.
