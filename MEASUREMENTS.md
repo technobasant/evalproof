@@ -237,7 +237,8 @@ The labels give 22 passes and 8 failures. Against them:
 * the audited labels of sections 4 and 8 agree on all 29 cases they decide. The 30th, q66,
   which they left ambiguous, is a fail here: asked whether there is a Microsoft Teams
   integration, the answer opens "Yes" and then says there is none, and the rubric fails an
-  answer that contradicts itself.
+  answer that contradicts itself. Those audits were also read with Claude, so this agreement
+  shows a consistent reading, not an independent confirmation.
 
 | Judge · gold (30 cases) | TPR / FPR | κ | Gold only | ACC | PPI |
 |---|---:|---:|---:|---:|---:|
