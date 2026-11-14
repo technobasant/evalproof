@@ -232,6 +232,7 @@ The browser app in [`app/`](app) runs locally too:
 | `evalproof calibrate RUN` | measure the judge against gold labels and correct its pass rate |
 | `evalproof pairwise A B` | judge two runs head to head, in both orders |
 | `evalproof doctor [SUITE]` | check the agent CLIs a suite uses; no model call |
+| `evalproof readiness SUITE [--run FILE] [--json] [--require DIM,...]` | report which parts of quality the suite covers (correctness, tool use, quality, gate, cost, safety, and so on) and which it leaves untested; exits 1 when a `--require`d one is not covered; no model call |
 
 ## Providers
 

@@ -1,7 +1,7 @@
 """Command line.
 
 ``evalproof init | run | import | compare | verify | rehash | calibrate | report | doctor |
-pairwise``
+pairwise | readiness``
 """
 
 from __future__ import annotations
@@ -41,6 +41,13 @@ from evalproof.gate import (
 from evalproof.importers import EPOCHS, FORMATS, import_run
 from evalproof.models import CaseResult
 from evalproof.providers import ProviderError, make_provider
+from evalproof.readiness import (
+    assess,
+    exit_code,
+    parse_required,
+    readiness_json,
+    readiness_markdown,
+)
 from evalproof.rehash import RehashError, rehash_run
 from evalproof.report import (
     calibration_markdown,
@@ -285,6 +292,18 @@ def cmd_rehash(args: argparse.Namespace) -> int:
     save_run(rehashed, out)
     sys.stderr.write(f"rehashed {len(rehashed.results)} cases in {out}\n")
     return EXIT_PASS
+
+
+def cmd_readiness(args: argparse.Namespace) -> int:
+    required = parse_required(args.require)  # a bad name is a usage error before any file is read
+    cfg = load_config(args.suite)
+    cases = load_dataset(cfg.resolve(cfg.dataset))
+    run = load_run(args.run) if args.run else None
+    report = assess(cfg, cases, run, args.run)
+    sys.stdout.write(
+        readiness_json(report, required) if args.json else readiness_markdown(report, required)
+    )
+    return exit_code(report, required)
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -629,6 +648,26 @@ def build_parser() -> argparse.ArgumentParser:
         "suite", nargs="?", help="check the targets this suite uses (default: every CLI found)"
     )
     dr.set_defaults(func=cmd_doctor)
+
+    rd = sub.add_parser(
+        "readiness",
+        help="report which parts of quality a suite covers and which it leaves untested",
+        description="Read SUITE and its dataset (and RUN, if given) and report, for each "
+        "dimension of AI quality, whether the suite covers it, covers it in part, leaves it "
+        "untested or leaves it to another kind of tool, with the evidence. Static: makes no "
+        "model call. Exit 0, or 1 when a --require'd dimension is not covered, 2 for a usage "
+        "error.",
+    )
+    rd.add_argument("suite")
+    rd.add_argument("--run", metavar="FILE", help="add what this run file shows (traces, errors)")
+    rd.add_argument("--json", action="store_true", help="print JSON instead of a table")
+    rd.add_argument(
+        "--require",
+        action="append",
+        metavar="DIM,...",
+        help="exit 1 unless these dimensions are covered (comma-separated; may repeat)",
+    )
+    rd.set_defaults(func=cmd_readiness)
 
     pw = sub.add_parser("pairwise", help="judge baseline vs candidate outputs head to head")
     pw.add_argument("baseline")

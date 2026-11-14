@@ -28,6 +28,12 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - `evalproof.adapters` turns what Google ADK, LangChain and LangGraph, the Claude Agent SDK and
   the OpenAI Agents SDK return into the trace a python system hands back, and `TraceRecorder`
   with `mcp_call` builds one by hand. No SDK is imported; tokens and cost roll up from the trace.
+- `evalproof readiness SUITE [--run FILE] [--json] [--require dim,...]` reads a suite and its
+  dataset, and optionally a run file, and reports for each dimension of quality (correctness,
+  behaviour, quality, regression gate, reliability, cost and latency, safety, robustness,
+  multi-turn, load, production monitoring) whether it is covered, partly covered, missing or out
+  of scope, with the evidence. It makes no model call. It exits 1 when a `--require`d dimension
+  is not covered, and `--json` is for CI.
 
 ## [0.5.2] — 2026-11-14
 
