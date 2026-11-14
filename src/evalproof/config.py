@@ -32,6 +32,9 @@ class ConfigError(ValueError):
     pass
 
 
+MAX_TRIALS = 100  # the most trials per case a suite or ``--trials`` may ask for
+
+
 class Pricing(BaseModel):
     """USD per million tokens. Local models default to zero."""
 
@@ -52,6 +55,22 @@ class GenerationParams(BaseModel):
     max_tokens: int = 512
     think: bool | None = False  # reasoning models: off by default for speed and determinism
     extra: dict[str, Any] = Field(default_factory=dict)
+
+
+def trial_params(params: GenerationParams, trial: int) -> GenerationParams:
+    """The generation parameters of one trial: ``seed + trial`` when a seed is set, so a local
+    model that honours seeds gives each trial its own sample. Trial 0, and a run with no seed,
+    use ``params`` as they are.
+
+    Which fields the suite set explicitly is kept as it was. A hosted provider sends ``seed`` (and
+    ``temperature``) only when the suite set it, and ``model_copy(update=...)`` would otherwise
+    mark ``seed`` as set and make it start sending one."""
+    if trial == 0 or params.seed is None:
+        return params
+    shifted = params.model_copy(update={"seed": params.seed + trial})
+    shifted.__pydantic_fields_set__.clear()
+    shifted.__pydantic_fields_set__.update(params.model_fields_set)
+    return shifted
 
 
 class TargetConfig(BaseModel):
@@ -277,6 +296,9 @@ class SuiteConfig(BaseModel):
     seed: int = 0
     cache_dir: str = ".evalproof/cache"
     concurrency: int = 1
+    # How many times each case runs (1 to 100). Not part of ``suite_fingerprint``: ``evalproof run
+    # --trials`` overrides it, and the run records the number it used in ``RunInfo.trials``.
+    trials: int = Field(default=1, ge=1, le=MAX_TRIALS)
     base_dir: str = "."
 
     @model_validator(mode="after")
