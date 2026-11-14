@@ -179,6 +179,10 @@ class GateConfig(BaseModel):
     min_pass_rate: float | dict[str, float] | None = None
     must_pass: list[str] = Field(default_factory=list)
     max_new_failures: int | None = None
+    # With repeated trials (``trials`` > 1), how a case's trials become one value on a pass/fail
+    # metric: ``mean`` (its pass rate), ``all`` (passed every trial) or ``any`` (at least once).
+    # Ignored at one trial per case.
+    aggregate: Literal["mean", "all", "any"] = "mean"
 
     @model_validator(mode="after")
     def _check_absolute(self) -> GateConfig:

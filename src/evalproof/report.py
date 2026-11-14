@@ -6,11 +6,12 @@ import html
 import json
 import statistics
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from evalproof.calibration import CalibrationReport, Estimate
 from evalproof.compare import Comparison, MetricComparison, dataset_change_note
+from evalproof.config import GateConfig
 from evalproof.gate import EXIT_CANNOT_GATE, GateDecision
 from evalproof.models import CaseResult, Run
 from evalproof.stats import percentile, wilson
@@ -19,6 +20,7 @@ from evalproof.trials import (
     case_counts,
     is_flaky,
     pooled_rate_ci,
+    trial_outcome,
 )
 
 STATUS_ICON = {"pass": "✅ pass", "warn": "⚠️ pass with warnings", "fail": "❌ fail"}
@@ -52,11 +54,11 @@ def _pct(x: float | None) -> str:
 
 
 def _rate_or_mean(mc: MetricComparison, value: float) -> str:
-    return _pct(value) if mc.kind == "binary" else f"{value:.3f}"
+    return _pct(value) if mc.kind in ("binary", "rate") else f"{value:.3f}"
 
 
 def _delta(mc: MetricComparison) -> str:
-    if mc.kind == "binary":
+    if mc.kind in ("binary", "rate"):
         return f"{100 * mc.delta:+.1f} pts [{100 * mc.ci_low:+.1f}, {100 * mc.ci_high:+.1f}]"
     return f"{mc.delta:+.3f} [{mc.ci_low:+.3f}, {mc.ci_high:+.3f}]"
 
@@ -68,7 +70,7 @@ def _examples(
     each run answered and why the candidate's scorer failed it."""
     if show <= 0:
         return []
-    b_by, c_by = baseline.by_id(), candidate.by_id()
+    b_by, c_by = baseline.by_case(), candidate.by_case()
     picked: list[tuple[str, str]] = []
     for name in gated:
         mc = cmp.metrics.get(name)
@@ -77,14 +79,18 @@ def _examples(
                 picked.append((cid, name))
     lines: list[str] = []
     for cid, name in picked[:show]:
-        base, cand = b_by[cid], c_by[cid]
+        # Of a case's trials, show the baseline's first pass and the candidate's first failure:
+        # the pair that shows what changed. One trial per case is just that trial.
+        base = next((r for r in b_by[cid] if trial_outcome(r, name) is not False), b_by[cid][0])
+        cand = next((r for r in c_by[cid] if trial_outcome(r, name) is not True), c_by[cid][0])
         score = cand.scores.get(name)
         reason = cand.output.error and f"system error: {cand.output.error}"
         reason = reason or (score.reason if score and score.reason else "none recorded")
+        which = f" (trial {cand.trial})" if candidate.trials > 1 else ""
         lines += [
             "",
             f"<details><summary><code>{html.escape(cid)}</code> regressed on "
-            f"{html.escape(name)}</summary>",
+            f"{html.escape(name)}{which}</summary>",
             "",
             "**Baseline output**",
             "",
@@ -140,9 +146,10 @@ def comparison_markdown(
             lines.append(f"- ⚠️ {note}")
         if cmp.judge_changes or cmp.judge_warnings or cmp.system_changes or note:
             lines.append("")
+    repeated = f" (trials: {cmp.trials}, aggregate: {cmp.aggregate})" if cmp.trials > 1 else ""
     lines += [
         f"Baseline `{cmp.baseline_label}` vs candidate `{cmp.candidate_label}` on "
-        f"{len(cmp.paired_ids)} paired cases.",
+        f"{len(cmp.paired_ids)} paired cases{repeated}.",
         "",
         "| Metric | Baseline | Candidate | Δ (95% CI) | Test | p |"
         + (" Holm-adjusted p |" if adjusted else ""),
@@ -157,24 +164,158 @@ def comparison_markdown(
         if adjusted:
             row += f" {adjusted[name]:.4f} |" if name in adjusted else " — |"
         lines.append(row)
+    if decision is not None:
+        for name, power in decision.power.items():
+            lines += ["", f"Power on **{name}**: {power.note}"]
+    for name in cmp.aggregate_ignored:
+        if name not in gated:  # a gated one is refused, and the gate says so
+            lines += [
+                "",
+                f"- ⚠️ aggregate {cmp.aggregate} needs a pass/fail metric: {name!r} is "
+                "continuous and was compared on the mean",
+            ]
     lines += [
         "",
         "| Run | Cases | Errors | p50 latency | p95 latency | Cost |",
         "|---|---:|---:|---:|---:|---:|",
     ]
     for label, st in (("baseline", cmp.baseline), ("candidate", cmp.candidate)):
+        size = f"{st.cases // st.trials} × {st.trials}" if st.trials > 1 else f"{st.cases}"
         lines.append(
-            f"| {label} | {st.cases} | {st.errors} | {st.p50_latency_ms:.0f} ms | "
+            f"| {label} | {size} | {st.errors} | {st.p50_latency_ms:.0f} ms | "
             f"{st.p95_latency_ms:.0f} ms | ${st.cost_usd:.4f} |"
         )
     for name, focus in cmp.metrics.items():
         label = f"**{name}**" if name in gated else name
+        majority = " by majority" if focus.kind == "rate" else ""
         if focus.regressed:
-            lines += ["", f"Regressed on {label} ({len(focus.regressed)}): {_ids(focus.regressed)}"]
+            lines += [
+                "",
+                f"Regressed on {label}{majority} ({len(focus.regressed)}): {_ids(focus.regressed)}",
+            ]
         if name in gated and focus.improved:
-            lines.append(f"Improved on {label}: {len(focus.improved)} case(s)")
+            lines.append(f"Improved on {label}{majority}: {len(focus.improved)} case(s)")
+        if name in gated and focus.flaky_baseline:
+            lines += [
+                "",
+                f"Flaky in baseline ({len(focus.flaky_baseline)}): {_ids(focus.flaky_baseline)}",
+            ]
+        if name in gated and focus.flaky_candidate:
+            lines += [
+                "",
+                f"Flaky in candidate ({len(focus.flaky_candidate)}): {_ids(focus.flaky_candidate)}",
+            ]
     if runs is not None:
         lines += _examples(cmp, gated, runs[0], runs[1], show)
+    return "\n".join(lines) + "\n"
+
+
+@dataclass
+class MatrixEntry:
+    """One candidate of a matrix comparison: its comparison and gate decision, or the reason it
+    could not be compared at all (``refusal``)."""
+
+    label: str
+    path: str
+    comparison: Comparison | None
+    decision: GateDecision | None
+    run: Run | None = None
+    refusal: str | None = None
+
+
+def _verdict(mc: MetricComparison, p_adj: float, gate: GateConfig) -> str:
+    """The gate's quality rule for one metric of one candidate, on the matrix-adjusted p."""
+    significant = p_adj < gate.alpha
+    if mc.delta <= -gate.max_drop and significant:
+        return "❌ regression"
+    if mc.delta <= -gate.max_drop:
+        return "⚠️ drop, not significant"
+    if mc.delta > 0 and significant:
+        return "✅ improved"
+    return "✅ no regression"
+
+
+def _entry_status(entry: MatrixEntry) -> str:
+    if entry.decision is None:
+        return "—"
+    d = entry.decision
+    status = CANNOT_GATE if d.exit_code == EXIT_CANNOT_GATE else STATUS_ICON[d.status]
+    return f"{status} (exit {d.exit_code})"
+
+
+def matrix_markdown(
+    baseline_label: str,
+    entries: Sequence[MatrixEntry],
+    gate: GateConfig | None = None,
+    *,
+    show: int = 0,
+    baseline: Run | None = None,
+) -> str:
+    """Several candidates against one baseline: one table, a row per candidate and, for each
+    gated metric, ``Δ (CI) · adjusted p · verdict``; then the gate status of each candidate and,
+    in a ``<details>`` block, its own comparison. The p-values are Holm-adjusted across every
+    candidate and every gated metric. Without a gate the columns are every compared metric and
+    the p-values are raw."""
+    if gate is not None:
+        gated = gate.gated
+    else:
+        gated = list(
+            dict.fromkeys(n for e in entries if e.comparison for n in e.comparison.metrics)
+        )
+    p_name = "adj p" if gate is not None else "p"
+    lines = [
+        "## evalproof",
+        "",
+        f"Baseline `{baseline_label}` against {len(entries)} candidates"
+        + (
+            f"; p-values are Holm-adjusted across all {len(entries)} candidates and "
+            f"{len(gated)} gated metric(s)."
+            if gate is not None
+            else "."
+        ),
+        "",
+        "| Candidate | "
+        + " | ".join(f"{n}: Δ (95% CI) · {p_name}" + (" · verdict" if gate else "") for n in gated)
+        + (" | Gate |" if gate is not None else " |"),
+        "|---|" + "---|" * len(gated) + ("---|" if gate is not None else ""),
+    ]
+    for entry in entries:
+        cells = []
+        for name in gated:
+            mc = entry.comparison.metrics.get(name) if entry.comparison else None
+            if mc is None:
+                cells.append("—")
+                continue
+            p_shown = mc.p_value
+            if (
+                gate is not None
+                and entry.decision is not None
+                and name in entry.decision.adjusted_p
+            ):
+                p_shown = entry.decision.adjusted_p[name]
+            cell = f"{_delta(mc)} · {p_shown:.4f}"
+            if gate is not None:
+                cell += f" · {_verdict(mc, p_shown, gate)}"
+            cells.append(cell)
+        row = f"| `{entry.label}` | " + " | ".join(cells)
+        row += f" | {_entry_status(entry)} |" if gate is not None else " |"
+        lines.append(row)
+    for entry in entries:
+        lines += ["", f"<details><summary><code>{html.escape(entry.label)}</code>"]
+        lines[-1] += f" — {html.escape(_entry_status(entry))}</summary>" if gate else "</summary>"
+        lines.append("")
+        if entry.comparison is None or entry.run is None:
+            lines += [f"- {entry.refusal}"] if entry.refusal else []
+        else:
+            body = comparison_markdown(
+                entry.comparison,
+                entry.decision,
+                gate.gated if gate else None,
+                runs=(baseline, entry.run) if baseline is not None else None,
+                show=show,
+            )
+            lines.append(body.removeprefix("## evalproof\n\n").rstrip("\n"))
+        lines += ["", "</details>"]
     return "\n".join(lines) + "\n"
 
 
