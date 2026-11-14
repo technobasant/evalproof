@@ -297,9 +297,9 @@ def test_import_guide_documents_the_experimental_importers_and_what_they_record(
         assert text in page, f"import.md does not mention {text}"
 
 
-def test_changelog_unreleased_lists_the_new_importers_and_import_dataset() -> None:
+def test_changelog_0_8_0_lists_the_new_importers_and_import_dataset() -> None:
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = text.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    section = text.split("## [0.8.0]", 1)[1].split("\n## [", 1)[0]
     for needle in (
         "import garak",
         "import --threshold",
@@ -309,7 +309,7 @@ def test_changelog_unreleased_lists_the_new_importers_and_import_dataset() -> No
         "environment.import_experimental",
         "environment.trace_from",
     ):
-        assert needle in unreleased, f"the Unreleased section does not mention {needle}"
+        assert needle in section, f"the 0.8.0 section does not mention {needle}"
 
 
 # --- run file -----------------------------------------------------------------------------------

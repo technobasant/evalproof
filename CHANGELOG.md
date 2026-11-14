@@ -4,7 +4,13 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
-Changes merged after 0.7.1 are listed here until the next release.
+Nothing yet. Changes merged after 0.8.0 are listed here until the next release.
+
+## [0.8.0] — 2026-11-15
+
+Importers and grading: bring results from garak, Google ADK, Inspect agent logs, promptfoo
+red-team runs and `claude plugin eval` into a run file, turn an ADK eval set into a dataset, and
+grade with rubric sets and the `facts` scorer.
 
 ### Added
 
@@ -647,7 +653,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/technobasant/evalproof/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/technobasant/evalproof/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/technobasant/evalproof/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/technobasant/evalproof/compare/v0.5.2...v0.6.0

@@ -141,4 +141,4 @@ questions, one Apple M5. Full method and every table in [Measurements](about/mea
 
 The other findings (correcting the judge's rate, reviewed labels, a reasoning judge) are in [Measurements](about/measurements.md).
 
-Documented version: **0.7.x**. This site tracks the latest release.
+Documented version: **0.8.x**. This site tracks the latest release.
