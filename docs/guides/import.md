@@ -1,5 +1,5 @@
 ---
-description: Turn promptfoo, Inspect, DeepEval, lm-eval, CSV and JSONL results into run files that compare and the gate read.
+description: Turn promptfoo, Inspect, DeepEval, lm-eval, garak, Google ADK, Claude Code plugin eval, CSV and JSONL results into run files that compare and the gate read.
 ---
 
 # Import results from other tools
@@ -12,6 +12,9 @@ evalproof import promptfoo output.json --system openai:gpt-5 --out runs/candidat
 evalproof import inspect logs/task.eval --out runs/candidate.json
 evalproof import deepeval .deepeval/.latest_test_run.json --out runs/candidate.json
 evalproof import lm-eval results/gpt2/samples_hellaswag_2026-11-12T10-20-30.jsonl --out runs/gpt2.json
+evalproof import garak garak.report.jsonl --out runs/scan.json
+evalproof import adk .adk/eval_history/app_evalset_1788817991.2.evalset_result.json --out runs/adk.json
+evalproof import claude-plugin-eval aggregate-result.json --system with --out runs/with.json
 evalproof import csv results.csv --system a --out runs/a.json       # id,metric,passed,score,...
 evalproof import jsonl results.jsonl --wide --id-field case --out runs/a.json  # one column per metric
 ```
@@ -30,10 +33,34 @@ Import each side with the same importer, then gate as usual, for example
   counted as a system error; its errored repeats still score as failures.
 * A NaN or infinite score is refused at import, naming the case and metric, because it would
   make the bootstrap report a significant difference that is not there.
+* promptfoo red-team rows are tagged from their metadata (`pluginId` gives `safety`, `redteam` and
+  `plugin:<id>`; `strategyId` gives `strategy:<id>`; `severity` gives `severity:<level>`), and the
+  repeats of a test (`--repeat`) are trials in `repeatIndex` order with `--epochs trials`.
 * promptfoo files can hold several providers and `--system` picks one. Inspect `.eval` logs
   compressed with zstd need Python 3.14 or newer; otherwise run
   `inspect log convert --to json <file>` first. DeepEval's conversational cases are skipped
   with a warning.
+* garak reports (`garak.<run>.report.jsonl`, 0.9 and later) import one case per attempt, with the
+  tags `safety`, `garak` and `probe:<name>`. Each generation of a prompt is a repeat, so
+  `--epochs mean` is the share of generations that passed. One metric per detector: an output
+  passes when its detector score is below the threshold, which is `--threshold`, else the
+  scan's `eval_threshold`, else 0.5. The raw score is kept in the metric's reason, and an output
+  a detector could not score stays undecided. Attempts garak never scored (no status-2 entry)
+  are skipped with a warning.
+* Google ADK eval results (`*.evalset_result.json`, from `.adk/eval_history`) import one case per
+  eval case, with its runs (`repetition_index` order) as repeats. One metric per ADK metric,
+  scored as ADK scored it (a 1 to 5 metric stays 1 to 5, and the import names it); passed and
+  failed follow ADK's status, and a metric ADK did not evaluate is undecided. The tool calls come
+  from the session's events, or from each invocation's intermediate data. This importer is
+  experimental: it was written from ADK's source and no real result file was available.
+* Claude Code plugin evals (`aggregate-result.json`, from `claude plugin eval`, `schemaVersion: 1`)
+  hold two systems when the suite ran with `--ablation with-without`: the `with` and `without`
+  arms. `--system with` or `--system without` picks one (a file with both needs it). Each case is a
+  case of the run, its runs are repeats, and the metrics are the run's `score` and one per grader
+  (`withOnly` graders are shown but have no verdict, and are left out of the `without` arm). A run
+  with an `error` or an `aborted` stop counts as a failure on every metric. A suite that did not
+  finish (`partial`) is imported with a warning. No trace is read. This importer is experimental:
+  it was written from the writer's schema and no real result file was available.
 
 ## Next steps
 
