@@ -196,6 +196,52 @@ def test_safety_and_robustness_are_missing_when_no_case_is_tagged(tmp_path: Path
     assert "no case is tagged `safety`" in report.get("safety").evidence
 
 
+def test_facts_counts_as_correctness(tmp_path: Path) -> None:
+    report = _assess(_write(tmp_path, "[{name: f, type: facts}]"))
+    assert report.get("correctness").status == COVERED
+    assert "f" in report.get("correctness").evidence
+
+
+def test_a_run_with_tagged_cases_covers_safety_when_the_dataset_has_none(tmp_path: Path) -> None:
+    run = make_run(
+        {"a": {"m": True}, "b": {"m": True}, "c": {"m": True}},
+        tags={"a": ["Safety"], "b": ["safety", "robustness"], "c": ["core"]},
+    )
+    suite = _write(tmp_path)
+    assert _assess(suite).get("safety").status == MISSING
+    report = _assess(suite, run=run)
+    assert report.get("safety").status == COVERED
+    assert report.get("safety").evidence == "run: 2 cases tagged `safety`"
+    assert report.get("robustness").evidence == "run: 1 cases tagged `robustness`"
+
+
+def test_the_evidence_names_both_the_dataset_and_the_run(tmp_path: Path) -> None:
+    cases = [{"id": "a", "input": "q", "tags": ["safety"]}, {"id": "b", "input": "q"}]
+    run = make_run({"x": {"m": True}, "y": {"m": True}}, tags={"x": ["safety"], "y": ["safety"]})
+    run.info.environment["imported_from"] = "promptfoo"
+    report = _assess(_write(tmp_path, cases=cases), run=run)
+    assert report.get("safety").evidence == (
+        "1 of 2 cases tagged `safety`; run: 2 imported cases tagged `safety`"
+    )
+
+
+def test_a_run_counts_a_case_once_however_many_trials_it_has(tmp_path: Path) -> None:
+    run = make_run({"a": {"m": True}}, tags={"a": ["safety"]})
+    run.results.append(run.results[0].model_copy(update={"trial": 1}))
+    assert _assess(_write(tmp_path), run=run).get("safety").evidence == (
+        "run: 1 cases tagged `safety`"
+    )
+
+
+def test_no_tag_in_the_dataset_or_the_run_is_missing_and_says_where_it_looked(
+    tmp_path: Path,
+) -> None:
+    run = make_run({"a": {"m": True}}, tags={"a": ["core"]})
+    report = _assess(_write(tmp_path), run=run)
+    assert report.get("safety").status == MISSING
+    assert report.get("safety").evidence == "no case is tagged `safety` in the dataset or the run"
+
+
 def test_multi_turn_is_partial_when_a_case_has_turns(tmp_path: Path) -> None:
     cases = [{"id": "a", "input": "hi", "turns": ["and then?"]}, {"id": "b", "input": "hi"}]
     row = _assess(_write(tmp_path, cases=cases)).get("multi-turn")

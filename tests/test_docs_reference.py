@@ -48,6 +48,7 @@ from evalproof.models import (
 )
 from evalproof.scorers import _SIMPLE as SIMPLE_SCORERS
 from evalproof.scorers import ChecksScorer, PythonScorer
+from evalproof.scorers.judge import JUDGE_PARAMS, RUBRIC_MODES, RUBRIC_SET_PARAMS, RubricSetJudge
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
@@ -138,11 +139,36 @@ def test_configuration_page_lists_every_scorer_type_and_parameter() -> None:
             ]
             if not rows:
                 problems.append(f"{scorer_type}.{param} has no parameter row")
-    for param in ("rubric", "rubric_file", "max_retries"):
+    for param in (*JUDGE_PARAMS, *RUBRIC_SET_PARAMS):
         if not any(
             "`llm_judge`" in line and f"| `{param}` |" in line for line in section.splitlines()
         ):
             problems.append(f"llm_judge.{param} has no parameter row")
+    assert not problems, "\n".join(problems)
+
+
+def test_configuration_page_shows_the_rubric_set_defaults_and_modes() -> None:
+    sections = _sections(_page("reference/configuration.md"))
+    assert "Rubric sets" in sections, "configuration.md has no '### Rubric sets' section"
+    text = sections["Scorers"] + sections["Rubric sets"]
+    defaults = inspect.signature(RubricSetJudge.__init__).parameters
+    problems = []
+    for param in RUBRIC_SET_PARAMS:
+        rows = [
+            line
+            for line in text.splitlines()
+            if line.startswith("|") and "`llm_judge`" in line and f"| `{param}` |" in line
+        ]
+        if not rows:
+            problems.append(f"llm_judge.{param} has no row")
+            continue
+        default = defaults[param].default
+        for shown in _default_texts(default):
+            if f"`{shown}`" not in rows[0]:
+                problems.append(f"llm_judge.{param}: the row does not show `{shown}`")
+    for mode in RUBRIC_MODES:
+        if f"`{mode}`" not in text:
+            problems.append(f"mode `{mode}` is not documented")
     assert not problems, "\n".join(problems)
 
 
@@ -156,6 +182,12 @@ def test_configuration_example_loads(tmp_path: Path) -> None:
         (tmp_path / file_name).write_text("text", encoding="utf-8")
     cfg = load_config(tmp_path / "suite.yaml")
     assert cfg.gate is not None and cfg.gate.gated == ["judge"]
+
+
+def test_readiness_page_says_facts_counts_as_correctness_and_run_tags_count() -> None:
+    page = _page("guides/readiness.md")
+    assert "`facts`" in page
+    assert "run" in page.lower() and "imported" in page.lower()
 
 
 # --- commands -----------------------------------------------------------------------------------

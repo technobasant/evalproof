@@ -16,12 +16,14 @@ regression gate, reliability, cost and latency, safety, robustness, multi-turn, 
 production monitoring. Each is `covered`, `partial`, `missing` or `out of scope`, with the evidence.
 
 * **correctness** is covered by a deterministic scorer that grades answers against a key
-  (`contains`, `regex`, and so on); **behaviour** by a `checks` scorer, when at least half the
+  (`contains`, `regex`, `facts`, and so on); **behaviour** by a `checks` scorer, when at least half the
   cases have a check on the tool calls or rounds; **quality** by an `llm_judge` scorer, calibrated.
 * **regression gate** needs a `gate` block, and `min_cases` no larger than the dataset;
   **cost and latency** need `max_cost_usd` or `max_p95_latency_ms` in it.
-* **safety** and **robustness** are covered when a case is tagged `safety` or `robustness`;
-  **multi-turn** is at most partial, since evalproof cannot say how many multi-turn cases are
+* **safety** and **robustness** are covered when a case is tagged `safety` or `robustness`. With
+  `--run` the tags in the run file count too, so a run imported from a red-team tool covers safety
+  without a dataset; the evidence names both ("12 of 40 cases tagged `safety`; run: 85 imported
+  cases tagged `safety`"). **multi-turn** is at most partial, since evalproof cannot say how many multi-turn cases are
   enough.
 * **reliability** is covered with 3 or more `trials` per case, partial with 2 (two trials show
   disagreement but not a rate) and missing with 1; with `--run` it reads the run's own `trials`.
