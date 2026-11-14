@@ -33,6 +33,9 @@ Import each side with the same importer, then gate as usual, for example
   counted as a system error; its errored repeats still score as failures.
 * A NaN or infinite score is refused at import, naming the case and metric, because it would
   make the bootstrap report a significant difference that is not there.
+* promptfoo red-team rows are tagged from their metadata (`pluginId` gives `safety`, `redteam` and
+  `plugin:<id>`; `strategyId` gives `strategy:<id>`; `severity` gives `severity:<level>`), and the
+  repeats of a test (`--repeat`) are trials in `repeatIndex` order with `--epochs trials`.
 * promptfoo files can hold several providers and `--system` picks one. Inspect `.eval` logs
   compressed with zstd need Python 3.14 or newer; otherwise run
   `inspect log convert --to json <file>` first. DeepEval's conversational cases are skipped
