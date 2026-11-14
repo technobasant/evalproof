@@ -1,9 +1,13 @@
+---
+description: Turn promptfoo, Inspect, DeepEval, lm-eval, CSV and JSONL results into run files that compare and the gate read.
+---
+
 # Import results from other tools
 
-You do not have to run your evals with evalproof to gate them. `evalproof import` turns the
+This page is for anyone who already has results from another eval tool. You do not have to run your evals with evalproof to gate them. `evalproof import` turns the
 per-case results another tool wrote into a run file that `compare` and the gate read:
 
-```bash
+```bash title="Terminal"
 evalproof import promptfoo output.json --system openai:gpt-5 --out runs/candidate.json
 evalproof import inspect logs/task.eval --out runs/candidate.json
 evalproof import deepeval .deepeval/.latest_test_run.json --out runs/candidate.json
@@ -30,3 +34,8 @@ Import each side with the same importer, then gate as usual, for example
   compressed with zstd need Python 3.14 or newer; otherwise run
   `inspect log convert --to json <file>` first. DeepEval's conversational cases are skipped
   with a warning.
+
+## Next steps
+
+* Gate the imported runs in CI: [In CI](ci.md#in-ci).
+* How runs are paired: [Concepts](../reference/concepts.md#when-the-cases-change).

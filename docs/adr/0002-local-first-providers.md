@@ -1,3 +1,7 @@
+---
+description: Records the decision to default to local Ollama, plain HTTP providers and a content-addressed cache.
+---
+
 # 2. Local-first providers over plain HTTP
 
 Status: accepted · 2026-10

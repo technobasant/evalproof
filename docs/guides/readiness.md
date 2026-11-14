@@ -1,8 +1,12 @@
+---
+description: Report which parts of quality a suite covers and which it leaves untested, with no model call.
+---
+
 # What a suite covers: `evalproof readiness`
 
 `evalproof readiness` reports which parts of quality a suite covers and which it leaves untested.
 
-```bash
+```bash title="Terminal"
 evalproof readiness suite.yaml [--run FILE] [--json] [--require behaviour,regression-gate]
 ```
 
@@ -29,3 +33,7 @@ turns it into a gate: the exit code is 1 unless every named dimension is covered
 usage error. The names are `correctness`, `behaviour`, `quality`, `regression-gate`,
 `reliability`, `cost-latency`, `safety`, `robustness`, `multi-turn`, `load` and
 `production-monitoring`.
+
+## Next steps
+
+* Cover reliability with [repeated trials](repeated-trials.md#repeated-trials) and behaviour with [testing agents](testing-agents.md#testing-agents).

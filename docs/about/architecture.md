@@ -1,3 +1,7 @@
+---
+description: How a run flows from the suite and the dataset through the system, scorers, compare and gate to the exit code.
+---
+
 # Architecture
 
 How a run flows from the suite and the dataset to the exit code.

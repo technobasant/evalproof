@@ -134,12 +134,14 @@ plugins:
 
 nav:
   - Home: index.md
-  - Getting started:
+  - Get started:
+      - getting-started/index.md
       - Install: getting-started/install.md
-      - What it needs to run: getting-started/credentials.md
       - Five-minute quickstart: getting-started/quickstart.md
+      - What it needs to run: getting-started/credentials.md
       - Use cases: getting-started/use-cases.md
   - Guides:
+      - guides/index.md
       - Providers: guides/providers.md
       - Testing agents: guides/testing-agents.md
       - Repeated trials: guides/repeated-trials.md
@@ -149,13 +151,15 @@ nav:
       - From Python: guides/python.md
       - In CI: guides/ci.md
   - Reference:
+      - reference/index.md
       - Commands: reference/commands.md
       - Concepts: reference/concepts.md
       - API reference: reference/api.md
   - About:
+      - about/index.md
       - Architecture: about/architecture.md
       - Decisions:
-          - Overview: about/decisions.md
+          - about/decisions/index.md
           - "0001 The judge is a classifier": adr/0001-judge-is-a-classifier.md
           - "0002 Local-first providers": adr/0002-local-first-providers.md
           - "0003 Gate on significance, not delta": adr/0003-gate-on-significance-not-delta.md

@@ -1,3 +1,7 @@
+---
+description: Records the decision to run coding-agent CLIs as providers only in isolation and to gate on their fingerprint.
+---
+
 # 4. Coding-agent CLIs as providers, isolated and fingerprinted
 
 Status: accepted · 2026-11

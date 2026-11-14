@@ -1,3 +1,7 @@
+---
+description: The Python objects evalproof exports, generated from the docstrings: load, compare, gate, calibrate, traces and adapters.
+---
+
 # API reference
 
 The objects the [From Python](../guides/python.md) and [Agent SDK adapters](../guides/adapters.md)
@@ -5,6 +9,8 @@ guides use, generated from the docstrings in the package. Import them from `eval
 `evalproof.adapters`; the names in `evalproof.__all__` are the supported API.
 
 ## Load, compare and gate
+
+Read run files, compare two of them and turn the comparison into a gate decision.
 
 ::: evalproof.load_run
 
@@ -20,6 +26,8 @@ guides use, generated from the docstrings in the package. Import them from `eval
 
 ## Calibrate
 
+Measure a judge against gold labels and correct its pass rate.
+
 ::: evalproof.calibrate
 
 ::: evalproof.CalibrationReport
@@ -28,6 +36,8 @@ guides use, generated from the docstrings in the package. Import them from `eval
 
 ## Systems and traces
 
+The objects a python system receives and returns.
+
 ::: evalproof.RunContext
 
 ::: evalproof.Trace
@@ -35,6 +45,8 @@ guides use, generated from the docstrings in the package. Import them from `eval
 ::: evalproof.ToolCall
 
 ## Adapters
+
+Build a trace from what an agent SDK returns.
 
 ::: evalproof.adapters.TraceRecorder
 

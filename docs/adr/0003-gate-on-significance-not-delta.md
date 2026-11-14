@@ -1,3 +1,7 @@
+---
+description: Records the decision to gate on a drop that is both large and statistically significant, on paired cases.
+---
+
 # 3. Gate on a significant regression, not on a delta
 
 Status: accepted · 2026-10

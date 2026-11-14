@@ -1,3 +1,7 @@
+---
+description: How evalproof relates to promptfoo, DeepEval, Ragas and Inspect: a narrow measurement layer that can sit beside them.
+---
+
 # How it relates to other tools
 
 [promptfoo](https://www.promptfoo.dev/docs/intro/) (open-source, local evals of prompts,

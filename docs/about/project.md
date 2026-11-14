@@ -1,3 +1,7 @@
+---
+description: Where to find the changelog, contributing guide, security policy, code of conduct, citation and licence.
+---
+
 # Project
 
 [Changelog](changelog.md) · [Contributing](https://github.com/technobasant/evalproof/blob/main/CONTRIBUTING.md) ·

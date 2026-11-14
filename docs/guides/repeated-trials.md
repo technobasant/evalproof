@@ -1,9 +1,13 @@
+---
+description: Run each case several times, read pass@k, pass^k and flaky cases, and compare several candidates in one table.
+---
+
 # Repeated trials
 
-A model, or an agent built on one, can answer the same input differently on another run, so one
+This page is for anyone whose system can answer the same input differently on another run. A model, or an agent built on one, can answer the same input differently on another run, so one
 run per case measures one draw of what the system does. Run each case several times:
 
-```yaml
+```yaml title="suite.yaml"
 trials: 5          # in the suite; `evalproof run --trials 5` overrides it (1 to 100)
 ```
 
@@ -15,7 +19,9 @@ had and keys every later trial separately, so a re-run is still free and a trial
 another's answer. Nothing new goes to any provider. A run file from before trials loads as one
 trial per case.
 
-**What the report shows.** A run of several trials reports the pooled pass rate (passes over
+## What the report shows
+
+A run of several trials reports the pooled pass rate (passes over
 decided trials, with an interval that resamples cases, since a case's trials move together),
 `pass@k` (the share of cases that passed at least once), `pass^k` (the share that passed every
 time), the mean (and, for a continuous score, the within-case spread), and the **flaky** cases: those with a pass and a fail
@@ -23,7 +29,9 @@ among their decided trials. An errored trial counts as a failure; a trial the sc
 is left out. When every case gave the same output on every trial, the report says so, because the
 system may be deterministic at these settings and the trials then add nothing.
 
-**How compare reads them.** Both runs need the same number of trials per case; `compare` refuses
+## How compare reads them
+
+Both runs need the same number of trials per case; `compare` refuses
 otherwise (exit 4 with `--gate`, 2 without). Each case's trials become one value per run, chosen by
 `--aggregate` or the gate's `aggregate`:
 
@@ -44,7 +52,9 @@ when there are at most 16 cases that differ at all. Otherwise it is a Monte Carl
 20 000 seeded draws, labelled so, with p = (hits + 1) / (draws + 1), which is never 0 and the same
 on every run. The interval on the change is a paired bootstrap over cases.
 
-**What the gate does.** `max_drop` and `alpha` apply to the aggregated values, as before.
+## What the gate does
+
+`max_drop` and `alpha` apply to the aggregated values, as before.
 `must_pass: [tag]` needs every trial of every case with that tag to pass, and the failure names the
 case once, with "in at least one trial". `min_pass_rate` is the pooled rate over trials, `min_cases`
 counts cases, and the latency and cost budgets cover every trial. `max_new_failures` counts
@@ -53,7 +63,9 @@ candidate did not. A case that merely became flakier is listed ("Flaky in candid
 new failure unless its rate fell from above one half to one half or below, so one unlucky trial
 cannot fail the build by itself.
 
-**Power.** Next to the decision the report says what the suite could have detected: "With 35 cases
+## Power
+
+Next to the decision the report says what the suite could have detected: "With 35 cases
 this gate reliably detects drops of about 8.7 points (80% power); about 663 cases are needed to
 detect max_drop (2.0 points)." The estimate uses the spread of the per-case differences, divides
 `alpha` across the candidates and gated metrics, and says so plainly when the baseline is uniform
@@ -61,11 +73,13 @@ detect max_drop (2.0 points)." The estimate uses the spread of the per-case diff
 the status, a warning or the exit code. A suite too small to see a 2-point drop passes a 2-point
 drop, and now the report says why.
 
-**The example.** `examples/agent-tools/suite-flaky.yaml` has a `flaky` build that forgets the
+## The example
+
+`examples/agent-tools/suite-flaky.yaml` has a `flaky` build that forgets the
 calendar on a fixed 40% of the outing trials, decided by `random.Random(f"{case_id}:{trial}")` so
 that it is the same on every machine:
 
-```bash
+```bash title="Terminal"
 for v in v2 flaky; do
   uv run evalproof run examples/agent-tools/suite-flaky.yaml --variant $v --trials 5 \
     --out /tmp/agent-k5-$v.json --quiet
@@ -81,7 +95,7 @@ reports reliability as covered.
 
 ## Several candidates
 
-```bash
+```bash title="Terminal"
 evalproof compare baseline.json a.json b.json c.json --suite suite.yaml --gate
 ```
 
@@ -94,3 +108,8 @@ cannot be compared (a different number of trials, say) is a cannot-gate entry un
 does not stop the others; without `--gate` it is a usage error. `--json FILE` writes
 `{"baseline", "candidates": [{"label", "path", "comparison", "gate"}]}`, with `comparison` null
 for a candidate that was refused. One candidate behaves, and prints, as it always did.
+
+## Next steps
+
+* Gate several candidates or trials in CI: [In CI](ci.md#in-ci).
+* See which parts of quality a suite covers: [Readiness](readiness.md).

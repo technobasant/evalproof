@@ -1,3 +1,7 @@
+---
+description: What the measurements and the method do not show: sample size, gold labels, approximations, cost and CLI repeatability.
+---
+
 # Limits
 
 * The measurements cover one machine, two small local models, one product domain and

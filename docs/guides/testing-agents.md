@@ -1,6 +1,10 @@
+---
+description: Test what an agent did as well as what it said: traces, the checks scorer, several turns and variants, with no model needed.
+---
+
 # Testing agents
 
-An agent can give a fluent answer for the wrong reason: it skipped a tool, called one with the
+This page is for anyone testing an agent. An agent can give a fluent answer for the wrong reason: it skipped a tool, called one with the
 wrong argument, or made up a number. A text-only scorer cannot see that. evalproof tests what an
 agent *did* as well as what it said, and none of it needs a model: the `checks` scorer reads a
 trace, a record of the tool calls and replies, and the gate treats the result like any other
@@ -30,7 +34,7 @@ else). Each tool call is a `ToolCall`:
 
 `TraceRecorder` builds the dict by hand, for an agent in plain Python:
 
-```python
+```python title="example.py"
 # agent.py
 from evalproof import RunContext
 from evalproof.adapters import TraceRecorder
@@ -56,7 +60,7 @@ variables), and `trial` (the repeat index, 0 to `trials - 1`; always 0 unless th
 
 ## The `checks` scorer
 
-```yaml
+```yaml title="suite.yaml"
 scorers:
   - name: behaviour
     type: checks
@@ -70,7 +74,7 @@ gate: {metric: behaviour, max_drop: 0.02, min_cases: 30}
 Each case lists its own checks in `expect` (or in the field `params.field` names), and the scorer
 applies those after the suite-wide ones:
 
-```json
+```json title="cases.jsonl"
 {"id": "w01", "input": "What's the weather in Paris today?",
  "expect": [
    {"type": "tool_called", "name": "get_weather", "args": {"city": "Paris", "day": "today"}},
@@ -122,7 +126,7 @@ How the keys work:
 A case with `turns` is a conversation: `input` is turn 0 and each later user turn follows. A case
 may also carry `state`, an object holding the initial session state the system starts from.
 
-```json
+```json title="cases.jsonl"
 {"id": "m01", "input": "What's the weather like?", "turns": ["Paris"],
  "expect": [
    {"type": "tool_not_called", "name": "get_weather", "turn": 0},
@@ -141,7 +145,7 @@ up front, before any case runs.
 A variant is another way to run the same cases, scorers and gate: a different model, prompt or
 flag. Name them in the suite:
 
-```yaml
+```yaml title="suite.yaml"
 variants:
   - name: v1
     vars: {calendar_for_outings: false}
@@ -150,7 +154,7 @@ variants:
     system: {target: "python:agent:run_v2"}   # optional: merged over the suite's `system`
 ```
 
-```bash
+```bash title="Terminal"
 evalproof run suite.yaml --variant v1 --variant v2     # or --all-variants
 evalproof compare runs/v1.json runs/v2.json --suite suite.yaml --gate
 ```
@@ -171,10 +175,16 @@ against v2 with exit 1. CI runs both directions on every commit. A second suite 
 `suite-flaky.yaml`, shows [repeated trials](repeated-trials.md#repeated-trials) on a build that is right on some runs
 and wrong on others.
 
-```bash
+```bash title="Terminal"
 uv run evalproof run examples/agent-tools/suite.yaml --all-variants
 uv run evalproof compare runs/v1.json runs/v2.json \
   --suite examples/agent-tools/suite.yaml --gate; echo $?   # 0: v2 fixes it
 uv run evalproof compare runs/v2.json runs/v1.json \
   --suite examples/agent-tools/suite.yaml --gate; echo $?   # 1: v1 is the regression
 ```
+
+## Next steps
+
+* Build the trace from your SDK: [Agent SDK adapters](adapters.md#agent-sdk-adapters).
+* Run each case several times: [Repeated trials](repeated-trials.md#repeated-trials).
+* See what a suite leaves untested: [Readiness](readiness.md).

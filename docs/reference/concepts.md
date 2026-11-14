@@ -1,9 +1,17 @@
+---
+description: Suites, runs, scorers, calibration, the gate and how cases are paired: how evalproof reaches a verdict.
+---
+
 # Concepts
 
-**Suite** — one YAML file: a JSONL golden set, the system under test, scorers, an optional
+The ideas the rest of the documentation uses: suites, runs, scorers, calibration, the gate and how cases are paired. It is for anyone who wants to know how evalproof reaches a verdict.
+
+## Suite
+
+one YAML file: a JSONL golden set, the system under test, scorers, an optional
 judge, calibration settings and a gate.
 
-```yaml
+```yaml title="suite.yaml"
 name: support-qa
 dataset: cases.jsonl              # {"id", "input", "reference", ...extra fields}
 system:
@@ -20,21 +28,27 @@ calibration: {judge_scorer: judge, gold_scorer: answer_key, gold_sample: 30}
 gate: {metric: judge, max_drop: 0.03, alpha: 0.05, min_cases: 40, max_p95_latency_ms: 2500}
 ```
 
-**Run** — `evalproof run suite.yaml` writes one self-describing JSON file: every case's
+## Run
+
+`evalproof run suite.yaml` writes one self-describing JSON file: every case's
 output, latency, tokens, cost and scores, plus the dataset hash, a hash of each case, a
 fingerprint of the suite (system, judge, scorers, seed), the Ollama version and model digests,
 and for a CLI target the CLI, its version, the isolation scheme and the model that answered.
 `verify` and `compare` read these, so a run file can be committed and checked later without
 running anything.
 
-**Scorers** — `exact_match`, `contains`, `regex` (accept/reject answer keys),
+## Scorers
+
+`exact_match`, `contains`, `regex` (accept/reject answer keys),
 `json_schema`, `numeric_tolerance`, `recall_at_k`, `mrr`, `ndcg`, `checks` (what an agent did:
 [Testing agents](../guides/testing-agents.md#testing-agents)), and `llm_judge`: a strict
 JSON verdict, one retry on an unparseable reply, and an explicit *undecided* state that is
 counted, never scored as a pass. `evalproof pairwise` judges two runs head to head in both
 orders and reports order-dependent verdicts as ties.
 
-**Calibrate** — `evalproof calibrate run.json --judge-scorer judge --labels gold.jsonl`
+## Calibrate
+
+`evalproof calibrate run.json --judge-scorer judge --labels gold.jsonl`
 (human labels) or `--gold-scorer answer_key --gold-sample 30`:
 
 | Estimate | What it is |
@@ -44,7 +58,9 @@ orders and reports order-dependent verdicts as ties.
 | ACC | `(q − FPR) / (TPR − FPR)`, bootstrap interval over both the judged set and the gold sample |
 | PPI | judge mean on unlabelled cases + mean (label − judge) on the gold sample, normal interval |
 
-**Compare and gate** — `evalproof compare baseline.json candidate.json --suite suite.yaml --gate`
+## Compare and gate
+
+`evalproof compare baseline.json candidate.json --suite suite.yaml --gate`
 
 | Exit | Meaning |
 |---|---|
@@ -61,7 +77,9 @@ ids that regressed on every compared metric (ten per metric, then "and N more").
 candidate scorer's reason in a collapsed block. `run` and `report` list failed cases the same
 way (`--show N`, default 10; 0 hides the list).
 
-**When the cases change.** Every case in a run carries a hash of its content, and `compare`
+## When the cases change
+
+Every case in a run carries a hash of its content, and `compare`
 pairs two runs by id and hash. A case added since the baseline has no baseline score and is not
 compared. A case edited since the baseline (same id, new content) is excluded and listed in the
 report, so adding or editing cases never blocks the gate; the baseline catches up when the
@@ -78,9 +96,11 @@ baseline with 0.5 or newer. Run files from 0.5.0 keep working: they have
 no tag-free hash, so pairing falls back to the case hash, which includes tags. A dataset change
 is a warning.
 
-**Checks without a baseline.** The significance test needs a baseline. These do not:
+## Checks without a baseline
 
-```yaml
+The significance test needs a baseline. These do not:
+
+```yaml title="suite.yaml"
 gate:
   metric: judge
   min_pass_rate: 0.8           # a floor for the candidate; or per scorer: {judge: 0.8, answer_key: 0.9}
@@ -119,7 +139,7 @@ the chance of failing a build on noise stays at `alpha` for the set as a whole, 
 report shows the raw and the adjusted p-value side by side. Metrics that are not gated are
 still reported.
 
-```yaml
+```yaml title="suite.yaml"
 gate:
   metrics: [judge, answer_key]   # one metric: `metric: judge`
   max_drop: 0.03
@@ -127,6 +147,11 @@ gate:
   min_cases: 40
 ```
 
-```bash
+```bash title="Terminal"
 evalproof compare baseline.json candidate.json --gate --metric judge --metric answer_key
 ```
+
+## Next steps
+
+* Run the gate in GitHub Actions: [In CI](../guides/ci.md#in-ci).
+* Every command and flag: [Commands](commands.md).
