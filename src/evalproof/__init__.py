@@ -24,10 +24,21 @@ from evalproof.gate import (
     decide,
 )
 from evalproof.importers import ImportFormatError, import_run
-from evalproof.models import Case, CaseResult, Run, RunInfo, Score, SystemOutput
+from evalproof.models import (
+    Case,
+    CaseResult,
+    ModelUsage,
+    Run,
+    RunInfo,
+    Score,
+    SystemOutput,
+    ToolCall,
+    Trace,
+)
 from evalproof.report import calibration_markdown, comparison_markdown, run_markdown
 from evalproof.runner import load_run, run_suite, save_run
 from evalproof.stats import holm, mcnemar_exact, paired_bootstrap, wilson
+from evalproof.systems import RunContext
 
 __all__ = [
     "EXIT_BUDGET",
@@ -47,12 +58,16 @@ __all__ = [
     "GateDecision",
     "ImportFormatError",
     "MetricComparison",
+    "ModelUsage",
     "Run",
+    "RunContext",
     "RunInfo",
     "RunStats",
     "Score",
     "SuiteConfig",
     "SystemOutput",
+    "ToolCall",
+    "Trace",
     "__version__",
     "calibrate",
     "calibration_markdown",
