@@ -99,7 +99,7 @@ def test_reliability_is_always_missing_until_trials_arrive(tmp_path: Path) -> No
     gate = "gate: {metric: m, max_drop: 0.02}\n"
     report = _assess(_write(tmp_path, extra=gate))
     assert report.get("reliability").status == MISSING
-    assert report.get("reliability").evidence == "repeated trials arrive in 0.7"
+    assert report.get("reliability").evidence == "repeated trials are not in this release"
 
 
 # --- quality -----------------------------------------------------------------------------------

@@ -256,7 +256,7 @@ def assess(
         "behaviour": behaviour,
         "quality": _quality(cfg),
         "regression-gate": _gate(cfg, len(cases)),
-        "reliability": (MISSING, "repeated trials arrive in 0.7"),
+        "reliability": (MISSING, "repeated trials are not in this release"),
         "cost-latency": _budgets(cfg),
         "safety": _tagged(cases, "safety"),
         "robustness": _tagged(cases, "robustness"),

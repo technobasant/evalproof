@@ -86,7 +86,7 @@ echo $?   # 0
 | behaviour (tool use) | covered | 35 of 35 cases have a check on the tool calls or rounds (checks `behaviour`) |
 | quality | missing | no llm_judge scorer |
 | regression gate | covered | gate on `behaviour`, max_drop 0.02, alpha 0.05, min_cases 30, with checks that need no baseline |
-| reliability | missing | repeated trials arrive in 0.7 |
+| reliability | missing | repeated trials are not in this release |
 | cost & latency | missing | no max_cost_usd or max_p95_latency_ms in the gate |
 | safety | covered | 5 of 35 cases tagged `safety` |
 | robustness | covered | 5 of 35 cases tagged `robustness` |
