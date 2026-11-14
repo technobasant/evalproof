@@ -4,6 +4,62 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+Reliability: run each case several times, and compare and gate on what the trials show.
+
+### Added
+
+- Repeated trials. `trials: K` in a suite, or `evalproof run --trials K` (1 to 100), runs each
+  case K times and scores every trial on its own. A python system gets `ctx.trial`, an http
+  system a `trial` field in the body (only when K is above 1), and a local model that honours a
+  seed gets `seed + trial`. The response cache keeps trial 0 under the key it always had and keys
+  later trials apart, and no provider is sent anything new. A run file from before trials loads as
+  one trial per case, and a run with one trial per case is written, read and compared as before.
+- The run report for K > 1 shows the pooled pass rate with a case-resampling interval, `pass@K`,
+  `pass^K`, the within-case spread of a continuous score and the flaky cases (a pass and a fail
+  among a case's decided trials), and says when every case gave the same output on every trial.
+  `verify` checks every trial of every case, `rehash` covers every trial, and calibration reads
+  trial 0.
+- `evalproof compare` on runs with K > 1 aggregates each case's trials with `--aggregate` or
+  `gate.aggregate`: `mean` (the pass rate, the default), `all` or `any`. `mean` and continuous
+  scores are tested with a paired sign-flip permutation test, exact by dynamic programming when
+  every case has the same number of decided trials and by enumeration up to 16 differing cases,
+  otherwise 20 000 seeded draws (p = (hits + 1) / (draws + 1)); `all` and `any` use exact
+  McNemar. The interval on the change is a paired bootstrap over cases. Runs with a different K
+  cannot be compared (exit 4 under `--gate`, 2 without), and `all` or `any` on a gated continuous
+  metric is refused.
+- The gate over trials: `max_drop` and `alpha` apply to the aggregated values; `must_pass` needs
+  every trial of every tagged case to pass; `min_pass_rate` is pooled over trials; `min_cases`
+  counts cases; budgets cover every trial; `max_new_failures` counts majority flips (a case the
+  baseline passed in more than half its trials and the candidate did not). Flaky cases are
+  listed in the compare report.
+- A power line beside the gate decision, for every run: the smallest drop the suite can detect
+  at 80% power, and the cases needed to detect `max_drop`, from the spread of the paired
+  differences with `alpha` divided across candidates and gated metrics. It is information only
+  and never changes the status, a warning or an exit code. `GateDecision.power` carries it.
+- `evalproof compare BASE CAND [CAND ...]` compares several candidates against one baseline:
+  one table, each candidate decided on its own, and one Holm correction over every candidate and
+  gated metric. The exit code is the worst of the candidates (2, 4, 1, 3, 0). `--json FILE` holds
+  `{"baseline", "candidates": [{"label", "path", "comparison", "gate"}]}`. One candidate is
+  unchanged.
+- `evalproof readiness` reports reliability from the trials: covered with 3 or more per case,
+  partial with 2, missing with 1; with `--run` it reads the run's own trials.
+- `evalproof import --epochs trials` keeps each repeat of a case as one of its trials.
+- `examples/agent-tools/suite-flaky.yaml` and a `flaky_calendar` variable on the example agent: a
+  build that forgets the calendar on a fixed 40% of the outing trials (decided by
+  `random.Random(f"{case_id}:{trial}")`, so the same on every machine). With `--trials 5`,
+  `v2` to `flaky` fails the gate (behaviour 100.0% to 90.9%, exact p = 0.0078, `o01` and `o05`
+  regress by majority, all eight outing cases flaky) and `v2` to `v2` passes; with one trial per
+  case the same build gives McNemar p = 0.25. CI runs both and checks `readiness --run` on the
+  five trials.
+
+### Documentation
+
+- The README has a "Repeated trials" subsection under Testing agents (trials, `ctx.trial`, the
+  aggregates, pass@k and pass^k, the test used, majority flips, `must_pass` over every trial,
+  power, and the limit that a deterministic system shows no variation), the several-candidate
+  `compare` and the new `gate.aggregate` key. The agent example's README walks through the flaky
+  build, and its readiness table no longer says repeated trials are missing from the release.
+
 ## [0.6.0] — 2026-11-14
 
 Testing agents: assert on the tools an agent called and what it said, across several turns and

@@ -27,7 +27,7 @@ evalproof:
 2. **corrects its pass rate** with adjusted classify-and-count and prediction-powered
    inference, each with a confidence interval;
 3. **compares runs on paired cases** — exact McNemar for pass/fail, paired bootstrap for
-   scores;
+   scores, and a paired permutation test when each case runs several times;
 4. **gates CI** only when a drop is both larger than your tolerance *and* statistically
    significant, plus latency and cost budgets, with distinct exit codes;
 5. **checks the run files it gates** — `verify` proves, with no model call, that a committed
@@ -245,8 +245,8 @@ The browser app in [`app/`](app) runs locally too:
 | Command | What it does |
 |---|---|
 | `evalproof init` | write a starter suite, a CI workflow and an agent skill; no model call |
-| `evalproof run SUITE` | run the suite and write a run file; `--gate` applies the baseline-free checks (`min_pass_rate`, `must_pass`); `--show N` lists N failed cases; `--variant NAME` (repeatable) or `--all-variants` runs the suite's [variants](#variants-one-suite-several-builds), one run file each |
-| `evalproof compare BASE CAND` | compare two runs on paired cases; `--gate` turns the result into an exit code; `--show N` prints both answers for N regressed cases |
+| `evalproof run SUITE` | run the suite and write a run file; `--gate` applies the baseline-free checks (`min_pass_rate`, `must_pass`); `--show N` lists N failed cases; `--variant NAME` (repeatable) or `--all-variants` runs the suite's [variants](#variants-one-suite-several-builds), one run file each; `--trials K` runs each case K times ([repeated trials](#repeated-trials)) |
+| `evalproof compare BASE CAND [CAND ...]` | compare runs on paired cases; `--gate` turns the result into an exit code; `--show N` prints both answers for N regressed cases; `--aggregate mean\|all\|any` picks how a case's [trials](#repeated-trials) become one value; several candidates give [one table](#several-candidates) |
 | `evalproof verify RUN SUITE` | check, with no model call, that a run file was made with this suite, covers exactly the dataset's cases as they are now, and has the scores its deterministic scorers give the stored outputs |
 | `evalproof rehash RUN SUITE` | add per-case hashes to a run file written before 0.5, from the dataset it scored; no model call |
 | `evalproof report RUN` | print a run file's report |
@@ -563,7 +563,7 @@ orders and reports order-dependent verdicts as ties.
 | 0 | pass — possibly with warnings (a big drop that is not significant; a significant drop within tolerance) |
 | 1 | quality regression: drop ≥ `max_drop` **and** p < `alpha`; or an absolute check failed (`min_pass_rate`, `must_pass`, `max_new_failures`) |
 | 3 | budget breach: candidate p95 latency or cost over the limit |
-| 4 | cannot gate, which is not a regression: fewer than `min_cases` paired cases, a gated metric with no paired scores, the dataset changed and a run predates per-case hashes, the judge changed (unless `--allow-judge-change`), or `verify` found the candidate does not match the suite |
+| 4 | cannot gate, which is not a regression: fewer than `min_cases` paired cases, a gated metric with no paired scores, the dataset changed and a run predates per-case hashes, the judge changed (unless `--allow-judge-change`), `verify` found the candidate does not match the suite, or the two runs have a different number of trials per case |
 | 2 | usage or configuration error (an unknown key in the suite, an unknown `--metric`); also `run` when every case errored |
 | 130 | interrupted (Ctrl-C) |
 
@@ -617,6 +617,7 @@ few cases, would call noise. Errored cases count as failures in every one of the
 | `max_drop` | the largest tolerated drop, as a fraction | 0.02 |
 | `alpha` | significance level | 0.05 |
 | `min_cases` | fewest paired cases the gate will decide on | 20 |
+| `aggregate` | with several [trials](#repeated-trials) per case, how a case's trials become one value on a pass/fail metric: `mean`, `all` or `any` | `mean` |
 | `max_p95_latency_ms`, `max_cost_usd` | budgets on the candidate | none |
 | `allow_judge_change` | accept a changed judge | false |
 | `min_pass_rate`, `must_pass`, `max_new_failures` | the checks above | none |
@@ -811,7 +812,9 @@ keyword planner, no model and no network) with 35 cases, including `safety`, `ro
 three multi-turn cases, and two variants. `v1` has a planted bug: asked whether to go on a picnic,
 the agent answers from the forecast alone and never looks at the calendar. Its reply still reads
 well, so a text scorer passes it; the `behaviour` scorer fails 8 cases, and the gate fails v1
-against v2 with exit 1. CI runs both directions on every commit.
+against v2 with exit 1. CI runs both directions on every commit. A second suite there,
+`suite-flaky.yaml`, shows [repeated trials](#repeated-trials) on a build that is right on some runs
+and wrong on others.
 
 ```bash
 uv run evalproof run examples/agent-tools/suite.yaml --all-variants
@@ -820,6 +823,103 @@ uv run evalproof compare runs/v1.json runs/v2.json \
 uv run evalproof compare runs/v2.json runs/v1.json \
   --suite examples/agent-tools/suite.yaml --gate; echo $?   # 1: v1 is the regression
 ```
+
+### Repeated trials
+
+A model, or an agent built on one, can answer the same input differently on another run, so one
+run per case measures one draw of what the system does. Run each case several times:
+
+```yaml
+trials: 5          # in the suite; `evalproof run --trials 5` overrides it (1 to 100)
+```
+
+The run file then holds `cases x trials` results. Each trial is run and scored on its own. A
+python system gets `ctx.trial` (0 to `trials - 1`), an http system a `trial` field in the request
+body (only when `trials` is above 1), and a local model that honours a seed gets `seed + trial`,
+so each trial can draw a different sample. The response cache keeps trial 0 under the key it always
+had and keys every later trial separately, so a re-run is still free and a trial never replays
+another's answer. Nothing new goes to any provider. A run file from before trials loads as one
+trial per case.
+
+**What the report shows.** A run of several trials reports the pooled pass rate (passes over
+decided trials, with an interval that resamples cases, since a case's trials move together),
+`pass@k` (the share of cases that passed at least once), `pass^k` (the share that passed every
+time), the mean (and, for a continuous score, the within-case spread), and the **flaky** cases: those with a pass and a fail
+among their decided trials. An errored trial counts as a failure; a trial the scorer did not decide
+is left out. When every case gave the same output on every trial, the report says so, because the
+system may be deterministic at these settings and the trials then add nothing.
+
+**How compare reads them.** Both runs need the same number of trials per case; `compare` refuses
+otherwise (exit 4 with `--gate`, 2 without). Each case's trials become one value per run, chosen by
+`--aggregate` or the gate's `aggregate`:
+
+| Aggregate | The case's value | Test | Use it when |
+|---|---|---|---|
+| `mean` (default) | its pass rate over the decided trials | paired sign-flip permutation test on the per-case rates | you care how often it works |
+| `all` | 1 if it passed every trial | exact McNemar on the cases | a single failure is a failure (a safety rule) |
+| `any` | 1 if it passed at least once | exact McNemar on the cases | a retry is fine |
+
+`all` and `any` need a pass/fail metric, and `compare` refuses them on a gated continuous one. A
+continuous score compares by its per-case mean, with the same permutation test. One trial per case
+compares exactly as before, with McNemar's test and the paired bootstrap.
+
+The permutation test flips the sign of each case's difference at random and asks how often a total
+as large as the observed one comes up. It is exact (the report says `sign-flip permutation
+(exact)`) when every case has the same number of decided trials, however many cases there are, and
+when there are at most 16 cases that differ at all. Otherwise it is a Monte Carlo estimate from
+20 000 seeded draws, labelled so, with p = (hits + 1) / (draws + 1), which is never 0 and the same
+on every run. The interval on the change is a paired bootstrap over cases.
+
+**What the gate does.** `max_drop` and `alpha` apply to the aggregated values, as before.
+`must_pass: [tag]` needs every trial of every case with that tag to pass, and the failure names the
+case once, with "in at least one trial". `min_pass_rate` is the pooled rate over trials, `min_cases`
+counts cases, and the latency and cost budgets cover every trial. `max_new_failures` counts
+**majority flips**: a case counts when the baseline passed more than half of its trials and the
+candidate did not. A case that merely became flakier is listed ("Flaky in candidate") but is not a
+new failure unless its rate fell from above one half to one half or below, so one unlucky trial
+cannot fail the build by itself.
+
+**Power.** Next to the decision the report says what the suite could have detected: "With 35 cases
+this gate reliably detects drops of about 8.7 points (80% power); about 663 cases are needed to
+detect max_drop (2.0 points)." The estimate uses the spread of the per-case differences, divides
+`alpha` across the candidates and gated metrics, and says so plainly when the baseline is uniform
+(all pass or all fail) and the spread cannot be estimated. It is information only: it never changes
+the status, a warning or the exit code. A suite too small to see a 2-point drop passes a 2-point
+drop, and now the report says why.
+
+**The example.** `examples/agent-tools/suite-flaky.yaml` has a `flaky` build that forgets the
+calendar on a fixed 40% of the outing trials, decided by `random.Random(f"{case_id}:{trial}")` so
+that it is the same on every machine:
+
+```bash
+for v in v2 flaky; do
+  uv run evalproof run examples/agent-tools/suite-flaky.yaml --variant $v --trials 5 \
+    --out /tmp/agent-k5-$v.json --quiet
+done
+uv run evalproof compare /tmp/agent-k5-v2.json /tmp/agent-k5-flaky.json \
+  --suite examples/agent-tools/suite-flaky.yaml --gate; echo $?   # 1
+```
+
+behaviour falls from 100.0% to 90.9% (exact p = 0.0078), `o01` and `o05` regress by majority, and
+all eight outing cases are flaky. One run per case misses most of it: the same build reads as three
+failed cases and a McNemar p of 0.25. CI runs both directions, and `readiness --run` on the k=5 run
+reports reliability as covered.
+
+#### Several candidates
+
+```bash
+evalproof compare baseline.json a.json b.json c.json --suite suite.yaml --gate
+```
+
+One table has a row per candidate and gated metric (`delta (CI) · adjusted p · verdict`), then the
+status of each candidate and its details in a collapsed block. Every candidate whose comparison
+was made, times every gated metric, is in one Holm family, so that adding a candidate cannot make a
+false failure more likely. The exit code is the worst of the candidates in the order usage (2),
+cannot gate (4), regression (1), budget (3), pass (0); without `--gate` it is 0. A candidate that
+cannot be compared (a different number of trials, say) is a cannot-gate entry under `--gate` and
+does not stop the others; without `--gate` it is a usage error. `--json FILE` writes
+`{"baseline", "candidates": [{"label", "path", "comparison", "gate"}]}`, with `comparison` null
+for a candidate that was refused. One candidate behaves, and prints, as it always did.
 
 ### What a suite covers: `evalproof readiness`
 
@@ -1065,7 +1165,7 @@ Import each side with the same importer, then gate as usual, for example
   coincidence.
 * A system error counts as a failure on every metric, as in a native run. Repeats of one case
   (epochs, repeated tests) collapse by `--epochs`: `mean` (the default), `first`, `all`
-  or `any`. Under `mean`, `first` and `any`, a case with at least one repeat that ran is not
+  or `any`, or are kept as the case's [trials](#repeated-trials) with `--epochs trials`. Under `mean`, `first` and `any`, a case with at least one repeat that ran is not
   counted as a system error; its errored repeats still score as failures.
 * A NaN or infinite score is refused at import, naming the case and metric, because it would
   make the bootstrap report a significant difference that is not there.
@@ -1211,7 +1311,12 @@ lm-eval you do not even need to do that: evalproof [imports their results](#impo
   gold sample to be random. evalproof reports when either does not hold rather than
   printing a number.
 * The percentile-bootstrap p-value for continuous scores is an approximation; pass/fail
-  metrics use the exact McNemar test.
+  metrics use the exact McNemar test. With several trials per case the test is a paired
+  permutation test, exact for a whole suite of equally repeated cases and a seeded Monte Carlo
+  estimate when it is not (see [repeated trials](#repeated-trials)).
+* Repeated trials show variation only when the system varies. A model at a fixed seed, or a
+  cached call, can give the same answer every time, and then five trials are one trial five
+  times; the report says when every case did.
 * Cost tracking needs a `pricing` table in the suite for hosted models; only `claude-code`
   reports a cost of its own (an API-equivalent estimate under a subscription).
 * CLI targets (`claude-code`, `codex` and the experimental three) take no temperature or seed,
