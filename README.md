@@ -695,8 +695,8 @@ SDK, the [adapters below](#agent-sdk-adapters) build the same dict from what the
 **`ctx`.** Declare a parameter named `ctx` and the function is called as `run(input, ctx=ctx)`.
 A `RunContext` has `case_id`, `input`, `turns` (the user turns after the input), `state` (the
 case's initial session state), `variant` and `vars` (the suite variant being run and its
-variables), and `trial` (the repeat index, always 0 for now). Each call gets its own copies of the
-mutable parts.
+variables), and `trial` (the repeat index, 0 to `trials - 1`; always 0 unless the suite sets
+`trials`). Each call gets its own copies of the mutable parts.
 
 ### The `checks` scorer
 
@@ -840,7 +840,8 @@ production monitoring. Each is `covered`, `partial`, `missing` or `out of scope`
 * **safety** and **robustness** are covered when a case is tagged `safety` or `robustness`;
   **multi-turn** is at most partial, since evalproof cannot say how many multi-turn cases are
   enough.
-* **reliability** is always `missing` in this release, because repeated trials are not here yet.
+* **reliability** is covered with 3 or more `trials` per case, partial with 2 (two trials show
+  disagreement but not a rate) and missing with 1; with `--run` it reads the run's own `trials`.
   **load** and **production monitoring** are out of scope: use a load-testing tool and an
   observability platform.
 
