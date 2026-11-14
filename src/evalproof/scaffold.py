@@ -23,7 +23,7 @@ from evalproof.providers.agent_cli import CLAUDE_OAUTH_ENV
 
 # The tag of the composite action (``action.yml``) the generated workflows use. The
 # ``evalproof`` version that ``run`` is pinned to in the api-key variant is the same release.
-ACTION_REF = "v0.7.0"
+ACTION_REF = "v0.7.1"
 
 CI_MODES = ("keyless", "api-key", "none")
 

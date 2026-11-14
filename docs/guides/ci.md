@@ -10,7 +10,7 @@ fails the job on exit codes 1, 3 or 4. This page is for anyone wiring the gate i
 ## The action
 
 ```yaml title=".github/workflows/evalproof.yml"
-- uses: technobasant/evalproof@v0.7.0
+- uses: technobasant/evalproof@v0.7.1
   with:
     baseline: eval/baseline.json     # produced on main, e.g. as a build artifact
     candidate: eval/candidate.json   # produced on this branch
