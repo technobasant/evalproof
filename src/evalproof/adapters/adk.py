@@ -18,16 +18,20 @@ SDK fields read (names confirmed in the SDK source, not from memory):
   google/adk/tools/function_tool.py:385, :528 (``{"error": ...}``) and :646 (the SDK's own test,
   ``response.get("error")``).
 
-ADK runs return events, not messages. A turn boundary is an event authored by ``user`` that
-carries text (a user turn); without one every call is turn 0.
+ADK runs return events, not messages. ``Runner.run_async`` does not yield the user's message
+unless it is called with ``yield_user_message=True`` (google-adk==2.14.1 google/adk/runners.py:1133,
+:1153), so the events of several runs joined together show no turn boundary. For a multi-turn
+case pass one list of events per run (``[events_turn_0, events_turn_1, ...]``), or
+``session.events``, which holds the user events. Within a run a turn boundary is an event authored
+by ``user`` that carries text; without one every call is turn 0.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from typing import Any
 
-from evalproof.adapters._common import AgentResult, Ledger, count, get
+from evalproof.adapters._common import AgentResult, Ledger, count, get, runs
 from evalproof.models import ModelUsage, Trace
 
 
@@ -51,12 +55,24 @@ def _error_of(response: Any) -> str | None:
     return str(error) if error else None
 
 
+_NEXT_TURN = object()
+
+
+def _with_turn_breaks(events: Iterable[Any]) -> Iterator[Any]:
+    """The events of every run in order, with ``_NEXT_TURN`` between one run and the next."""
+    for index, run in enumerate(runs(events)):
+        if index:
+            yield _NEXT_TURN
+        yield from run
+
+
 def from_events(events: Iterable[Any]) -> AgentResult:
     """Build ``{"output", "trace"}`` from ADK events (objects or dicts), in order.
 
-    Calls and responses pair by id, or by order and name when an id is missing. The reply of a
-    turn is the text of its last final-response event. Usage is summed per model over the
-    complete (not ``partial``) events that report it; ``rounds`` counts the model responses.
+    ``events`` is the events of one run, or a list of such lists, one per user turn. Calls and
+    responses pair by id, or by order and name when an id is missing. The reply of a turn is the
+    text of its last final-response event. Usage is summed per model over the complete (not
+    ``partial``) events that report it; ``rounds`` counts the model responses.
     """
     ledger = Ledger()
     turn = 0
@@ -64,7 +80,11 @@ def from_events(events: Iterable[Any]) -> AgentResult:
     replies: dict[int, str] = {}
     usage: dict[str | None, ModelUsage] = {}
     rounds = 0
-    for event in events:
+    for event in _with_turn_breaks(events):
+        if event is _NEXT_TURN:  # each run answers a new user turn
+            turn += 1
+            active = False
+            continue
         if get(event, "partial", default=False):
             continue
         author = get(event, "author", default="")

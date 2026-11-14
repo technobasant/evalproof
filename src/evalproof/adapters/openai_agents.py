@@ -20,6 +20,8 @@ customised) and arrives as an ordinary ``output``, so every call is ``ok`` unles
 a function of the output that returns True for a failure, says otherwise. The SDK reports no
 cost, and its usage is not split by model, so the usage entry has no model and no cost.
 A turn is a ``RunResult``: pass a list of results (one per user turn) for a multi-turn case.
+Results that share one ``Usage`` object (the same ``RunContextWrapper`` passed to every run)
+have their tokens counted once.
 """
 
 from __future__ import annotations
@@ -65,6 +67,10 @@ def from_result(result: Any, *, error_if: Callable[[Any], bool] | None = None) -
     rounds = 0
     rounds_known = False
     saw_usage = False
+    # Usage objects already counted. Runs given the same RunContextWrapper, or resumed from a
+    # RunState, share one cumulative Usage (run_internal/agent_runner_helpers.py:377-383 keeps a
+    # wrapper it is given), so each object is counted once, at its final value.
+    counted: set[int] = set()
     for turn, one in enumerate(results):
         last_message = ""
         for item in get(one, "new_items", default=[]):
@@ -97,13 +103,16 @@ def from_result(result: Any, *, error_if: Callable[[Any], bool] | None = None) -
         responses.append(_final_text(get(one, "final_output"), last_message))
         raw_responses = get(one, "raw_responses")
         stats = get(get(one, "context_wrapper"), "usage")
+        fresh = stats is not None and id(stats) not in counted
+        if fresh:
+            counted.add(id(stats))
         if isinstance(raw_responses, list | tuple):
             rounds += len(raw_responses)
             rounds_known = True
-        elif count(get(stats, "requests")):
+        elif fresh and count(get(stats, "requests")):
             rounds += count(get(stats, "requests"))
             rounds_known = True
-        if stats is not None:
+        if fresh:
             saw_usage = True
             usage.tokens_in += count(get(stats, "input_tokens"))
             usage.tokens_out += count(get(stats, "output_tokens"))

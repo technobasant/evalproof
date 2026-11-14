@@ -276,6 +276,30 @@ def test_adk_user_events_mark_turns() -> None:
     assert trace_of(result).responses == ["a1", "a2"] and result["output"] == "a2"
 
 
+def test_adk_one_list_of_events_per_run_marks_turns() -> None:
+    # run_async yields no user event by default, so each run's events come as their own list.
+    first = [
+        FakeEvent("a", [call_part("t1", {}, "c1")], role="model", usage=usage(10, 1)),
+        FakeEvent("a", [resp_part("t1", {"ok": 1}, "c1")], role="user"),
+        FakeEvent("a", [text_part("a1")], role="model", usage=usage(20, 2)),
+    ]
+    second = [
+        FakeEvent("a", [call_part("t2", {}, "c2")], role="model", usage=usage(30, 3)),
+        FakeEvent("a", [resp_part("t2", {"ok": 2}, "c2")], role="user"),
+        FakeEvent("a", [text_part("a2")], role="model", usage=usage(40, 4)),
+    ]
+    result = adk.from_events([first, second])
+    assert [(c.name, c.turn) for c in calls_of(result)] == [("t1", 0), ("t2", 1)]
+    trace = trace_of(result)
+    assert trace.responses == ["a1", "a2"] and result["output"] == "a2" and trace.rounds == 4
+    assert (trace.usage[0].tokens_in, trace.usage[0].tokens_out) == (100, 10)
+    # A run that yielded the user event too (yield_user_message=True) is not a turn ahead.
+    with_user = [FakeEvent("user", [text_part("q2")], role="user"), *second]
+    assert trace_of(adk.from_events([first, with_user])).responses == ["a1", "a2"]
+    # Joined into one list with no user event, both runs read as one turn: the reason for runs.
+    assert trace_of(adk.from_events(first + second)).responses == ["a2"]
+
+
 def test_adk_user_authored_response_is_not_a_turn_boundary() -> None:
     events = [
         FakeEvent("a", [call_part("slow", {}, "c1")], role="model"),
@@ -583,6 +607,38 @@ def test_claude_result_messages_mark_turns_and_totals_are_running() -> None:
     assert {c.turn for c in calls_of(single)} == {0} and single["output"] == "one"
 
 
+def test_claude_one_list_per_query_call_adds_the_totals_of_each_session() -> None:
+    first = [
+        AssistantMessage([ToolUseBlock("u1", "A", {})], "m"),
+        UserMessage([ToolResultBlock("u1", "ra")]),
+        AssistantMessage([TextBlock("one")], "m"),
+        ResultMessage(
+            result="one", total_cost_usd=0.01, model_usage={"m": model_usage(10, 1, cost=0.01)}
+        ),
+    ]
+    second = [
+        AssistantMessage([ToolUseBlock("u2", "B", {})], "m"),
+        UserMessage([ToolResultBlock("u2", "rb")]),
+        AssistantMessage([TextBlock("two")], "m"),
+        ResultMessage(
+            result="two", total_cost_usd=0.02, model_usage={"m": model_usage(25, 4, cost=0.02)}
+        ),
+    ]
+    result = claude_agent_sdk.from_messages([first, second])
+    assert [(c.name, c.turn) for c in calls_of(result)] == [("A", 0), ("B", 1)]
+    assert trace_of(result).responses == ["one", "two"] and result["output"] == "two"
+    assert result.get("cost_usd") == pytest.approx(0.03)  # two sessions: added, not the last
+    (entry,) = trace_of(result).usage
+    assert (entry.tokens_in, entry.tokens_out) == (35, 5)
+    assert entry.cost_usd == pytest.approx(0.03)
+    # A run cut short with no ResultMessage still ends its turn, and adds no cost.
+    cut = first[:3]
+    short = claude_agent_sdk.from_messages([cut, second])
+    assert [(c.name, c.turn) for c in calls_of(short)] == [("A", 0), ("B", 1)]
+    assert trace_of(short).responses == ["one", "two"]
+    assert short.get("cost_usd") == pytest.approx(0.02)
+
+
 def test_claude_sub_agent_text_is_not_the_reply_plain_dicts_and_missing_attributes() -> None:
     messages: list[Any] = [
         {
@@ -745,6 +801,22 @@ def test_openai_list_of_results_is_one_result_per_turn() -> None:
     assert trace.responses == ["one", "two"] and result["output"] == "two" and trace.rounds == 3
     assert (trace.usage[0].tokens_in, trace.usage[0].tokens_out) == (40, 4)
     assert oa.from_result([])["output"] == ""
+
+
+def test_openai_results_sharing_one_usage_count_it_once() -> None:
+    # The same RunContextWrapper passed to both runs: one cumulative Usage, already the total.
+    first = run_result([], "one", requests=1, i=10, o=1)
+    second = run_result([], "two", requests=2, i=40, o=4)
+    second.context_wrapper = first.context_wrapper
+    first.context_wrapper.usage.input_tokens, first.context_wrapper.usage.output_tokens = 40, 4
+    trace = trace_of(oa.from_result([first, second]))
+    assert (trace.usage[0].tokens_in, trace.usage[0].tokens_out) == (40, 4)
+    assert trace.rounds == 3  # rounds come from each result's own raw_responses
+    # Without raw_responses, the shared request count is not added twice either.
+    for one in (first, second):
+        del one.raw_responses
+    first.context_wrapper.usage.requests = 3
+    assert trace_of(oa.from_result([first, second])).rounds == 3
 
 
 # --- through PythonSystem and the checks scorer -----------------------------------------------

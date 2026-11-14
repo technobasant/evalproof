@@ -628,11 +628,15 @@ the field names they cite; each module's header gives the package version and fi
 field it reads. Tokens and cost roll up from the trace, so `max_cost_usd` and the budgets see an
 agent's spend. Cost is set only where the SDK reports one (Claude); otherwise the target's
 `pricing` applies. A turn boundary is read from the input where it shows (ADK user events, a
-LangChain human message, a Claude `ResultMessage`, one OpenAI result per list item), else every
-call is turn 0.
+LangChain human message, a Claude `ResultMessage`), else every call is turn 0. For a multi-turn
+case where each user turn is a separate call to the SDK, pass one item per turn: a list of ADK
+event lists, a list of Claude message lists (one per `query()` call), or a list of OpenAI
+results. The python function gets the later turns as `ctx.turns`.
 
 **Google ADK** — `adk.from_events(events)`; pairs `function_call` and `function_response` parts
 by id, then by name and order. A tool that returns `{"error": ...}` is recorded as failed.
+`run_async` does not yield the user's message by default, so for several turns pass one event
+list per run (or `session.events`).
 
 ```python
 # agent.py
@@ -694,7 +698,8 @@ def run(question: str) -> dict:
 
 **Claude Agent SDK** — `claude_agent_sdk.from_messages(messages)`; `ToolResultBlock.is_error`
 marks a failed call, the usage comes from the per-model `model_usage` of the final
-`ResultMessage`, and `cost_usd` is its `total_cost_usd`.
+`ResultMessage`, and `cost_usd` is its `total_cost_usd`. Those are running totals of a session;
+pass one message list per `query()` call and the sessions' totals are added.
 
 ```python
 # agent.py

@@ -57,6 +57,15 @@ def number(value: Any) -> float | None:
     return float(value)
 
 
+def runs(value: Any) -> list[list[Any]]:
+    """``value`` split into runs: a list whose items are all lists holds one run per item (one per
+    user turn, when each turn is a separate call to the SDK); anything else is a single run."""
+    items = list(value) if value is not None else []
+    if items and all(isinstance(item, list | tuple) for item in items):
+        return [list(item) for item in items]
+    return [items]
+
+
 def text_of(content: Any) -> str:
     """The text of a message content: a string, or the text blocks of a list of blocks."""
     if content is None:

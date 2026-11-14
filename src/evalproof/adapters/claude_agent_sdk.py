@@ -13,7 +13,8 @@ claude-agent-sdk==0.2.182 claude_agent_sdk/types.py:
   ``outputTokens``, ``cacheReadInputTokens`` and ``costUSD`` (camelCase, passed through from the
   CLI: _internal/message_parser.py:323).
 * :1813-1815 the totals on a ``ResultMessage`` (``total_cost_usd``) are running totals of the
-  session, so the last result's totals are used, not a sum.
+  session, so within one session the last result's totals are used, not a sum. Separate
+  ``query()`` calls are separate sessions: pass one list per call and their totals are added.
 
 ``ResultMessage.usage`` is an untyped ``dict[str, Any]`` and its keys are not defined anywhere in
 the SDK source, so it is not read; ``model_usage`` carries the same tokens with confirmed names.
@@ -22,7 +23,7 @@ A turn ends at each ``ResultMessage``; with none, every call is turn 0.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from typing import Any
 
 from evalproof.adapters._common import (
@@ -33,6 +34,7 @@ from evalproof.adapters._common import (
     has,
     jsonable,
     number,
+    runs,
     text_of,
 )
 from evalproof.models import ModelUsage, Trace
@@ -54,8 +56,36 @@ def _value(content: Any) -> Any:
     return text if text else jsonable(content)
 
 
+_RUN_START = object()
+_RUN_END = object()
+
+
+def _with_run_ends(messages: Iterable[Any]) -> Iterator[Any]:
+    """The messages of every run in order, each run between ``_RUN_START`` and ``_RUN_END``."""
+    for run in runs(messages):
+        yield _RUN_START
+        yield from run
+        yield _RUN_END
+
+
+def _add_usage(totals: dict[str, ModelUsage], model_usage: Any) -> None:
+    """Add a run's per-model ``model_usage`` (camelCase keys) to ``totals``."""
+    for name, entry in model_usage.items() if hasattr(model_usage, "items") else []:
+        total = totals.setdefault(str(name), ModelUsage(role="agent", model=str(name)))
+        total.tokens_in += count(get(entry, "inputTokens"))
+        total.tokens_out += count(get(entry, "outputTokens"))
+        total.cached_tokens += count(get(entry, "cacheReadInputTokens"))
+        run_cost = number(get(entry, "costUSD"))
+        if run_cost is not None:
+            total.cost_usd = (total.cost_usd or 0.0) + run_cost
+
+
 def from_messages(messages: Iterable[Any]) -> AgentResult:
     """Build ``{"output", "trace", "cost_usd"?}`` from Claude Agent SDK messages (objects or dicts).
+
+    ``messages`` is what one session yielded, or a list of such lists, one per ``query()`` call
+    (one per user turn). Within a session the totals are running totals, so each run's last ones
+    count; across runs they are added up.
 
     ``ToolUseBlock`` entries are calls and ``ToolResultBlock`` entries (in user messages) answer
     them by id, ``is_error`` making the call fail. The reply of a turn is ``ResultMessage.result``,
@@ -65,14 +95,28 @@ def from_messages(messages: Iterable[Any]) -> AgentResult:
     """
     ledger = Ledger()
     turn = 0
+    open_turn = False  # a message seen since the last turn ended
     texts: dict[int, str] = {}
     replies: dict[int, str] = {}
     seen_ids: set[str] = set()
     rounds = 0
     cost: float | None = None
-    model_usage: Any = None
+    run_cost: float | None = None
+    run_usage: Any = None
+    usage: dict[str, ModelUsage] = {}
     meta: dict[str, Any] = {}
-    for message in messages:
+    for message in _with_run_ends(messages):
+        if message is _RUN_END:  # the session's running totals end here
+            if run_cost is not None:
+                cost = (cost or 0.0) + run_cost
+            _add_usage(usage, run_usage)
+            continue
+        if message is _RUN_START:
+            run_cost, run_usage = None, None
+            if open_turn:  # a run that did not end with a ResultMessage still ends its turn
+                turn += 1
+                open_turn = False
+            continue
         if _is_result(message):
             result = get(message, "result")
             reply = result if isinstance(result, str) else texts.get(turn)
@@ -80,15 +124,17 @@ def from_messages(messages: Iterable[Any]) -> AgentResult:
                 replies[turn] = reply
             total = number(get(message, "total_cost_usd"))
             if total is not None:
-                cost = total
+                run_cost = total
             if get(message, "model_usage") is not None:
-                model_usage = get(message, "model_usage")
+                run_usage = get(message, "model_usage")
             if get(message, "num_turns") is not None:
                 meta["num_turns"] = get(message, "num_turns")
             if get(message, "is_error", default=False) is True:
                 meta["is_error"] = True
             turn += 1
+            open_turn = False
             continue
+        open_turn = True
         blocks = _blocks(message)
         if has(message, "model"):  # an assistant message
             message_id = get(message, "message_id")
@@ -118,17 +164,6 @@ def from_messages(messages: Iterable[Any]) -> AgentResult:
                     error=(text_of(content) or "tool error") if failed else None,
                     turn=turn,
                 )
-    usage = [
-        ModelUsage(
-            role="agent",
-            model=str(name),
-            tokens_in=count(get(entry, "inputTokens")),
-            tokens_out=count(get(entry, "outputTokens")),
-            cached_tokens=count(get(entry, "cacheReadInputTokens")),
-            cost_usd=number(get(entry, "costUSD")),
-        )
-        for name, entry in (model_usage.items() if hasattr(model_usage, "items") else [])
-    ]
     for turn_index, text in texts.items():  # a turn with no ResultMessage keeps its last text
         replies.setdefault(turn_index, text)
     responses = [replies.get(i, "") for i in range(max(replies) + 1)] if replies else []
@@ -136,7 +171,7 @@ def from_messages(messages: Iterable[Any]) -> AgentResult:
         responses=responses,
         tool_calls=ledger.calls,
         rounds=rounds or None,
-        usage=usage,
+        usage=list(usage.values()),
         meta=meta,
     )
     out: AgentResult = {"output": responses[-1] if responses else "", "trace": trace}
