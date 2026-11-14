@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from evalproof import import_run
 from evalproof.cli import main
 from evalproof.config import GenerationParams
 from evalproof.dataset import load_dataset, write_dataset
@@ -579,6 +580,11 @@ def test_the_command_requires_out_and_a_known_format(tmp_path: Path) -> None:
         main(["import-dataset", "garak", str(BASIC), "--out", str(tmp_path / "x.jsonl")])
     assert bad_format.value.code == 2
     assert DATASET_FORMATS == ("adk",)
+
+
+def test_the_result_importer_points_an_eval_set_here() -> None:
+    with pytest.raises(ImportFormatError, match=r"evalproof import-dataset adk"):
+        import_run("adk", BASIC)
 
 
 def test_an_unknown_format_is_refused_by_the_function(tmp_path: Path) -> None:
