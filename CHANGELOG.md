@@ -25,6 +25,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   number from 0 to 1, a `(bool, reason)` pair or a `Score`; an exception or any other return
   value leaves the case undecided. `verify` re-scores it only when the scorer sets
   `deterministic: true`.
+- `evalproof.adapters` turns what Google ADK, LangChain and LangGraph, the Claude Agent SDK and
+  the OpenAI Agents SDK return into the trace a python system hands back, and `TraceRecorder`
+  with `mcp_call` builds one by hand. No SDK is imported; tokens and cost roll up from the trace.
 
 ## [0.5.2] — 2026-11-14
 
