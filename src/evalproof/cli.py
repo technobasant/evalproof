@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.calibration import calibrate
-from evalproof.compare import compare_runs
+from evalproof.compare import AGGREGATES, Comparison, ComparisonRefused, compare_runs, run_label
 from evalproof.config import (
     MAX_TRIALS,
     ConfigError,
@@ -31,16 +31,18 @@ from evalproof.config import (
 from evalproof.dataset import DatasetError, load_dataset
 from evalproof.doctor import run_doctor
 from evalproof.gate import (
+    EXIT_BUDGET,
     EXIT_CANNOT_GATE,
     EXIT_PASS,
     EXIT_REGRESSION,
     EXIT_USAGE,
+    GateDecision,
     absolute_checks,
     continuous_floors,
     decide,
 )
 from evalproof.importers import EPOCHS, FORMATS, import_run
-from evalproof.models import CaseResult
+from evalproof.models import CaseResult, Run
 from evalproof.providers import ProviderError, make_provider
 from evalproof.readiness import (
     assess,
@@ -51,14 +53,17 @@ from evalproof.readiness import (
 )
 from evalproof.rehash import RehashError, rehash_run
 from evalproof.report import (
+    MatrixEntry,
     calibration_markdown,
     comparison_markdown,
+    matrix_markdown,
     run_markdown,
     to_json,
 )
 from evalproof.runner import load_run, run_suite, save_run
 from evalproof.scaffold import CI_MODES, CLI_AUTHS, init_project
 from evalproof.scorers import pairwise
+from evalproof.stats import holm
 from evalproof.verify import verify_markdown, verify_run
 
 EXIT_INTERRUPTED = 130  # the shell's code for a process stopped by Ctrl-C
@@ -136,8 +141,8 @@ def _run_paths(args: argparse.Namespace, variants: list[str | None]) -> list[str
 
 def _worst(codes: list[int]) -> int:
     """The exit code of several runs: a usage error, then a gate that could not decide, then a
-    regression, then a pass."""
-    for code in (EXIT_USAGE, EXIT_CANNOT_GATE, EXIT_REGRESSION):
+    regression, then a budget breach, then a pass."""
+    for code in (EXIT_USAGE, EXIT_CANNOT_GATE, EXIT_REGRESSION, EXIT_BUDGET):
         if code in codes:
             return code
     return EXIT_PASS
@@ -242,6 +247,7 @@ def _gate_config(args: argparse.Namespace) -> GateConfig | None:
             "min_pass_rate": args.min_pass_rate,
             "must_pass": args.must_pass,
             "max_new_failures": args.max_new_failures,
+            "aggregate": args.aggregate,
         }.items()
         if v is not None
     }
@@ -256,9 +262,99 @@ def _gate_config(args: argparse.Namespace) -> GateConfig | None:
         raise ConfigError(format_validation_error(exc, "gate", GateConfig)) from exc
 
 
+def _refused(args: argparse.Namespace, message: str) -> int:
+    """Two runs that cannot be compared at all. Under ``--gate`` that is a gate that cannot
+    decide (exit 4), reported like any other; without it, a usage error."""
+    if not args.gate:
+        raise ConfigError(message)
+    decision = GateDecision("fail", EXIT_CANNOT_GATE, [message])
+    _emit(
+        f"## evalproof\n\n**Gate: ⚠️ cannot gate** (exit {EXIT_CANNOT_GATE})\n\n- {message}\n",
+        args.markdown,
+    )
+    if args.json:
+        payload = {"gate": json.loads(to_json(decision))}
+        Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return EXIT_CANNOT_GATE
+
+
+def _compare_matrix(
+    args: argparse.Namespace,
+    baseline: Run,
+    gate: GateConfig | None,
+    alpha: float,
+    aggregate: str,
+) -> int:
+    """One baseline against several candidates. Each gets its own comparison and decision, and
+    Holm's correction runs once over every candidate and every gated metric, so adding a
+    candidate cannot make a false failure likelier."""
+    entries: list[MatrixEntry] = []
+    for path in args.candidate:
+        run = load_run(path)
+        label = run_label(run)
+        try:
+            cmp = compare_runs(baseline, run, alpha=alpha, seed=args.seed, aggregate=aggregate)
+        except ComparisonRefused as exc:
+            if not args.gate:
+                raise ConfigError(f"{path}: {exc}") from exc
+            message = f"{label}: {exc}"
+            refused = GateDecision("fail", EXIT_CANNOT_GATE, [message])
+            entries.append(MatrixEntry(label, path, None, refused, run, message))
+            continue
+        entries.append(MatrixEntry(label, path, cmp, None, run))
+    # Candidates that share a label (two runs of one system) are told apart by their file.
+    labels = [e.label for e in entries]
+    for entry in entries:
+        if labels.count(entry.label) > 1:
+            entry.label = f"{entry.label} [{Path(entry.path).name}]"
+
+    if gate is not None:
+        family: list[tuple[int, str, float]] = []
+        for i, entry in enumerate(entries):
+            if entry.comparison is None:
+                continue
+            for name in gate.gated:
+                if name in entry.comparison.metrics:
+                    family.append((i, name, entry.comparison.metrics[name].p_value))
+        adjusted = holm([p for _, _, p in family])
+        for i, entry in enumerate(entries):
+            if entry.comparison is None:
+                continue
+            mine = {n: adjusted[j] for j, (c, n, _) in enumerate(family) if c == i}
+            entry.decision = decide(
+                entry.comparison, gate, entry.run, adjusted=mine, candidates=len(entries)
+            )
+    _emit(
+        matrix_markdown(run_label(baseline), entries, gate, show=args.show, baseline=baseline),
+        args.markdown,
+    )
+    if args.json:
+        payload = {
+            "baseline": run_label(baseline),
+            "candidates": [
+                {
+                    "label": e.label,
+                    "path": e.path,
+                    "comparison": json.loads(to_json(e.comparison)) if e.comparison else None,
+                    "gate": json.loads(to_json(e.decision)) if e.decision else None,
+                }
+                for e in entries
+            ],
+        }
+        Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    if args.gate:
+        return _worst([e.decision.exit_code for e in entries if e.decision is not None])
+    return EXIT_PASS
+
+
 def cmd_compare(args: argparse.Namespace) -> int:
-    baseline, candidate = load_run(args.baseline), load_run(args.candidate)
-    known = list(dict.fromkeys([*baseline.scorer_names(), *candidate.scorer_names()]))
+    baseline = load_run(args.baseline)
+    candidates = [load_run(path) for path in args.candidate]
+    known = list(
+        dict.fromkeys(
+            [*baseline.scorer_names(), *(n for run in candidates for n in run.scorer_names())]
+        )
+    )
     for name in args.metric or []:
         if name not in known:
             raise ConfigError(
@@ -266,11 +362,20 @@ def cmd_compare(args: argparse.Namespace) -> int:
                 f"available: {', '.join(known) or 'none'}"
             )
     gate = _gate_config(args)
-    alpha = gate.alpha if gate else (args.alpha or 0.05)
-    cmp = compare_runs(baseline, candidate, alpha=alpha, seed=args.seed)
-    decision = decide(cmp, gate, candidate) if gate else None
-    if args.gate and decision is None:
+    if args.gate and gate is None:
         raise ConfigError("--gate needs a gate: pass --suite with a gate block, or --metric")
+    alpha = gate.alpha if gate else (args.alpha or 0.05)
+    aggregate = args.aggregate or (gate.aggregate if gate else "mean")
+    if len(candidates) > 1:
+        return _compare_matrix(args, baseline, gate, alpha, aggregate)
+    candidate = candidates[0]
+    try:
+        cmp: Comparison = compare_runs(
+            baseline, candidate, alpha=alpha, seed=args.seed, aggregate=aggregate
+        )
+    except ComparisonRefused as exc:
+        return _refused(args, str(exc))
+    decision = decide(cmp, gate, candidate) if gate else None
     _emit(
         comparison_markdown(
             cmp,
@@ -560,10 +665,16 @@ def build_parser() -> argparse.ArgumentParser:
     im.set_defaults(func=cmd_import)
 
     c = sub.add_parser(
-        "compare", help="compare two runs; --gate turns the result into an exit code"
+        "compare",
+        help="compare two runs, or several candidates with one baseline; --gate turns the "
+        "result into an exit code",
+        description="Compare CANDIDATE with BASELINE on the cases both runs share. Give several "
+        "CANDIDATEs to compare each with the baseline in one table; --gate then corrects the "
+        "p-values for all candidates and gated metrics at once and exits with the worst code "
+        "(2, then 4, 1, 3, 0).",
     )
     c.add_argument("baseline")
-    c.add_argument("candidate")
+    c.add_argument("candidate", nargs="+", help="one run, or several for a matrix comparison")
     c.add_argument("--suite", help="take gate settings from this suite")
     c.add_argument(
         "--metric",
@@ -572,6 +683,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     c.add_argument("--max-drop", type=float)
     c.add_argument("--alpha", type=float)
+    c.add_argument(
+        "--aggregate",
+        choices=AGGREGATES,
+        help="when the runs repeat each case (trials > 1), how a case's trials become one value "
+        "on a pass/fail metric: mean (the pass rate, default), all (passed every trial) or any "
+        "(passed at least once); overrides gate.aggregate",
+    )
     c.add_argument("--min-cases", type=int)
     c.add_argument("--max-p95-ms", type=float)
     c.add_argument("--max-cost", type=float)
