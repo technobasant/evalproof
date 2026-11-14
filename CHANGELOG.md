@@ -28,6 +28,16 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - `evalproof.adapters` turns what Google ADK, LangChain and LangGraph, the Claude Agent SDK and
   the OpenAI Agents SDK return into the trace a python system hands back, and `TraceRecorder`
   with `mcp_call` builds one by hand. No SDK is imported; tokens and cost roll up from the trace.
+- Suite `variants` run the same cases, scorers and gate against another model, prompt or flag:
+  each has a `name`, optional `vars` and an optional `system` merged over the suite's.
+  `evalproof run --variant NAME` (repeatable) or `--all-variants` writes `runs/<variant>.json`,
+  and the run file records the variant. A python system whose function has a `ctx` parameter gets
+  a `RunContext` (`case_id`, `input`, `turns`, `state`, `variant`, `vars`, `trial`).
+- Multi-turn cases run on every target that can hold a conversation: a python system gets the
+  later turns as `ctx.turns`, an http system gets `turns`, `state`, `variant` and `vars` in the
+  POST body, and a direct model target plays the turns in order, each after its previous reply.
+  A coding-agent CLI takes one prompt per call, so a suite with `turns` cases on one is refused
+  before any case runs.
 - `evalproof readiness SUITE [--run FILE] [--json] [--require dim,...]` reads a suite and its
   dataset, and optionally a run file, and reports for each dimension of quality (correctness,
   behaviour, quality, regression gate, reliability, cost and latency, safety, robustness,
