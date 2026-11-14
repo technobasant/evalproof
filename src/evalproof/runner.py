@@ -28,7 +28,13 @@ from evalproof.providers import (
 )
 from evalproof.providers.agent_cli import cli_facts
 from evalproof.scorers import Scorer, make_scorer
-from evalproof.systems import LLMSystem, System, make_system
+from evalproof.systems import (
+    LLMSystem,
+    System,
+    check_turns_supported,
+    check_variant_vars,
+    make_system,
+)
 
 Progress = Callable[[int, int, CaseResult], None]
 
@@ -127,14 +133,27 @@ def run_suite(
     client: httpx.Client | None = None,
     progress: Progress | None = None,
     system_override: TargetConfig | None = None,
+    variant: str | None = None,
 ) -> Run:
+    """Run the suite and score it. ``variant`` names one of the suite's ``variants``: its partial
+    ``system`` override is merged over the suite's system (unless ``system_override`` replaces the
+    target outright), and its ``vars`` reach the system."""
+    variant_vars = cfg.variant(variant).vars if variant is not None else {}
+    system_cfg = system_override or cfg.variant_system(variant)
     cases = load_dataset(cfg.resolve(cfg.dataset))
+    check_turns_supported(system_cfg, cases)
+    if variant is not None:
+        check_variant_vars(system_cfg, variant, variant_vars, cases)
     if limit is not None:
         cases = cases[:limit]
     cache = ResponseCache(cfg.resolve(cfg.cache_dir)) if use_cache else None
-    system_cfg = system_override or cfg.system
     system = make_system(
-        system_cfg, cache=cache, client=client, search_path=str(Path(cfg.base_dir).resolve())
+        system_cfg,
+        cache=cache,
+        client=client,
+        search_path=str(Path(cfg.base_dir).resolve()),
+        variant=variant,
+        vars=variant_vars,
     )
 
     judge: Provider | None = None
@@ -179,7 +198,8 @@ def run_suite(
         wall_time_s=round(wall, 3),
         evalproof_version=__version__,
         seed=cfg.seed,
-        suite_hash=suite_fingerprint(cfg, system_cfg),
+        suite_hash=suite_fingerprint(cfg, system_cfg, variant),
+        variant=variant,
         environment=environment(
             cfg,
             client,

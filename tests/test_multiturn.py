@@ -12,10 +12,11 @@ import httpx
 import pytest
 
 from evalproof.cache import CachedProvider, ResponseCache, cache_key
-from evalproof.config import GenerationParams, Pricing, TargetConfig
+from evalproof.config import ConfigError, GenerationParams, Pricing, TargetConfig, load_config
 from evalproof.dataset import DatasetError, load_dataset
 from evalproof.models import Case
 from evalproof.providers import ChatResponse, Message, ProviderError
+from evalproof.runner import run_suite
 from evalproof.systems import HttpSystem, LLMSystem, PythonSystem, check_turns_supported
 from tests.conftest import ScriptedProvider, mock_client
 
@@ -230,6 +231,28 @@ def test_http_system_sends_turns_and_state() -> None:
     system = HttpSystem(TargetConfig(target="http://sut/chat"), client=mock_client(handler))
     system.run(Case.model_validate({"id": "c", "input": "a", "turns": ["b"], "state": {"k": 1}}))
     assert seen[0]["turns"] == ["b"] and seen[0]["state"] == {"k": 1}
+
+
+@pytest.mark.parametrize(
+    "target", ["claude-code:haiku", "codex:gpt-5", "opencode:m", "cursor:m", "copilot:m"]
+)
+def test_cli_agent_targets_refuse_multi_turn_cases(tmp_path: Path, target: str) -> None:
+    _dataset(
+        tmp_path,
+        {"id": "one", "input": "q"},
+        {"id": "chat", "input": "q", "turns": ["more"]},
+    )
+    suite = tmp_path / "suite.yaml"
+    suite.write_text(
+        f"name: s\ndataset: cases.jsonl\nsystem: {{target: '{target}'}}\n"
+        "scorers: [{name: c, type: contains, params: {any_of: [x]}}]\n",
+        "utf-8",
+    )
+    with pytest.raises(
+        ConfigError, match=r"multi-turn cases need a python, http or direct model target"
+    ) as exc:
+        run_suite(load_config(suite), use_cache=False)
+    assert "'chat'" in str(exc.value) and target in str(exc.value)
 
 
 def test_the_turns_check_leaves_single_turn_cases_and_other_targets_alone() -> None:

@@ -20,7 +20,13 @@ from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.calibration import calibrate
 from evalproof.compare import compare_runs
-from evalproof.config import ConfigError, GateConfig, format_validation_error, load_config
+from evalproof.config import (
+    ConfigError,
+    GateConfig,
+    SuiteConfig,
+    format_validation_error,
+    load_config,
+)
 from evalproof.dataset import DatasetError, load_dataset
 from evalproof.doctor import run_doctor
 from evalproof.gate import (
@@ -78,17 +84,52 @@ def _check_writable(path: Path) -> None:
         raise ConfigError(f"cannot write the run file {path}: {exc}") from exc
 
 
-def cmd_run(args: argparse.Namespace) -> int:
-    cfg = load_config(args.suite)
-    if args.gate and (cfg.gate is None or not cfg.gate.has_absolute_checks):
+def _selected_variants(cfg: SuiteConfig, args: argparse.Namespace) -> list[str | None]:
+    """The variants to run: ``[None]`` (the suite as written) unless ``--variant`` or
+    ``--all-variants`` pick some."""
+    if args.variant and args.all_variants:
+        raise ConfigError("use --variant or --all-variants, not both")
+    if args.all_variants:
+        if not cfg.variants:
+            raise ConfigError("--all-variants: the suite defines no variants")
+        return [v.name for v in cfg.variants]
+    if args.variant:
+        names = list(dict.fromkeys(args.variant))
+        for name in names:
+            cfg.variant(name)  # an unknown name is a ConfigError listing the real ones
+        return list(names)
+    return [None]
+
+
+def _run_paths(args: argparse.Namespace, variants: list[str | None]) -> list[str | None]:
+    """Where each run is written; None is the timestamped default of a run without variants.
+    A variant's default is ``runs/<variant>.json``; ``--out`` names the file only when exactly
+    one variant runs (with several it would make them overwrite each other)."""
+    if variants == [None]:
+        return [args.out]
+    if args.out and len(variants) > 1:
         raise ConfigError(
-            "run --gate needs absolute checks: set gate.min_pass_rate or gate.must_pass in the "
-            "suite (a comparison with a baseline is `evalproof compare --gate`)"
+            "--out names one file but several variants run; leave it out and each variant "
+            "writes runs/<variant>.json"
         )
-    _check_writable(Path(args.out) if args.out else Path("runs") / "run.json")
+    return [args.out or f"runs/{name}.json" for name in variants]
+
+
+def _worst(codes: list[int]) -> int:
+    """The exit code of several runs: a usage error, then a gate that could not decide, then a
+    regression, then a pass."""
+    for code in (EXIT_USAGE, EXIT_CANNOT_GATE, EXIT_REGRESSION):
+        if code in codes:
+            return code
+    return EXIT_PASS
+
+
+def _run_variant(
+    args: argparse.Namespace, cfg: SuiteConfig, variant: str | None, out_path: str | None
+) -> int:
     override = None
     if args.system or args.system_prompt_file or args.label:
-        override = cfg.system.model_copy(deep=True)
+        override = cfg.variant_system(variant).model_copy(deep=True)
         if args.system:
             override.target = args.system
         if args.label:
@@ -107,14 +148,17 @@ def cmd_run(args: argparse.Namespace) -> int:
             if i == n:
                 sys.stderr.write("\n")
 
+    if variant is not None and not args.quiet:
+        sys.stderr.write(f"variant {variant}\n")
     run = run_suite(
         cfg,
         limit=args.limit,
         use_cache=not args.no_cache,
         progress=progress,
         system_override=override,
+        variant=variant,
     )
-    out = args.out or f"runs/{cfg.name}-{run.info.started_at.replace(':', '')}.json"
+    out = out_path or f"runs/{cfg.name}-{run.info.started_at.replace(':', '')}.json"
     save_run(run, out)
     sys.stderr.write(f"wrote {out}\n")
     markdown = run_markdown(run, args.show)
@@ -136,6 +180,22 @@ def cmd_run(args: argparse.Namespace) -> int:
     if refused:
         return EXIT_CANNOT_GATE
     return EXIT_REGRESSION if failures else EXIT_PASS
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    cfg = load_config(args.suite)
+    if args.gate and (cfg.gate is None or not cfg.gate.has_absolute_checks):
+        raise ConfigError(
+            "run --gate needs absolute checks: set gate.min_pass_rate or gate.must_pass in the "
+            "suite (a comparison with a baseline is `evalproof compare --gate`)"
+        )
+    variants = _selected_variants(cfg, args)
+    paths = _run_paths(args, variants)
+    for path in paths:
+        _check_writable(Path(path) if path else Path("runs") / "run.json")
+    return _worst(
+        [_run_variant(args, cfg, v, path) for v, path in zip(variants, paths, strict=True)]
+    )
 
 
 def _gate_config(args: argparse.Namespace) -> GateConfig | None:
@@ -375,12 +435,27 @@ def build_parser() -> argparse.ArgumentParser:
 
     r = sub.add_parser("run", help="run a suite and write a run artifact")
     r.add_argument("suite")
-    r.add_argument("--out")
+    r.add_argument(
+        "--out",
+        help="where to write the run (with --variant, only when exactly one variant runs)",
+    )
     r.add_argument("--limit", type=int)
     r.add_argument("--no-cache", action="store_true")
     r.add_argument("--system", help="override the system target")
     r.add_argument("--system-prompt-file", help="override the system prompt")
     r.add_argument("--label", help="name this system in reports")
+    r.add_argument(
+        "--variant",
+        action="append",
+        metavar="NAME",
+        help="run one of the suite's variants and write runs/<variant>.json; repeat to run "
+        "several, one run file each",
+    )
+    r.add_argument(
+        "--all-variants",
+        action="store_true",
+        help="run every variant the suite defines, one run file each",
+    )
     r.add_argument("--markdown", help="also append the report to this file")
     r.add_argument("--quiet", action="store_true")
     r.add_argument(

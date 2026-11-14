@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import re
 from pathlib import Path
 from typing import Any, Literal, get_args
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from evalproof.dataset import canonical_json
 
@@ -189,6 +190,68 @@ class GateConfig(BaseModel):
         return self.min_pass_rate is not None or bool(self.must_pass)
 
 
+VARIANT_NAME = re.compile(r"[a-z0-9._-]+")
+
+# The parts of a system override that merge into the suite's own rather than replace it.
+_MERGED_SYSTEM_KEYS = ("params", "pricing")
+
+
+class VariantConfig(BaseModel):
+    """One way to run the suite: the same cases, scorers and gate, with another model, prompt or
+    flag. ``vars`` name what differs (they reach a python or http system through ``RunContext``
+    and the request body, and a model prompt as template fields); ``system`` is an optional
+    partial ``TargetConfig`` merged over the suite's ``system``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    vars: dict[str, Any] = Field(default_factory=dict)
+    system: dict[str, Any] | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, v: str) -> str:
+        if not VARIANT_NAME.fullmatch(v):
+            raise ValueError(f"variant name {v!r} must use only a-z, 0-9, '.', '_' and '-'")
+        return v
+
+    @field_validator("vars")
+    @classmethod
+    def _json_vars(cls, v: dict[str, Any]) -> dict[str, Any]:
+        try:
+            canonical_json(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"vars must be plain JSON values: {exc}") from exc
+        return v
+
+
+def _merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """``override`` over ``base``; a dict meeting a dict is merged key by key, anything else is
+    replaced."""
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def merge_system(base: TargetConfig, override: dict[str, Any]) -> TargetConfig:
+    """The suite's ``system`` with a variant's partial override applied.
+
+    ``params`` and ``pricing`` merge key by key (a variant that sets only ``temperature`` keeps the
+    suite's ``max_tokens``); every other key, ``headers`` included, is replaced by the override's.
+    Raises ``ValidationError`` when the result is not a valid target."""
+    merged = base.model_dump()
+    for key, value in override.items():
+        if key in _MERGED_SYSTEM_KEYS and isinstance(value, dict):
+            merged[key] = _merge(merged.get(key) or {}, value)
+        else:
+            merged[key] = value
+    return TargetConfig.model_validate(merged)
+
+
 class SuiteConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -199,10 +262,26 @@ class SuiteConfig(BaseModel):
     judge: TargetConfig | None = None
     calibration: CalibrationConfig | None = None
     gate: GateConfig | None = None
+    variants: list[VariantConfig] = Field(default_factory=list)
     seed: int = 0
     cache_dir: str = ".evalproof/cache"
     concurrency: int = 1
     base_dir: str = "."
+
+    @model_validator(mode="after")
+    def _check_variants(self) -> SuiteConfig:
+        names = [v.name for v in self.variants]
+        if len(set(names)) != len(names):
+            raise ValueError(f"variant names must be unique, got {names}")
+        for variant in self.variants:
+            if variant.system is None:
+                continue
+            try:
+                merge_system(self.system, variant.system)
+            except ValidationError as exc:
+                problems = format_validation_error(exc, f"variant {variant.name!r}", TargetConfig)
+                raise ValueError(problems.replace("\n", "; ")) from exc
+        return self
 
     @model_validator(mode="after")
     def _check(self) -> SuiteConfig:
@@ -233,6 +312,22 @@ class SuiteConfig(BaseModel):
         p = Path(path)
         return p if p.is_absolute() else Path(self.base_dir) / p
 
+    def variant(self, name: str) -> VariantConfig:
+        """The variant called ``name``; a ``ConfigError`` listing the names when there is none."""
+        for v in self.variants:
+            if v.name == name:
+                return v
+        known = ", ".join(v.name for v in self.variants) or "none defined"
+        raise ConfigError(f"unknown variant {name!r}; the suite's variants: {known}")
+
+    def variant_system(self, name: str | None) -> TargetConfig:
+        """The system a variant runs: the suite's with the variant's override merged over it.
+        ``None`` is the suite as written."""
+        if name is None:
+            return self.system
+        override = self.variant(name).system
+        return self.system if override is None else merge_system(self.system, override)
+
 
 def _target_identity(cfg: TargetConfig | None) -> dict[str, Any] | None:
     """What decides a target's answers. ``label``, ``timeout_s``, ``headers``, ``api_key_env``
@@ -248,21 +343,27 @@ def _target_identity(cfg: TargetConfig | None) -> dict[str, Any] | None:
     }
 
 
-def suite_fingerprint(cfg: SuiteConfig, system_cfg: TargetConfig | None = None) -> str:
+def suite_fingerprint(
+    cfg: SuiteConfig, system_cfg: TargetConfig | None = None, variant: str | None = None
+) -> str:
     """A short hash of what makes a run's scores: the system under test, the judge, every
     scorer and the seed. ``system_cfg`` is the target that actually ran, overrides included;
-    it defaults to the suite's own.
+    it defaults to the suite's own, with the variant's override merged in when ``variant`` names
+    one. A variant adds its name and vars to the hash; a run without one hashes exactly as it did
+    before variants existed.
 
     The dataset is not in it (``evalproof verify`` checks it case by case), nor is anything that
     only names or paces the run: the labels, timeouts, headers, key variable, pricing, gate,
     cache directory, concurrency and suite name.
     """
-    material = {
-        "system": _target_identity(system_cfg or cfg.system),
+    material: dict[str, Any] = {
+        "system": _target_identity(system_cfg or cfg.variant_system(variant)),
         "judge": _target_identity(cfg.judge),
         "scorers": [s.model_dump(mode="json") for s in cfg.scorers],
         "seed": cfg.seed,
     }
+    if variant is not None:
+        material["variant"] = {"name": variant, "vars": cfg.variant(variant).vars}
     return hashlib.sha256(canonical_json(material).encode()).hexdigest()[:16]
 
 
@@ -318,8 +419,11 @@ def load_config(path: str | Path) -> SuiteConfig:
         raise ConfigError(f"{path}: top level must be a mapping")
     raw.setdefault("base_dir", str(path.parent))
     # Prompt and rubric text may live in files next to the suite.
-    for section in ("system", "judge"):
-        block = raw.get(section)
+    blocks = [raw.get("system"), raw.get("judge")]
+    variants = raw.get("variants")
+    if isinstance(variants, list):  # a variant's system override takes prompt files too
+        blocks += [v.get("system") for v in variants if isinstance(v, dict)]
+    for block in blocks:
         if isinstance(block, dict):
             for key in ("system_prompt", "prompt_template"):
                 file_key = f"{key}_file"
