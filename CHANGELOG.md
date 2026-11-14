@@ -34,6 +34,16 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   multi-turn, load, production monitoring) whether it is covered, partly covered, missing or out
   of scope, with the evidence. It makes no model call. It exits 1 when a `--require`d dimension
   is not covered, and `--json` is for CI.
+- `examples/agent-tools`, an offline agent example: a plain-Python agent with two fake tools and
+  no model, 35 cases with inline `expect` checks (three multi-turn, five tagged `safety`, five
+  `robustness`), and two variants. `v1` plants a bug that skips a tool for one intent, and only
+  the `checks` scorer sees it, since the reply still reads well. The committed run files in
+  `runs/` gate `v1` to `v2` with exit 0 and `v2` to `v1` with exit 1, and `evalproof readiness`
+  reports its gaps. CI runs both directions and the readiness `--require` on every commit.
+- The README has a "Testing agents" section: the trace contract (what a python system returns,
+  the `ToolCall` fields and `ctx`), a table of every check with what it needs and when it passes,
+  multi-turn cases (`turns`, `state`), variants (`--variant`, `--all-variants`), the example, and
+  what `readiness` reports. "Agent SDK adapters" is now a subsection of it.
 - Credentials are stated plainly. The README has a "What it needs to run" section, a table of
   each target, the variable it reads, whether it works locally and in CI, and where it is allowed.
   `evalproof init` prints what the chosen judge needs, locally and in CI. `evalproof init --ci
