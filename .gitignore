@@ -14,3 +14,6 @@ build/
 runs/
 !examples/**/runs/
 .DS_Store
+
+# Built documentation site (mkdocs build)
+site/

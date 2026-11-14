@@ -1,0 +1,107 @@
+site_name: evalproof
+site_description: Treat LLM evaluation as measurement. Calibrate the judge, correct the pass rate, gate CI on significant regressions.
+site_url: https://basantbhattarai.com.np/evalproof/
+repo_url: https://github.com/technobasant/evalproof
+repo_name: technobasant/evalproof
+edit_uri: edit/main/docs/
+copyright: Apache-2.0
+
+# Internal design specs stay in the repository; they are not part of the site.
+exclude_docs: |
+  specs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+# `mkdocs build --strict` (CI runs it) turns every one of these into an error.
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            heading_level: 3
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+            merge_init_into_class: true
+            show_if_no_docstring: true
+            filters: ["!^_"]
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Install: getting-started/install.md
+      - What it needs to run: getting-started/credentials.md
+      - Five-minute quickstart: getting-started/quickstart.md
+      - Use cases: getting-started/use-cases.md
+  - Guides:
+      - Providers: guides/providers.md
+      - Testing agents: guides/testing-agents.md
+      - Repeated trials: guides/repeated-trials.md
+      - Readiness: guides/readiness.md
+      - Agent SDK adapters: guides/adapters.md
+      - Import results from other tools: guides/import.md
+      - From Python: guides/python.md
+      - In CI: guides/ci.md
+  - Reference:
+      - Commands: reference/commands.md
+      - Concepts: reference/concepts.md
+      - API reference: reference/api.md
+  - About:
+      - Architecture: about/architecture.md
+      - Decisions:
+          - Overview: about/decisions.md
+          - "0001 The judge is a classifier": adr/0001-judge-is-a-classifier.md
+          - "0002 Local-first providers": adr/0002-local-first-providers.md
+          - "0003 Gate on significance, not delta": adr/0003-gate-on-significance-not-delta.md
+          - "0004 Agent CLIs as providers": adr/0004-agent-clis-as-providers.md
+      - How it relates to other tools: about/related-tools.md
+      - Limits: about/limits.md
+      - Roadmap: about/roadmap.md
+      - Measurements: about/measurements.md
+      - Changelog: about/changelog.md
+      - Project: about/project.md

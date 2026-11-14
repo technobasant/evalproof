@@ -17,8 +17,8 @@ that is loosened until it stops failing on noise also stops catching regressions
   continuous scores use a **paired bootstrap** of the mean difference. Report the delta
   with a 95% interval either way.
 * **Fail only when both hold:** the drop is at least `max_drop` *and* `p < alpha`.
-  * A large drop that is not significant passes with a warning that names the sample size.
-  * A significant drop smaller than `max_drop` passes with a warning.
+    * A large drop that is not significant passes with a warning that names the sample size.
+    * A significant drop smaller than `max_drop` passes with a warning.
 * Refuse to gate (exit 4) when there are fewer than `min_cases` paired cases or the two runs
   used different datasets (the dataset hash differs).
 * Budgets — p95 latency and cost — are separate checks with their own exit code (3).

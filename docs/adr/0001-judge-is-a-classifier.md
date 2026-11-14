@@ -23,10 +23,10 @@ evalproof treats the judge as an instrument to be calibrated, not an oracle:
 1. A calibration sample of gold labels — human review, or a trusted deterministic check —
    measures the judge's confusion matrix, TPR, FPR and Cohen's κ.
 2. The judge's pass rate is reported next to two corrected estimates:
-   * **ACC** (Rogan–Gladen): `p = (q − FPR) / (TPR − FPR)`, with a bootstrap interval that
-     resamples both the judged set and the gold sample.
-   * **PPI** (prediction-powered inference): the judge's mean on unlabelled cases plus the
-     mean residual (label − judge) on the gold sample, with a normal interval.
+    * **ACC** (Rogan–Gladen): `p = (q − FPR) / (TPR − FPR)`, with a bootstrap interval that
+      resamples both the judged set and the gold sample.
+    * **PPI** (prediction-powered inference): the judge's mean on unlabelled cases plus the
+      mean residual (label − judge) on the gold sample, with a normal interval.
 3. Undecided verdicts (an unparseable reply after one retry) are counted and excluded,
    never silently scored as passes.
 

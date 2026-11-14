@@ -1,6 +1,6 @@
 # Measurements
 
-Every figure here comes from real runs of [`examples/support-qa`](examples/support-qa) on
+Every figure here comes from real runs of [`examples/support-qa`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa) on
 one machine. The run files are committed in `examples/support-qa/runs/`, and
 `uv run python examples/support-qa/measure.py` recomputes the calibration, comparison and
 latency tables from them without a model.
@@ -13,11 +13,11 @@ latency tables from them without a model.
 | Ollama | 0.23.2 |
 | System under test | `qwen3:1.7b`, digest `8f68893c685c` — temperature 0, seed 0, `think: false`, max 200 tokens |
 | Judge | `qwen3:8b`, digest `500a1f067a9f` — temperature 0, seed 0, `think: false`, max 256 tokens |
-| Reasoning judge (section 8) | the same model with `think: true` and max 4,096 tokens, in [`suite.reasoning-judge.yaml`](examples/support-qa/suite.reasoning-judge.yaml) |
+| Reasoning judge (section 8) | the same model with `think: true` and max 4,096 tokens, in [`suite.reasoning-judge.yaml`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa/suite.reasoning-judge.yaml) |
 | evalproof / Python | 0.1.0 / 3.13.15 |
-| Golden set | 83 questions about a product; 9 are not answerable from the facts. Every run in `runs/` used [`cases.v1.jsonl`](examples/support-qa/cases.v1.jsonl), dataset hash `c6f08ac201023363`; `cases.jsonl` is the revised set from section 8 (`55ba005be14c0f20`), whose runs are in `runs/v2/` |
+| Golden set | 83 questions about a product; 9 are not answerable from the facts. Every run in `runs/` used [`cases.v1.jsonl`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa/cases.v1.jsonl), dataset hash `c6f08ac201023363`; `cases.jsonl` is the revised set from section 8 (`55ba005be14c0f20`), whose runs are in `runs/v2/` |
 | "Gold" | a per-question regex answer key, written before any model output was seen and not changed after. It stands in for human review; it is not human labelling. |
-| Reviewed labels (section 9) | pass/fail for the 30 baseline cases of the seed-0 random sample, read against the rubric and the product facts, in [`human-review/`](examples/support-qa/human-review) |
+| Reviewed labels (section 9) | pass/fail for the 30 baseline cases of the seed-0 random sample, read against the rubric and the product facts, in [`human-review/`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa/human-review) |
 | Change under test | grounded system prompt → "friendly, always give a complete answer" prompt; same model |
 
 ## 1. The two runs
@@ -143,7 +143,7 @@ evalproof gates on pointwise verdicts and reports pairwise preference as a diagn
   results identical to the cold run, apart from the per-case `cached` flag.
 * Three days later, the full baseline judged again with the judge's cache entries removed
   (system answers still cached) gave **83/83 identical verdicts** in 201 s
-  ([`baseline.think-off-rerun.json`](examples/support-qa/runs/baseline.think-off-rerun.json)).
+  ([`baseline.think-off-rerun.json`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa/runs/baseline.think-off-rerun.json)).
 
 ## 8. A reasoning judge
 
@@ -201,7 +201,7 @@ noise at n = 83, so the gate still passes with a warning.
 
 `cases.jsonl` now says Team only for q21 and q22, as the product facts do; `cases.v1.jsonl`
 keeps the original so the runs above stay reproducible. All four runs were judged again on
-the revised set ([`runs/v2/`](examples/support-qa/runs/v2)): every answer came from the cache,
+the revised set ([`runs/v2/`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa/runs/v2)): every answer came from the cache,
 and the only verdicts that moved were the thinking judge's on q21 and q22, now passes.
 
 | Against the audited labels | Thinking off | Thinking on |
@@ -222,9 +222,9 @@ Section 9 reads a random sample instead.
 Sections 3 and 4 calibrated against the answer key and then found the key wrong. Here the key
 is replaced by labels that were read. The 30 baseline cases are the seed-0 random sample that
 `calibrate --gold-sample 30` would draw, so PPI's assumption of a random gold sample holds. Each
-answer was marked pass or fail against [`rubric.md`](examples/support-qa/rubric.md) and the
-product facts, in [`review-sheet.csv`](examples/support-qa/human-review/review-sheet.csv) (the
-verdicts are also in [`labels.jsonl`](examples/support-qa/human-review/labels.jsonl) for
+answer was marked pass or fail against [`rubric.md`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa/rubric.md) and the
+product facts, in [`review-sheet.csv`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa/human-review/review-sheet.csv) (the
+verdicts are also in [`labels.jsonl`](https://github.com/technobasant/evalproof/blob/main/examples/support-qa/human-review/labels.jsonl) for
 `calibrate --labels`). The verdicts were drafted with a model (Claude) and checked and accepted
 by the maintainer: one reviewer's check, not an independent panel. q22 was read against its
 corrected reference.
