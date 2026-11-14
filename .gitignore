@@ -17,3 +17,5 @@ runs/
 
 # Built documentation site (mkdocs build)
 site/
+# The privacy plugin keeps what it downloaded here
+.cache/
