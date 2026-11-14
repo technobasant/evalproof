@@ -34,7 +34,11 @@ evalproof:
 4. **gates CI** only when a drop is both larger than your tolerance *and* statistically
    significant, plus latency and cost budgets, with distinct exit codes;
 5. **checks the run files it gates** — `verify` proves, with no model call, that a committed
-   run was made with this suite and covers the dataset as it is now.
+   run was made with this suite and covers the dataset as it is now;
+6. **tests agents** — asserts on the tools an agent called and what it said, across several
+   turns, several builds of the same system and repeated trials, with adapters for ADK,
+   LangChain/LangGraph, the Claude Agent SDK and OpenAI Agents
+   ([Testing agents](https://basantbhattarai.com.np/evalproof/guides/testing-agents/)).
 
 It is local-first: Ollama is the default, every major hosted provider is one `target:` line
 away ([Providers](https://basantbhattarai.com.np/evalproof/guides/providers/)), a logged-in Claude Code or Codex can be the judge with no API
