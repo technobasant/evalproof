@@ -43,8 +43,10 @@ running anything.
 `json_schema`, `numeric_tolerance`, `recall_at_k`, `mrr`, `ndcg`, `checks` (what an agent did:
 [Testing agents](../guides/testing-agents.md#testing-agents)), and `llm_judge`: a strict
 JSON verdict, one retry on an unparseable reply, and an explicit *undecided* state that is
-counted, never scored as a pass. `evalproof pairwise` judges two runs head to head in both
-orders and reports order-dependent verdicts as ties.
+counted, never scored as a pass. A judge can also grade against a set of rubrics, with a
+score that is the share that passed ([Rubric sets](configuration.md#rubric-sets)), and `facts`
+checks that an answer holds the numbers and phrases a case lists. `evalproof pairwise` judges
+two runs head to head in both orders and reports order-dependent verdicts as ties.
 
 ## Calibrate
 

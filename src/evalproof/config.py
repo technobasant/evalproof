@@ -5,6 +5,7 @@ from __future__ import annotations
 import difflib
 import hashlib
 import re
+import warnings
 from pathlib import Path
 from typing import Any, Literal, get_args
 
@@ -19,6 +20,7 @@ ScorerType = Literal[
     "regex",
     "json_schema",
     "numeric_tolerance",
+    "facts",
     "recall_at_k",
     "mrr",
     "ndcg",
@@ -123,7 +125,7 @@ class ScorerConfig(BaseModel):
     @model_validator(mode="after")
     def _check_params(self) -> ScorerConfig:
         # The scorers with a fixed vocabulary are checked when the suite loads, not mid-run.
-        if self.type in ("checks", "python"):
+        if self.type in ("checks", "python", "llm_judge"):
             from evalproof.scorers import validate_scorer_params  # imports this module
 
             validate_scorer_params(self.type, self.params)
@@ -322,28 +324,53 @@ class SuiteConfig(BaseModel):
 
     @model_validator(mode="after")
     def _check(self) -> SuiteConfig:
+        from evalproof.scorers import metric_names  # imports this module
+
         names = [s.name for s in self.scorers]
         if len(set(names)) != len(names):
             raise ValueError(f"scorer names must be unique, got {names}")
+        # A rubric-set judge with ``per_rubric_metrics`` also writes ``<scorer>/<id>`` metrics, and
+        # the gate and calibration may name those like any scorer.
+        extras = [m for s in self.scorers for m in metric_names(s)[1:]]
+        clash = sorted(set(extras) & set(names))
+        if clash:
+            raise ValueError(f"per-rubric metric names clash with scorer names: {clash}")
+        metrics = [*names, *extras]
         if any(s.type == "llm_judge" for s in self.scorers) and self.judge is None:
             raise ValueError("an llm_judge scorer needs a 'judge' target")
         if self.gate:
             for i, name in enumerate(self.gate.gated):
-                if name not in names:
+                if name not in metrics:
                     where = "gate.metric" if i == 0 else "gate.metrics"
                     raise ValueError(f"{where} {name!r} is not a scorer name")
             if isinstance(self.gate.min_pass_rate, dict):
                 for name in self.gate.min_pass_rate:
-                    if name not in names:
+                    if name not in metrics:
                         raise ValueError(f"gate.min_pass_rate {name!r} is not a scorer name")
         if self.calibration:
             for field in ("judge_scorer", "gold_scorer"):
                 ref = getattr(self.calibration, field)
-                if ref is not None and ref not in names:
+                if ref is not None and ref not in metrics:
                     raise ValueError(f"calibration.{field} {ref!r} is not a scorer name")
         if self.concurrency < 1:
             raise ValueError("concurrency must be >= 1")
+        self._warn_repeated_judge_samples()
         return self
+
+    def _warn_repeated_judge_samples(self) -> None:
+        """``num_samples`` above 1 at temperature 0 asks the same question n times."""
+        if self.judge is None or self.judge.params.temperature != 0:
+            return
+        for s in self.scorers:
+            samples = s.params.get("num_samples", 1) if s.type == "llm_judge" else 1
+            if isinstance(samples, int) and samples > 1:
+                warnings.warn(
+                    f"scorer {s.name!r} asks the judge {samples} times, but the judge's "
+                    "temperature is 0, so the samples will agree: set judge.params.temperature "
+                    "above 0, or num_samples to 1",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
     def resolve(self, path: str) -> Path:
         p = Path(path)
