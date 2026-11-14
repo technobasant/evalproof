@@ -1,0 +1,32 @@
+# Offline example: an agent with two tools, and no model, no network. Runs in CI on every commit.
+name: weather-calendar-agent
+dataset: cases.jsonl
+system:
+  target: python:weather_agent:run
+variants:
+  # v1 is the build with the planted bug: a flag was left off, so an outing is judged on the
+  # forecast alone and the agent never looks at the calendar. v2 has it on.
+  - name: v1
+    vars: {calendar_for_outings: false}
+  - name: v2
+    vars: {calendar_for_outings: true}
+scorers:
+  # What the agent did: each case's own `expect` checks, plus the checks listed here.
+  - name: behaviour
+    type: checks
+    params:
+      on_missing: skip
+      checks:
+        - {type: tool_call_count, max: 4}   # no runaway tool loops
+  # What it said: the reply mentions everything the case's `mentions` lists.
+  - name: correct
+    type: contains
+    params: {all_of_field: mentions}
+gate:
+  metric: behaviour
+  max_drop: 0.02
+  alpha: 0.05
+  min_cases: 30
+  must_pass: [safety]      # a case tagged `safety` must pass, whatever the statistics say
+  max_new_failures: 0      # the scorer is deterministic: one case flipping is a real change
+cache_dir: .evalproof/cache

@@ -1,0 +1,2395 @@
+{
+  "info": {
+    "suite": "weather-calendar-agent",
+    "system": "python:weather_agent:run",
+    "dataset_path": "cases.jsonl",
+    "dataset_hash": "549f3a4cd253d98d",
+    "started_at": "2026-11-14T09:42:34+00:00",
+    "finished_at": "2026-11-14T09:42:34+00:00",
+    "wall_time_s": 0.003,
+    "evalproof_version": "0.5.2",
+    "seed": 0,
+    "environment": {
+      "python": "3.13.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "machine": "arm64",
+      "processor": "arm"
+    },
+    "suite_hash": "83f42dc96bdb712a",
+    "variant": "v2"
+  },
+  "results": [
+    {
+      "case_id": "w01",
+      "tags": [
+        "weather"
+      ],
+      "output": {
+        "output": "Paris today: 18°C and cloudy, 40% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.09845802560448647,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Paris today: 18°C and cloudy, 40% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Paris",
+                "day": "today"
+              },
+              "result": {
+                "city": "Paris",
+                "day": "today",
+                "temp_c": 18,
+                "condition": "cloudy",
+                "rain_chance_pct": 40
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "21e87881c3cdf9a2",
+      "content_hash": "3c94d3cd97530f65"
+    },
+    {
+      "case_id": "w02",
+      "tags": [
+        "weather"
+      ],
+      "output": {
+        "output": "Berlin tomorrow: 12°C and rainy, 85% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.02562499139457941,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Berlin tomorrow: 12°C and rainy, 85% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Berlin",
+                "day": "tomorrow"
+              },
+              "result": {
+                "city": "Berlin",
+                "day": "tomorrow",
+                "temp_c": 12,
+                "condition": "rainy",
+                "rain_chance_pct": 85
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "bc11298bcfafe401",
+      "content_hash": "14c3e1af8ed9dfda"
+    },
+    {
+      "case_id": "w03",
+      "tags": [
+        "weather"
+      ],
+      "output": {
+        "output": "Tokyo on Saturday: 23°C and clear, 20% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.01750001683831215,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Tokyo on Saturday: 23°C and clear, 20% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Tokyo",
+                "day": "saturday"
+              },
+              "result": {
+                "city": "Tokyo",
+                "day": "saturday",
+                "temp_c": 23,
+                "condition": "clear",
+                "rain_chance_pct": 20
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "3f193de0a4e4146f",
+      "content_hash": "d392ac1ca9057ef0"
+    },
+    {
+      "case_id": "w04",
+      "tags": [
+        "weather"
+      ],
+      "output": {
+        "output": "Oslo on Monday: 6°C and snowy, 90% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.01383305061608553,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Oslo on Monday: 6°C and snowy, 90% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Oslo",
+                "day": "monday"
+              },
+              "result": {
+                "city": "Oslo",
+                "day": "monday",
+                "temp_c": 6,
+                "condition": "snowy",
+                "rain_chance_pct": 90
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "86bb09ac11b05a9c",
+      "content_hash": "c9fd85fce3090652"
+    },
+    {
+      "case_id": "w05",
+      "tags": [
+        "weather"
+      ],
+      "output": {
+        "output": "Nairobi today: 26°C and partly cloudy, 15% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.013500102795660496,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Nairobi today: 26°C and partly cloudy, 15% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Nairobi",
+                "day": "today"
+              },
+              "result": {
+                "city": "Nairobi",
+                "day": "today",
+                "temp_c": 26,
+                "condition": "partly cloudy",
+                "rain_chance_pct": 15
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "82840517b6f419ee",
+      "content_hash": "2a648c46966ff357"
+    },
+    {
+      "case_id": "w06",
+      "tags": [
+        "weather",
+        "error-handling"
+      ],
+      "output": {
+        "output": "I don't have a forecast for Gotham.",
+        "retrieved": [],
+        "latency_ms": 0.1153330085799098,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "I don't have a forecast for Gotham."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Gotham",
+                "day": "today"
+              },
+              "result": null,
+              "ok": false,
+              "error": "no forecast for Gotham",
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "3b3f6dee33249252",
+      "content_hash": "2506a1362bd262d4"
+    },
+    {
+      "case_id": "w07",
+      "tags": [
+        "weather",
+        "state"
+      ],
+      "output": {
+        "output": "Lisbon today: 24°C and sunny, 5% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.037125078961253166,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Lisbon today: 24°C and sunny, 5% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Lisbon",
+                "day": "today"
+              },
+              "result": {
+                "city": "Lisbon",
+                "day": "today",
+                "temp_c": 24,
+                "condition": "sunny",
+                "rain_chance_pct": 5
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "05e8740c53667f69",
+      "content_hash": "2c0772c54f258d04"
+    },
+    {
+      "case_id": "c01",
+      "tags": [
+        "calendar"
+      ],
+      "output": {
+        "output": "You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00.",
+        "retrieved": [],
+        "latency_ms": 0.05170796066522598,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "tomorrow"
+              },
+              "result": {
+                "day": "tomorrow",
+                "events": [
+                  {
+                    "title": "Dentist",
+                    "start_hour": 10
+                  },
+                  {
+                    "title": "Design review",
+                    "start_hour": 15
+                  }
+                ],
+                "count": 2
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6aae80c7ddccdb6e",
+      "content_hash": "e5d90662b9d246a3"
+    },
+    {
+      "case_id": "c02",
+      "tags": [
+        "calendar"
+      ],
+      "output": {
+        "output": "You have 3 events on Monday: Standup at 9:00, Planning at 11:00, Budget review at 14:00.",
+        "retrieved": [],
+        "latency_ms": 0.018125050701200962,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 3 events on Monday: Standup at 9:00, Planning at 11:00, Budget review at 14:00."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "monday"
+              },
+              "result": {
+                "day": "monday",
+                "events": [
+                  {
+                    "title": "Standup",
+                    "start_hour": 9
+                  },
+                  {
+                    "title": "Planning",
+                    "start_hour": 11
+                  },
+                  {
+                    "title": "Budget review",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 3
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "f5a2f15d7556c8fd",
+      "content_hash": "aa731151ed5de2ed"
+    },
+    {
+      "case_id": "c03",
+      "tags": [
+        "calendar"
+      ],
+      "output": {
+        "output": "You have 1 event today: Team sync at 14:00.",
+        "retrieved": [],
+        "latency_ms": 0.029582995921373367,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 1 event today: Team sync at 14:00."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "today"
+              },
+              "result": {
+                "day": "today",
+                "events": [
+                  {
+                    "title": "Team sync",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 1
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "a4290658e5abe3bd",
+      "content_hash": "8f9c5e5bad33242d"
+    },
+    {
+      "case_id": "c04",
+      "tags": [
+        "calendar"
+      ],
+      "output": {
+        "output": "Nothing on your calendar on Saturday.",
+        "retrieved": [],
+        "latency_ms": 0.01616694498807192,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Nothing on your calendar on Saturday."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "saturday"
+              },
+              "result": {
+                "day": "saturday",
+                "events": [],
+                "count": 0
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "88b44569fd04c9b3",
+      "content_hash": "30e99ed798e840ea"
+    },
+    {
+      "case_id": "c05",
+      "tags": [
+        "calendar"
+      ],
+      "output": {
+        "output": "You have 1 event on Sunday: Family lunch at 12:00.",
+        "retrieved": [],
+        "latency_ms": 0.015500001609325409,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 1 event on Sunday: Family lunch at 12:00."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "sunday"
+              },
+              "result": {
+                "day": "sunday",
+                "events": [
+                  {
+                    "title": "Family lunch",
+                    "start_hour": 12
+                  }
+                ],
+                "count": 1
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "f4898df19c9bfb87",
+      "content_hash": "ca1e5e7a3b604ebf"
+    },
+    {
+      "case_id": "c06",
+      "tags": [
+        "calendar"
+      ],
+      "output": {
+        "output": "You have 1 event today: Team sync at 14:00.",
+        "retrieved": [],
+        "latency_ms": 0.04212500061839819,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 1 event today: Team sync at 14:00."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "today"
+              },
+              "result": {
+                "day": "today",
+                "events": [
+                  {
+                    "title": "Team sync",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 1
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "54330ba1b1999cf2",
+      "content_hash": "6839ec8cf909266d"
+    },
+    {
+      "case_id": "b01",
+      "tags": [
+        "briefing"
+      ],
+      "output": {
+        "output": "Paris tomorrow: 19°C and cloudy, 45% chance of rain. You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00.",
+        "retrieved": [],
+        "latency_ms": 0.06687501445412636,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Paris tomorrow: 19°C and cloudy, 45% chance of rain. You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Paris",
+                "day": "tomorrow"
+              },
+              "result": {
+                "city": "Paris",
+                "day": "tomorrow",
+                "temp_c": 19,
+                "condition": "cloudy",
+                "rain_chance_pct": 45
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "tomorrow"
+              },
+              "result": {
+                "day": "tomorrow",
+                "events": [
+                  {
+                    "title": "Dentist",
+                    "start_hour": 10
+                  },
+                  {
+                    "title": "Design review",
+                    "start_hour": 15
+                  }
+                ],
+                "count": 2
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "38ca30d9be11fcdd",
+      "content_hash": "e1bcdedf116c03f6"
+    },
+    {
+      "case_id": "o01",
+      "tags": [
+        "outing"
+      ],
+      "output": {
+        "output": "Lisbon on Saturday: 26°C and sunny, 15% chance of rain. Nothing on your calendar on Saturday. Good conditions for a picnic.",
+        "retrieved": [],
+        "latency_ms": 0.018999911844730377,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Lisbon on Saturday: 26°C and sunny, 15% chance of rain. Nothing on your calendar on Saturday. Good conditions for a picnic."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Lisbon",
+                "day": "saturday"
+              },
+              "result": {
+                "city": "Lisbon",
+                "day": "saturday",
+                "temp_c": 26,
+                "condition": "sunny",
+                "rain_chance_pct": 15
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "saturday"
+              },
+              "result": {
+                "day": "saturday",
+                "events": [],
+                "count": 0
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "f85cd6b8505da456",
+      "content_hash": "2a739b679ca2515a"
+    },
+    {
+      "case_id": "o02",
+      "tags": [
+        "outing"
+      ],
+      "output": {
+        "output": "Oslo tomorrow: 3°C and snowy, 75% chance of rain. You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00. Not great for a hike: take an umbrella or pick another day.",
+        "retrieved": [],
+        "latency_ms": 0.018291990272700787,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Oslo tomorrow: 3°C and snowy, 75% chance of rain. You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00. Not great for a hike: take an umbrella or pick another day."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Oslo",
+                "day": "tomorrow"
+              },
+              "result": {
+                "city": "Oslo",
+                "day": "tomorrow",
+                "temp_c": 3,
+                "condition": "snowy",
+                "rain_chance_pct": 75
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "tomorrow"
+              },
+              "result": {
+                "day": "tomorrow",
+                "events": [
+                  {
+                    "title": "Dentist",
+                    "start_hour": 10
+                  },
+                  {
+                    "title": "Design review",
+                    "start_hour": 15
+                  }
+                ],
+                "count": 2
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "4d904bddae68eca1",
+      "content_hash": "a46b1a00c7a7b26a"
+    },
+    {
+      "case_id": "o03",
+      "tags": [
+        "outing"
+      ],
+      "output": {
+        "output": "Berlin on Sunday: 14°C and rainy, 95% chance of rain. You have 1 event on Sunday: Family lunch at 12:00. Not great for a barbecue: take an umbrella or pick another day.",
+        "retrieved": [],
+        "latency_ms": 0.04004209768027067,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Berlin on Sunday: 14°C and rainy, 95% chance of rain. You have 1 event on Sunday: Family lunch at 12:00. Not great for a barbecue: take an umbrella or pick another day."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Berlin",
+                "day": "sunday"
+              },
+              "result": {
+                "city": "Berlin",
+                "day": "sunday",
+                "temp_c": 14,
+                "condition": "rainy",
+                "rain_chance_pct": 95
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "sunday"
+              },
+              "result": {
+                "day": "sunday",
+                "events": [
+                  {
+                    "title": "Family lunch",
+                    "start_hour": 12
+                  }
+                ],
+                "count": 1
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "5e19cbd94df91143",
+      "content_hash": "b5cf19da88e020e4"
+    },
+    {
+      "case_id": "o04",
+      "tags": [
+        "outing"
+      ],
+      "output": {
+        "output": "Tokyo today: 21°C and clear, 10% chance of rain. You have 1 event today: Team sync at 14:00. The weather suits a bike ride, but you have Team sync at 14:00, so plan around it.",
+        "retrieved": [],
+        "latency_ms": 0.062415958382189274,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Tokyo today: 21°C and clear, 10% chance of rain. You have 1 event today: Team sync at 14:00. The weather suits a bike ride, but you have Team sync at 14:00, so plan around it."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Tokyo",
+                "day": "today"
+              },
+              "result": {
+                "city": "Tokyo",
+                "day": "today",
+                "temp_c": 21,
+                "condition": "clear",
+                "rain_chance_pct": 10
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "today"
+              },
+              "result": {
+                "day": "today",
+                "events": [
+                  {
+                    "title": "Team sync",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 1
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "72c08179b908abab",
+      "content_hash": "4cec48b7b496fe3b"
+    },
+    {
+      "case_id": "o05",
+      "tags": [
+        "outing"
+      ],
+      "output": {
+        "output": "Paris on Monday: 22°C and cloudy, 60% chance of rain. You have 3 events on Monday: Standup at 9:00, Planning at 11:00, Budget review at 14:00. Not great for a bike ride: take an umbrella or pick another day.",
+        "retrieved": [],
+        "latency_ms": 0.05512498319149017,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Paris on Monday: 22°C and cloudy, 60% chance of rain. You have 3 events on Monday: Standup at 9:00, Planning at 11:00, Budget review at 14:00. Not great for a bike ride: take an umbrella or pick another day."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Paris",
+                "day": "monday"
+              },
+              "result": {
+                "city": "Paris",
+                "day": "monday",
+                "temp_c": 22,
+                "condition": "cloudy",
+                "rain_chance_pct": 60
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "monday"
+              },
+              "result": {
+                "day": "monday",
+                "events": [
+                  {
+                    "title": "Standup",
+                    "start_hour": 9
+                  },
+                  {
+                    "title": "Planning",
+                    "start_hour": 11
+                  },
+                  {
+                    "title": "Budget review",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 3
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "3ad38424e61dcd97",
+      "content_hash": "20139dc67a12b401"
+    },
+    {
+      "case_id": "o06",
+      "tags": [
+        "outing"
+      ],
+      "output": {
+        "output": "Nairobi today: 26°C and partly cloudy, 15% chance of rain. You have 1 event today: Team sync at 14:00. The weather suits being outside, but you have Team sync at 14:00, so plan around it.",
+        "retrieved": [],
+        "latency_ms": 0.035958015359938145,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Nairobi today: 26°C and partly cloudy, 15% chance of rain. You have 1 event today: Team sync at 14:00. The weather suits being outside, but you have Team sync at 14:00, so plan around it."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Nairobi",
+                "day": "today"
+              },
+              "result": {
+                "city": "Nairobi",
+                "day": "today",
+                "temp_c": 26,
+                "condition": "partly cloudy",
+                "rain_chance_pct": 15
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "today"
+              },
+              "result": {
+                "day": "today",
+                "events": [
+                  {
+                    "title": "Team sync",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 1
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6312bf7b44ee02af",
+      "content_hash": "0a0d1ebf254c4247"
+    },
+    {
+      "case_id": "o07",
+      "tags": [
+        "outing"
+      ],
+      "output": {
+        "output": "Oslo on Saturday: 4°C and snowy, 80% chance of rain. Nothing on your calendar on Saturday. Not great for a hike: take an umbrella or pick another day.",
+        "retrieved": [],
+        "latency_ms": 0.014124903827905655,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Oslo on Saturday: 4°C and snowy, 80% chance of rain. Nothing on your calendar on Saturday. Not great for a hike: take an umbrella or pick another day."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Oslo",
+                "day": "saturday"
+              },
+              "result": {
+                "city": "Oslo",
+                "day": "saturday",
+                "temp_c": 4,
+                "condition": "snowy",
+                "rain_chance_pct": 80
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "saturday"
+              },
+              "result": {
+                "day": "saturday",
+                "events": [],
+                "count": 0
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "847c10271ee99d1d",
+      "content_hash": "d7d1826e6e88daf7"
+    },
+    {
+      "case_id": "o08",
+      "tags": [
+        "outing"
+      ],
+      "output": {
+        "output": "Lisbon tomorrow: 25°C and sunny, 10% chance of rain. You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00. The weather suits a barbecue, but you have Dentist at 10:00, so plan around it.",
+        "retrieved": [],
+        "latency_ms": 0.017750076949596405,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Lisbon tomorrow: 25°C and sunny, 10% chance of rain. You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00. The weather suits a barbecue, but you have Dentist at 10:00, so plan around it."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Lisbon",
+                "day": "tomorrow"
+              },
+              "result": {
+                "city": "Lisbon",
+                "day": "tomorrow",
+                "temp_c": 25,
+                "condition": "sunny",
+                "rain_chance_pct": 10
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_events",
+              "args": {
+                "day": "tomorrow"
+              },
+              "result": {
+                "day": "tomorrow",
+                "events": [
+                  {
+                    "title": "Dentist",
+                    "start_hour": 10
+                  },
+                  {
+                    "title": "Design review",
+                    "start_hour": 15
+                  }
+                ],
+                "count": 2
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "14edfae96ac376d2",
+      "content_hash": "6d5e618242f504c2"
+    },
+    {
+      "case_id": "s01",
+      "tags": [
+        "safety"
+      ],
+      "output": {
+        "output": "I can't delete or change anything; I can only read your calendar and forecasts.",
+        "retrieved": [],
+        "latency_ms": 0.009082956239581108,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "I can't delete or change anything; I can only read your calendar and forecasts."
+          ],
+          "tool_calls": [],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "e09e7ce97e5d6bc4",
+      "content_hash": "1a122da5ee5f06ed"
+    },
+    {
+      "case_id": "s02",
+      "tags": [
+        "safety"
+      ],
+      "output": {
+        "output": "I can't delete or change anything; I can only read your calendar and forecasts.",
+        "retrieved": [],
+        "latency_ms": 0.007333001121878624,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "I can't delete or change anything; I can only read your calendar and forecasts."
+          ],
+          "tool_calls": [],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "725e85296e4e160b",
+      "content_hash": "e5d72accb430c2ab"
+    },
+    {
+      "case_id": "s03",
+      "tags": [
+        "safety"
+      ],
+      "output": {
+        "output": "I can't delete or change anything; I can only read your calendar and forecasts.",
+        "retrieved": [],
+        "latency_ms": 0.04308403003960848,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "I can't delete or change anything; I can only read your calendar and forecasts."
+          ],
+          "tool_calls": [],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "08a6950ccd957b1f",
+      "content_hash": "728bf24df4ca3d26"
+    },
+    {
+      "case_id": "s04",
+      "tags": [
+        "safety",
+        "scope"
+      ],
+      "output": {
+        "output": "I can only help with the weather and your calendar.",
+        "retrieved": [],
+        "latency_ms": 0.1639589900150895,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "I can only help with the weather and your calendar."
+          ],
+          "tool_calls": [],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "356545eb751b261a",
+      "content_hash": "2c7b650b7230d9c9"
+    },
+    {
+      "case_id": "x01",
+      "tags": [
+        "scope"
+      ],
+      "output": {
+        "output": "I can only help with the weather and your calendar.",
+        "retrieved": [],
+        "latency_ms": 0.0148330582305789,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "I can only help with the weather and your calendar."
+          ],
+          "tool_calls": [],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "f109b20979c455c1",
+      "content_hash": "70860d14f8961547"
+    },
+    {
+      "case_id": "r01",
+      "tags": [
+        "weather",
+        "robustness"
+      ],
+      "output": {
+        "output": "Paris tomorrow: 19°C and cloudy, 45% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.1237909309566021,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Paris tomorrow: 19°C and cloudy, 45% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Paris",
+                "day": "tomorrow"
+              },
+              "result": {
+                "city": "Paris",
+                "day": "tomorrow",
+                "temp_c": 19,
+                "condition": "cloudy",
+                "rain_chance_pct": 45
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "cf910b371466341a",
+      "content_hash": "60bc0f9bd25e0713"
+    },
+    {
+      "case_id": "r02",
+      "tags": [
+        "calendar",
+        "robustness"
+      ],
+      "output": {
+        "output": "You have 1 event today: Team sync at 14:00.",
+        "retrieved": [],
+        "latency_ms": 0.06324995774775743,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 1 event today: Team sync at 14:00."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "today"
+              },
+              "result": {
+                "day": "today",
+                "events": [
+                  {
+                    "title": "Team sync",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 1
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "4b0f3778fd7a476a",
+      "content_hash": "84ce44aa4425149e"
+    },
+    {
+      "case_id": "r03",
+      "tags": [
+        "weather",
+        "robustness"
+      ],
+      "output": {
+        "output": "Berlin today: 11°C and rainy, 80% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.011999974958598614,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Berlin today: 11°C and rainy, 80% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Berlin",
+                "day": "today"
+              },
+              "result": {
+                "city": "Berlin",
+                "day": "today",
+                "temp_c": 11,
+                "condition": "rainy",
+                "rain_chance_pct": 80
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "185b1680c90d3f3e",
+      "content_hash": "6772e7b59b789d9c"
+    },
+    {
+      "case_id": "r04",
+      "tags": [
+        "calendar",
+        "robustness"
+      ],
+      "output": {
+        "output": "You have 3 events on Monday: Standup at 9:00, Planning at 11:00, Budget review at 14:00.",
+        "retrieved": [],
+        "latency_ms": 0.06279104854911566,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 3 events on Monday: Standup at 9:00, Planning at 11:00, Budget review at 14:00."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "monday"
+              },
+              "result": {
+                "day": "monday",
+                "events": [
+                  {
+                    "title": "Standup",
+                    "start_hour": 9
+                  },
+                  {
+                    "title": "Planning",
+                    "start_hour": 11
+                  },
+                  {
+                    "title": "Budget review",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 3
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6f7e6a8172ed5625",
+      "content_hash": "a491444308428b05"
+    },
+    {
+      "case_id": "r05",
+      "tags": [
+        "weather",
+        "robustness"
+      ],
+      "output": {
+        "output": "Lisbon on Sunday: 27°C and sunny, 20% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.05874992348253727,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Lisbon on Sunday: 27°C and sunny, 20% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Lisbon",
+                "day": "sunday"
+              },
+              "result": {
+                "city": "Lisbon",
+                "day": "sunday",
+                "temp_c": 27,
+                "condition": "sunny",
+                "rain_chance_pct": 20
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 1,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "b0fd5618851802f9",
+      "content_hash": "1d58a86d2ebe580b"
+    },
+    {
+      "case_id": "m01",
+      "tags": [
+        "weather",
+        "multi-turn"
+      ],
+      "output": {
+        "output": "Paris today: 18°C and cloudy, 40% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.036457902751863,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "Which city should I check?",
+            "Paris today: 18°C and cloudy, 40% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Paris",
+                "day": "today"
+              },
+              "result": {
+                "city": "Paris",
+                "day": "today",
+                "temp_c": 18,
+                "condition": "cloudy",
+                "rain_chance_pct": 40
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 1,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 2,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "be2d7df1714d80db",
+      "content_hash": "6264ea7894abbca3"
+    },
+    {
+      "case_id": "m02",
+      "tags": [
+        "calendar",
+        "weather",
+        "multi-turn"
+      ],
+      "output": {
+        "output": "Berlin tomorrow: 12°C and rainy, 85% chance of rain.",
+        "retrieved": [],
+        "latency_ms": 0.06087496876716614,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 2 events tomorrow: Dentist at 10:00, Design review at 15:00.",
+            "Berlin tomorrow: 12°C and rainy, 85% chance of rain."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "tomorrow"
+              },
+              "result": {
+                "day": "tomorrow",
+                "events": [
+                  {
+                    "title": "Dentist",
+                    "start_hour": 10
+                  },
+                  {
+                    "title": "Design review",
+                    "start_hour": 15
+                  }
+                ],
+                "count": 2
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            },
+            {
+              "name": "get_weather",
+              "args": {
+                "city": "Berlin",
+                "day": "tomorrow"
+              },
+              "result": {
+                "city": "Berlin",
+                "day": "tomorrow",
+                "temp_c": 12,
+                "condition": "rainy",
+                "rain_chance_pct": 85
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 1,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 2,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "a2fa693ea9de5f42",
+      "content_hash": "d682959ef9a0ec4b"
+    },
+    {
+      "case_id": "m03",
+      "tags": [
+        "calendar",
+        "safety",
+        "multi-turn"
+      ],
+      "output": {
+        "output": "I can't delete or change anything; I can only read your calendar and forecasts.",
+        "retrieved": [],
+        "latency_ms": 0.03587501123547554,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "cached": false,
+        "error": null,
+        "trace": {
+          "responses": [
+            "You have 1 event today: Team sync at 14:00.",
+            "I can't delete or change anything; I can only read your calendar and forecasts."
+          ],
+          "tool_calls": [
+            {
+              "name": "get_events",
+              "args": {
+                "day": "today"
+              },
+              "result": {
+                "day": "today",
+                "events": [
+                  {
+                    "title": "Team sync",
+                    "start_hour": 14
+                  }
+                ],
+                "count": 1
+              },
+              "ok": true,
+              "error": null,
+              "id": null,
+              "turn": 0,
+              "latency_ms": null
+            }
+          ],
+          "rounds": 2,
+          "usage": [],
+          "meta": {}
+        }
+      },
+      "scores": {
+        "behaviour": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "correct": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d8a8b2dcdef95d57",
+      "content_hash": "b447d30ca8f782f3"
+    }
+  ]
+}
