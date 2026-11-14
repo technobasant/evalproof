@@ -1,0 +1,59 @@
+name: docs
+
+# Publishes the MkDocs site to GitHub Pages at https://basantbhattarai.com.np/evalproof/.
+# It runs on each published release, so the site matches the latest release, and by hand.
+# ci.yml builds the same site with --strict on every push and pull request.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions: {}
+
+# One deployment at a time; a deployment in progress is finished, not cancelled.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+# Actions are pinned to full commit SHAs, with the release in a comment; Dependabot
+# keeps both current. uv is pinned to the version that wrote uv.lock; bump both together.
+env:
+  UV_VERSION: "0.12.23"
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: read # actions/configure-pages reads the Pages settings through the API
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - run: uv sync --locked --group docs
+      - run: uv run --locked --group docs mkdocs build --strict
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write # publish the uploaded artifact to GitHub Pages
+      id-token: write # deploy-pages checks the artifact came from this workflow run
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
