@@ -28,6 +28,7 @@ from pathlib import Path
 
 from evalproof.importers import (
     adk,
+    adk_dataset,
     claude_plugin_eval,
     deepeval,
     garak,
@@ -41,9 +42,10 @@ from evalproof.importers._common import (
     EXPERIMENTAL_FORMATS,
     ImportFormatError,
     Options,
+    _default_warn,
     imported_dataset_hash,
 )
-from evalproof.models import Run
+from evalproof.models import Case, Run
 
 _READERS: dict[str, Callable[[Path, Options], Run]] = {
     "promptfoo": promptfoo.read,
@@ -58,11 +60,18 @@ _READERS: dict[str, Callable[[Path, Options], Run]] = {
 }
 FORMATS = tuple(_READERS)
 
+_DATASET_READERS: dict[str, Callable[[Path, Callable[[str], None]], list[Case]]] = {
+    "adk": adk_dataset.read,
+}
+DATASET_FORMATS = tuple(_DATASET_READERS)
+
 __all__ = [
+    "DATASET_FORMATS",
     "EPOCHS",
     "EXPERIMENTAL_FORMATS",
     "FORMATS",
     "ImportFormatError",
+    "import_dataset",
     "import_run",
     "imported_dataset_hash",
 ]
@@ -104,3 +113,20 @@ def import_run(
     if warn is not None:
         options = replace(options, warn=warn)
     return reader(Path(path), options)
+
+
+def import_dataset(
+    fmt: str, path: str | Path, *, warn: Callable[[str], None] | None = None
+) -> list[Case]:
+    """Read the test cases in ``path`` (``fmt`` is ``adk``: an ``*.evalset.json`` or the flat
+    ``*.test.json`` list) and return them as evalproof cases, ready for ``write_dataset``.
+
+    ``warn`` receives notes about cases it skipped; by default they are raised as Python warnings.
+    Raises ``ImportFormatError`` (a ``ValueError``) when the file is not in the format asked for.
+    """
+    reader = _DATASET_READERS.get(fmt)
+    if reader is None:
+        raise ImportFormatError(
+            f"unknown dataset format {fmt!r}; choose one of {', '.join(DATASET_FORMATS)}"
+        )
+    return reader(Path(path), warn or _default_warn)
