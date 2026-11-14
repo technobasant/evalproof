@@ -25,19 +25,19 @@ changes with each CLI release, with nothing in the run to say so.
   afterwards, with the agent's system prompt replaced by the case's own (or one neutral line)
   and its tools, settings, MCP servers, skills and memory switched off. No permission-bypass
   flag is ever passed. The flags are listed by `evalproof doctor`.
-  * Claude Code runs with **zero tools** (`--tools ''`).
-  * Codex runs in a read-only sandbox with its shell, plugins, apps, hooks, multi-agent mode,
-    sleep and image tools, bundled skills, user config and rules switched off. It cannot be
-    made toolless: codex-cli 0.167.2 still offers a JavaScript isolate (`exec`, documented as
-    having no Node, no file system and no network), sub-agents that get the same restricted
-    tools, and `request_user_input`, which cannot be answered in exec mode. So the guard is an
-    allowlist, not a block list: any `item.started` or `item.completed` whose type is not
-    `agent_message`, `reasoning`, `error` or `todo_list` fails the call as `codex used a tool
-    (<type>); isolation broken`, and the reply is discarded. An unknown `--disable` name makes
-    codex exit with `Unknown feature flag`; evalproof turns that into a request to upgrade
-    codex (tested with codex-cli 0.167.2).
-  * The isolation is named, versioned (`claude-code/1`, `codex/1`) and checked by canary
-    tests, not claimed to be total.
+    * Claude Code runs with **zero tools** (`--tools ''`).
+    * Codex runs in a read-only sandbox with its shell, plugins, apps, hooks, multi-agent mode,
+      sleep and image tools, bundled skills, user config and rules switched off. It cannot be
+      made toolless: codex-cli 0.167.2 still offers a JavaScript isolate (`exec`, documented as
+      having no Node, no file system and no network), sub-agents that get the same restricted
+      tools, and `request_user_input`, which cannot be answered in exec mode. So the guard is an
+      allowlist, not a block list: any `item.started` or `item.completed` whose type is not
+      `agent_message`, `reasoning`, `error` or `todo_list` fails the call as `codex used a tool
+      (<type>); isolation broken`, and the reply is discarded. An unknown `--disable` name makes
+      codex exit with `Unknown feature flag`; evalproof turns that into a request to upgrade
+      codex (tested with codex-cli 0.167.2).
+    * The isolation is named, versioned (`claude-code/1`, `codex/1`) and checked by canary
+      tests, not claimed to be total.
 * **A CLI target has a fingerprint:** the CLI, its version, the isolation scheme and the
   sampling note (`cli-default`, since neither CLI takes a temperature, seed or token limit).
   The run records it, with the model id that actually answered, in `runner.environment`. The
