@@ -155,6 +155,40 @@ jobs:
           got=$?
           if [ "$got" != "0" ]; then echo "::error::agent readiness: expected exit 0, got $got"; exit 1; fi
           echo "agent readiness → exit $got (expected 0)"
+      # Five trials per case: the build that forgets the calendar in 40% of the trials (decided
+      # by a seeded coin, so the same everywhere) fails the gate, and the fixed build run twice
+      # does not.
+      - name: the agent example gates on repeated trials
+        run: |
+          suite=examples/agent-tools/suite-flaky.yaml
+          for v in v2 flaky; do
+            uv run evalproof run "$suite" --variant "$v" --trials 5 \
+              --out "/tmp/agent-k5-$v.json" --quiet > /dev/null
+          done
+          uv run evalproof run "$suite" --variant v2 --trials 5 \
+            --out /tmp/agent-k5-v2-again.json --quiet > /dev/null
+          set +e
+          check() {
+            uv run evalproof compare "/tmp/agent-k5-$1.json" "/tmp/agent-k5-$2.json" \
+              --suite "$suite" --gate > /dev/null
+            got=$?
+            if [ "$got" != "$3" ]; then echo "::error::agent k=5 $1 to $2: expected exit $3, got $got"; exit 1; fi
+            echo "agent k=5 $1 to $2 → exit $got (expected $3)"
+          }
+          check v2 flaky 1
+          check v2 v2-again 0
+          check flaky v2 0
+          # Several candidates against one baseline: the exit code is the worst of them.
+          uv run evalproof compare /tmp/agent-k5-v2.json /tmp/agent-k5-v2-again.json \
+            /tmp/agent-k5-flaky.json --suite "$suite" --gate > /dev/null
+          got=$?
+          if [ "$got" != "1" ]; then echo "::error::agent k=5 matrix: expected exit 1, got $got"; exit 1; fi
+          echo "agent k=5 matrix → exit $got (expected 1)"
+          uv run evalproof readiness "$suite" --run /tmp/agent-k5-flaky.json \
+            --require reliability > /dev/null
+          got=$?
+          if [ "$got" != "0" ]; then echo "::error::agent k=5 readiness: expected exit 0, got $got"; exit 1; fi
+          echo "agent k=5 readiness → exit $got (expected 0)"
 
   # The Streamlit app imports src/ directly, so a library change can break it without
   # failing the tests above. Install the app's own requirements, as Streamlit Community

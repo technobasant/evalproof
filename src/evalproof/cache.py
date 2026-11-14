@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 from evalproof.config import GenerationParams
@@ -40,6 +43,24 @@ def cache_key(
         material["extra"] = extra
     blob = json.dumps(material, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(blob.encode()).hexdigest()
+
+
+# The trial a model call belongs to. ``LLMSystem.run`` sets it around its provider calls, in the
+# thread that makes them, and ``CachedProvider`` reads it. A context variable keeps the provider
+# interface as it was (no provider takes a ``trial`` argument), and the judge, which runs outside
+# the system's call, always sees trial 0, so identical outputs get the same cached judgement.
+_TRIAL: ContextVar[int] = ContextVar("evalproof_trial", default=0)
+
+
+@contextmanager
+def trial_scope(trial: int) -> Iterator[None]:
+    """Inside the block, a ``CachedProvider`` call is keyed as that trial's. Trial 0 is the
+    key as it always was; a later trial adds ``{"trial": n}`` to the key's ``extra``."""
+    token = _TRIAL.set(trial)
+    try:
+        yield
+    finally:
+        _TRIAL.reset(token)
 
 
 class ResponseCache:
@@ -86,6 +107,9 @@ class CachedProvider:
     def chat(self, messages: list[Message], params: GenerationParams) -> ChatResponse:
         salt = getattr(self.inner, "cache_salt", None)
         extra: dict[str, object] | None = salt(params) if callable(salt) else None
+        trial = _TRIAL.get()
+        if trial:  # trial 0 keeps the key it had before trials existed
+            extra = {**(extra or {}), "trial": trial}
         key = cache_key(self.name, self.model, self.base_url, messages, params, extra)
         hit = self.cache.get(key)
         if hit is not None:

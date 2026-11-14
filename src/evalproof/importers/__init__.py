@@ -59,9 +59,10 @@ def import_run(
     ``system`` picks one system out of a file that holds several (promptfoo, and jsonl or
     csv with a ``system`` column) and is otherwise the label to give the run. ``epochs``
     says how repeats of one case collapse: ``mean`` (the default), ``first``, ``all`` (a
-    pass only if every repeat passed) or ``any``. ``warn`` receives notes about anything
-    skipped or incomplete; by default they are raised as Python warnings. ``fields`` and
-    ``wide`` apply to ``jsonl`` and ``csv`` only.
+    pass only if every repeat passed) or ``any``; ``trials`` keeps each repeat as its own
+    trial of the case (every case needs the same number of repeats). ``warn`` receives notes
+    about anything skipped or incomplete; by default they are raised as Python warnings.
+    ``fields`` and ``wide`` apply to ``jsonl`` and ``csv`` only.
 
     Raises ``ImportFormatError`` (a ``ValueError``) when the file is not in the format
     asked for or cannot be imported as asked.

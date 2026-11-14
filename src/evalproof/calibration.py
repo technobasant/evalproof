@@ -181,6 +181,7 @@ class CalibrationReport:
     estimates: list[Estimate]
     truth: Estimate | None = None
     disagreements: list[str] = field(default_factory=list)
+    trials: int = 1  # trials per case in the run; only trial 0 of each case is calibrated
 
 
 def calibrate(
@@ -199,12 +200,16 @@ def calibrate(
     With ``gold_scorer`` and ``gold_sample``, a random sample of that size stands in for a
     human-reviewed set; the remaining gold labels are used only to report the truth the
     estimates are trying to recover.
+
+    A run with several trials per case is calibrated on trial 0 of each case: a verdict per case,
+    as the labels are, and not the same case counted ``k`` times.
     """
     if (labels is None) == (gold_scorer is None):
         raise ValueError("pass exactly one of labels or gold_scorer")
     judged: dict[str, bool] = {}
     undecided = 0
-    for r in run.results:
+    first_trial = [r for r in run.results if r.trial == 0]
+    for r in first_trial:
         s = r.scores.get(judge_scorer)
         if s is None:
             continue
@@ -222,7 +227,7 @@ def calibrate(
         source = "labels file"
     else:
         assert gold_scorer is not None
-        for r in run.results:
+        for r in first_trial:
             s = r.scores.get(gold_scorer)
             if s is not None and s.passed is not None and r.case_id in judged:
                 truth_all[r.case_id] = s.passed
@@ -263,4 +268,5 @@ def calibrate(
         estimates=estimates,
         truth=truth,
         disagreements=disagreements,
+        trials=run.trials,
     )

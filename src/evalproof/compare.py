@@ -3,9 +3,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
-from evalproof.models import Run
-from evalproof.stats import mcnemar_exact, paired_bootstrap, percentile, wilson
+import numpy as np
+
+from evalproof.models import CaseResult, Run
+from evalproof.stats import (
+    bootstrap_ci,
+    mcnemar_exact,
+    paired_bootstrap,
+    percentile,
+    sign_flip_test,
+    wilson,
+)
+from evalproof.trials import is_flaky, trial_outcome
+
+AGGREGATES = ("mean", "all", "any")
+
+
+class ComparisonRefused(ValueError):
+    """The two runs cannot be compared at all (they repeat each case a different number of
+    times). ``compare`` exits 4 under ``--gate`` and 2 otherwise."""
+
 
 # Recorded in ``RunInfo.environment``. A judge key counts only when both runs have it, so runs
 # written before these keys existed still compare as they did.
@@ -25,7 +44,9 @@ SYSTEM_KEYS = ("system_target", "system_cli", "system_cli_version", "system_isol
 @dataclass
 class MetricComparison:
     name: str
-    kind: str  # "binary" | "continuous"
+    # "binary" (pass/fail per case), "rate" (the mean pass rate of a binary metric over a case's
+    # trials) or "continuous"
+    kind: str
     n_paired: int
     baseline: float
     candidate: float
@@ -39,16 +60,25 @@ class MetricComparison:
     undecided: int = 0
     baseline_ci: tuple[float, float] | None = None
     candidate_ci: tuple[float, float] | None = None
+    trials: int = 1  # trials per case in both runs
+    aggregate: str | None = None  # how a case's trials became one value; None at one trial
+    flaky_baseline: list[str] = field(default_factory=list)  # a pass and a fail among its trials
+    flaky_candidate: list[str] = field(default_factory=list)
+    # What the power estimate needs: the sample standard deviation of the paired per-case
+    # differences and the sample variance of the baseline's per-case values (None below 2 cases).
+    diff_sd: float | None = None
+    baseline_var: float | None = None
 
 
 @dataclass
 class RunStats:
-    cases: int
+    cases: int  # results in the run: cases times trials
     errors: int
     p50_latency_ms: float
     p95_latency_ms: float
     cost_usd: float
     cached: int
+    trials: int = 1
 
 
 @dataclass
@@ -70,6 +100,11 @@ class Comparison:
     comparable: bool = True
     edited: list[str] = field(default_factory=list)  # same id, different content: not compared
     judge_warnings: list[str] = field(default_factory=list)  # advisory judge changes
+    trials: int = 1  # trials per case in both runs
+    aggregate: str | None = None  # None at one trial
+    # Continuous metrics that ``aggregate`` all or any cannot apply to: compared on the mean, and
+    # a gate on one of them refuses.
+    aggregate_ignored: list[str] = field(default_factory=list)
 
 
 def environment_changes(baseline: Run, candidate: Run, keys: tuple[str, ...]) -> list[str]:
@@ -107,7 +142,7 @@ def dataset_change_note(cmp: Comparison) -> str | None:
     )
 
 
-def _label(run: Run) -> str:
+def run_label(run: Run) -> str:
     """The run's system, with its variant when it has one: two variants of a suite often run the
     same target, and only the variant tells them apart."""
     return f"{run.info.system} ({run.info.variant})" if run.info.variant else run.info.system
@@ -130,19 +165,31 @@ def run_stats(run: Run) -> RunStats:
         p95_latency_ms=percentile(lat, 95),
         cost_usd=cost,
         cached=sum(1 for r in run.results if r.output.cached),
+        trials=run.trials,
     )
 
 
-def compare_metric(
+def _spread(a: list[float], c: list[float]) -> tuple[float | None, float | None]:
+    """``(sd of the paired differences, variance of the baseline values)``, both with one degree
+    of freedom lost; None below two cases, where neither exists. What ``power`` needs."""
+    if len(a) < 2:
+        return None, None
+    base = np.asarray(a, dtype=np.float64)
+    diff = np.asarray(c, dtype=np.float64) - base
+    return float(np.std(diff, ddof=1)), float(np.var(base, ddof=1))
+
+
+def _compare_single(
     name: str,
     baseline: Run,
     candidate: Run,
     ids: list[str],
     *,
-    alpha: float = 0.05,
-    n_boot: int = 5000,
-    seed: int = 0,
+    alpha: float,
+    n_boot: int,
+    seed: int,
 ) -> MetricComparison | None:
+    """Two runs with one trial per case: every number is what evalproof 0.6 gave."""
     b_by, c_by = baseline.by_id(), candidate.by_id()
     pairs = []
     undecided = 0
@@ -165,6 +212,7 @@ def compare_metric(
         improved = [cid for cid, bs, cs in pairs if not bs.passed and cs.passed]
         boot = paired_bootstrap(a, c, n_boot=n_boot, alpha=alpha, seed=seed)
         n = len(pairs)
+        diff_sd, base_var = _spread(a, c)
         return MetricComparison(
             name=name,
             kind="binary",
@@ -181,6 +229,8 @@ def compare_metric(
             undecided=undecided,
             baseline_ci=wilson(int(sum(a)), n, alpha),
             candidate_ci=wilson(int(sum(c)), n, alpha),
+            diff_sd=diff_sd,
+            baseline_var=base_var,
         )
 
     a = [float(bs.value) for _, bs, _ in pairs if bs.value is not None]
@@ -188,6 +238,7 @@ def compare_metric(
     boot = paired_bootstrap(a, c, n_boot=n_boot, alpha=alpha, seed=seed)
     regressed = [cid for cid, bs, cs in pairs if (cs.value or 0) < (bs.value or 0)]
     improved = [cid for cid, bs, cs in pairs if (cs.value or 0) > (bs.value or 0)]
+    diff_sd, base_var = _spread(a, c)
     return MetricComparison(
         name=name,
         kind="continuous",
@@ -202,6 +253,193 @@ def compare_metric(
         regressed=regressed,
         improved=improved,
         undecided=undecided,
+        diff_sd=diff_sd,
+        baseline_var=base_var,
+    )
+
+
+@dataclass
+class _CaseValue:
+    """One case in one run, reduced over its trials for one metric."""
+
+    value: float  # the aggregated value: a pass rate, 0 or 1, or the mean score
+    passes: int = 0  # decided trials that passed (binary metrics)
+    decided: int = 0  # decided trials
+
+
+def _case_value(
+    results: list[CaseResult], name: str, *, binary: bool, aggregate: str
+) -> _CaseValue | None:
+    """The case's value on ``name`` over its trials, or None when no trial was decided. A binary
+    metric counts an errored trial as a failure and drops an undecided one; ``aggregate`` then
+    makes the pass rate (mean), 1 only if every decided trial passed (all) or if one did (any). A
+    continuous metric is the mean of the decided scores."""
+    if binary:
+        outcomes = [o for r in results if (o := trial_outcome(r, name)) is not None]
+        if not outcomes:
+            return None
+        passes = sum(outcomes)
+        decided = len(outcomes)
+        if aggregate == "all":
+            value = 1.0 if passes == decided else 0.0
+        elif aggregate == "any":
+            value = 1.0 if passes else 0.0
+        else:
+            value = passes / decided
+        return _CaseValue(value, passes, decided)
+    values = [s.value for r in results if (s := r.scores.get(name)) and s.value is not None]
+    return _CaseValue(sum(values) / len(values), decided=len(values)) if values else None
+
+
+def _compare_repeated(
+    name: str,
+    baseline: Run,
+    candidate: Run,
+    ids: list[str],
+    *,
+    aggregate: str,
+    alpha: float,
+    n_boot: int,
+    seed: int,
+) -> MetricComparison | None:
+    """Two runs that repeat each case: the trials of a case become one value per case, and the
+    cases, never the trials, are what is resampled and tested."""
+    b_cases, c_cases = baseline.by_case(), candidate.by_case()
+    k = baseline.trials
+    in_scope = [
+        cid
+        for cid in ids
+        if any(name in r.scores for r in b_cases[cid])
+        and any(name in r.scores for r in c_cases[cid])
+    ]
+    scored = [
+        s
+        for cid in in_scope
+        for results in (b_cases[cid], c_cases[cid])
+        for r in results
+        if (s := r.scores.get(name)) is not None and s.value is not None
+    ]
+    binary = bool(scored) and all(s.passed is not None for s in scored)
+    used = aggregate if binary else "mean"
+    pairs: list[tuple[str, _CaseValue, _CaseValue]] = []
+    undecided = 0
+    for cid in in_scope:
+        b = _case_value(b_cases[cid], name, binary=binary, aggregate=used)
+        c = _case_value(c_cases[cid], name, binary=binary, aggregate=used)
+        if b is None or c is None:
+            undecided += 1
+        else:
+            pairs.append((cid, b, c))
+    if not pairs:
+        return None
+
+    n = len(pairs)
+    a = [b.value for _, b, _ in pairs]
+    c_vals = [c.value for _, _, c in pairs]
+    boot = paired_bootstrap(a, c_vals, n_boot=n_boot, alpha=alpha, seed=seed)
+    diff_sd, base_var = _spread(a, c_vals)
+    common: dict[str, Any] = {
+        "name": name,
+        "n_paired": n,
+        "baseline": sum(a) / n,
+        "candidate": sum(c_vals) / n,
+        "delta": boot.delta,
+        "ci_low": boot.ci_low,
+        "ci_high": boot.ci_high,
+        "undecided": undecided,
+        "trials": k,
+        "aggregate": used,
+        "diff_sd": diff_sd,
+        "baseline_var": base_var,
+    }
+    if binary and used != "mean":
+        # all or any: each case passed or failed, so the test is McNemar's
+        regressed = [cid for cid, b, c in pairs if b.value and not c.value]
+        improved = [cid for cid, b, c in pairs if not b.value and c.value]
+        return MetricComparison(
+            kind="binary",
+            p_value=mcnemar_exact(len(regressed), len(improved)),
+            test="exact McNemar",
+            regressed=regressed,
+            improved=improved,
+            baseline_ci=wilson(int(sum(a)), n, alpha),
+            candidate_ci=wilson(int(sum(c_vals)), n, alpha),
+            flaky_baseline=[cid for cid, b, _ in pairs if is_flaky(b.passes, b.decided)],
+            flaky_candidate=[cid for cid, _, c in pairs if is_flaky(c.passes, c.decided)],
+            **common,
+        )
+
+    # Pass rates over exactly k trials sit on the grid of 1/k, so the test can be exact for any
+    # number of cases; an undecided trial moves a case off the grid.
+    on_grid = binary and all(b.decided == k and c.decided == k for _, b, c in pairs)
+    flip = sign_flip_test(
+        np.asarray(c_vals) - np.asarray(a), grid=k if on_grid else None, seed=seed
+    )
+    test = "sign-flip permutation (exact)"
+    if flip.method != "exact":
+        test = f"sign-flip permutation (Monte Carlo, {flip.draws})"
+    if binary:
+        return MetricComparison(
+            kind="rate",
+            p_value=flip.p_value,
+            test=test,
+            # A case passes by majority when its rate is above one half.
+            regressed=[cid for cid, b, c in pairs if b.value > 0.5 and not c.value > 0.5],
+            improved=[cid for cid, b, c in pairs if c.value > 0.5 and not b.value > 0.5],
+            baseline_ci=bootstrap_ci(a, n_boot=n_boot, alpha=alpha, seed=seed),
+            candidate_ci=bootstrap_ci(c_vals, n_boot=n_boot, alpha=alpha, seed=seed),
+            flaky_baseline=[cid for cid, b, _ in pairs if is_flaky(b.passes, b.decided)],
+            flaky_candidate=[cid for cid, _, c in pairs if is_flaky(c.passes, c.decided)],
+            **common,
+        )
+    return MetricComparison(
+        kind="continuous",
+        p_value=flip.p_value,
+        test=test,
+        regressed=[cid for cid, b, c in pairs if c.value < b.value],
+        improved=[cid for cid, b, c in pairs if c.value > b.value],
+        **common,
+    )
+
+
+def compare_metric(
+    name: str,
+    baseline: Run,
+    candidate: Run,
+    ids: list[str],
+    *,
+    alpha: float = 0.05,
+    n_boot: int = 5000,
+    seed: int = 0,
+    aggregate: str = "mean",
+) -> MetricComparison | None:
+    """Compare one metric on the paired cases. With one trial per case this is the paired test of
+    evalproof 0.6 (and ``aggregate`` does not apply); with several, each case's trials are
+    reduced to one value first (see ``_case_value``) and the cases are tested."""
+    if baseline.trials == 1 and candidate.trials == 1:
+        return _compare_single(
+            name, baseline, candidate, ids, alpha=alpha, n_boot=n_boot, seed=seed
+        )
+    if baseline.trials != candidate.trials:
+        raise ComparisonRefused(_trials_message(baseline, candidate))
+    if aggregate not in AGGREGATES:
+        raise ValueError(f"aggregate must be one of {', '.join(AGGREGATES)}, got {aggregate!r}")
+    return _compare_repeated(
+        name,
+        baseline,
+        candidate,
+        ids,
+        aggregate=aggregate,
+        alpha=alpha,
+        n_boot=n_boot,
+        seed=seed,
+    )
+
+
+def _trials_message(baseline: Run, candidate: Run) -> str:
+    return (
+        f"baseline has k={baseline.trials}, candidate has k={candidate.trials}; "
+        "rerun with the same --trials"
     )
 
 
@@ -213,7 +451,14 @@ def compare_runs(
     n_boot: int = 5000,
     seed: int = 0,
     metrics: list[str] | None = None,
+    aggregate: str = "mean",
 ) -> Comparison:
+    """Compare two runs on the cases they share. ``aggregate`` (``mean``, ``all`` or ``any``) says
+    how a case's trials become one value when the runs repeat each case; it is ignored at one
+    trial. Raises ``ComparisonRefused`` when the runs have a different number of trials."""
+    if baseline.trials != candidate.trials:
+        raise ComparisonRefused(_trials_message(baseline, candidate))
+    repeated = baseline.trials > 1
     b_by, c_by = baseline.by_id(), candidate.by_id()
     b_ids, c_ids = set(b_by), set(c_by)
     same_dataset = baseline.info.dataset_hash == candidate.info.dataset_hash
@@ -239,12 +484,22 @@ def compare_runs(
             paired.append(cid)
     names = metrics or [n for n in baseline.scorer_names() if n in candidate.scorer_names()]
     out: dict[str, MetricComparison] = {}
+    ignored: list[str] = []
     for name in names:
         mc = compare_metric(
-            name, baseline, candidate, paired, alpha=alpha, n_boot=n_boot, seed=seed
+            name,
+            baseline,
+            candidate,
+            paired,
+            alpha=alpha,
+            n_boot=n_boot,
+            seed=seed,
+            aggregate=aggregate,
         )
         if mc is not None:
             out[name] = mc
+            if repeated and mc.kind == "continuous" and aggregate != "mean":
+                ignored.append(name)
     judge_changes = environment_changes(baseline, candidate, JUDGE_KEYS)
     return Comparison(
         paired_ids=paired,
@@ -254,12 +509,15 @@ def compare_runs(
         metrics=out,
         baseline=run_stats(baseline),
         candidate=run_stats(candidate),
-        baseline_label=_label(baseline),
-        candidate_label=_label(candidate),
+        baseline_label=run_label(baseline),
+        candidate_label=run_label(candidate),
         same_judge=not judge_changes,
         judge_changes=judge_changes,
         system_changes=environment_changes(baseline, candidate, SYSTEM_KEYS),
         comparable=comparable,
         edited=edited,
         judge_warnings=judge_warnings(baseline, candidate),
+        trials=baseline.trials,
+        aggregate=aggregate if repeated else None,
+        aggregate_ignored=ignored,
     )

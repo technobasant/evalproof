@@ -75,7 +75,8 @@ def _rescore(
             continue
         for scorer in scorers:
             if not _same_score(r.scores.get(scorer.name), scorer.score(case, r.output)):
-                differing.append(f"`{r.case_id}` on `{scorer.name}`")
+                label = f"`{r.case_id}` trial {r.trial}" if run.trials > 1 else f"`{r.case_id}`"
+                differing.append(f"{label} on `{scorer.name}`")
     if differing:
         problems.append(
             f"{len(differing)} score(s) differ from re-scoring the stored outputs with the "
@@ -112,12 +113,33 @@ def verify_run(run: Run, cfg: SuiteConfig) -> Verification:
 
     dataset = {c.id: c for c in load_dataset(cfg.resolve(cfg.dataset))}
     cases = {cid: case_hash(c) for cid, c in dataset.items()}
-    if len(run.results) != len({r.case_id for r in run.results}):
-        problems.append("the run has duplicate case ids")
-    scored = {r.case_id: r.case_hash for r in run.results}
+    if len(run.results) != len({(r.case_id, r.trial) for r in run.results}):
+        problems.append(
+            "the run has duplicate case ids"
+            if run.trials == 1
+            else "the run has duplicate results for one case and trial"
+        )
+    scored: dict[str, set[str | None]] = {}
+    trials_of: dict[str, set[int]] = {}
+    for r in run.results:
+        scored.setdefault(r.case_id, set()).add(r.case_hash)
+        trials_of.setdefault(r.case_id, set()).add(r.trial)
     missing = sorted(set(cases) - set(scored))
     extra = sorted(set(scored) - set(cases))
-    changed = sorted(cid for cid in set(cases) & set(scored) if scored[cid] != cases[cid])
+    # Every trial of a case is checked: one edited or stale trial makes the case changed.
+    changed = sorted(cid for cid in set(cases) & set(scored) if scored[cid] != {cases[cid]})
+    expected_trials = list(range(run.trials))
+    wrong_trials = [
+        f"`{cid}` has trials {sorted(found)}, expected "
+        + (f"0..{run.trials - 1}" if run.trials > 1 else "0")
+        for cid, found in trials_of.items()
+        if sorted(found) != expected_trials
+    ]
+    if wrong_trials:
+        problems.append(
+            f"{len(wrong_trials)} case(s) do not have exactly the trials the run declares "
+            f"({run.trials} per case): {_listed(wrong_trials)}"
+        )
     if missing:
         problems.append(
             f"{len(missing)} case(s) in the dataset are missing from the run (a partial run, "

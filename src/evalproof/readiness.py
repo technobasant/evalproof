@@ -230,6 +230,15 @@ def _multi_turn(cases: list[Case]) -> tuple[str, str]:
     return MISSING, "no case has turns"
 
 
+def _reliability(trials: int) -> tuple[str, str]:
+    """Repeated trials are what show how often a case fails, not only whether it did once."""
+    if trials >= 3:
+        return COVERED, f"{trials} trials per case"
+    if trials == 2:
+        return PARTIAL, "two trials show disagreement but not a rate; use 3 or more"
+    return MISSING, "one trial per case: set `trials: 3` or more"
+
+
 def _run_evidence(run: Run, path: str | None) -> RunEvidence:
     return RunEvidence(
         path=path,
@@ -256,7 +265,7 @@ def assess(
         "behaviour": behaviour,
         "quality": _quality(cfg),
         "regression-gate": _gate(cfg, len(cases)),
-        "reliability": (MISSING, "repeated trials are not in this release"),
+        "reliability": _reliability(run.info.trials if run is not None else cfg.trials),
         "cost-latency": _budgets(cfg),
         "safety": _tagged(cases, "safety"),
         "robustness": _tagged(cases, "robustness"),

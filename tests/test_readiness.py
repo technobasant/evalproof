@@ -95,11 +95,11 @@ def test_load_and_production_monitoring_are_out_of_scope_and_name_a_tool(tmp_pat
     assert "k6" in load.evidence and "observability" in monitoring.evidence
 
 
-def test_reliability_is_always_missing_until_trials_arrive(tmp_path: Path) -> None:
+def test_reliability_is_missing_with_one_trial_per_case(tmp_path: Path) -> None:
     gate = "gate: {metric: m, max_drop: 0.02}\n"
     report = _assess(_write(tmp_path, extra=gate))
     assert report.get("reliability").status == MISSING
-    assert report.get("reliability").evidence == "repeated trials are not in this release"
+    assert report.get("reliability").evidence == "one trial per case: set `trials: 3` or more"
 
 
 # --- quality -----------------------------------------------------------------------------------

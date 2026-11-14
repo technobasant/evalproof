@@ -152,6 +152,9 @@ class CaseResult(BaseModel):
     # asked, so ``compare`` does not count a tag change as an edit. None in run files written by
     # evalproof 0.5.0, which pair on ``case_hash``.
     content_hash: str | None = None
+    # Which repeat of the case this is (0-based); 0 for every result in a run file written before
+    # evalproof 0.7, which ran each case once.
+    trial: int = 0
 
 
 class RunInfo(BaseModel):
@@ -172,6 +175,9 @@ class RunInfo(BaseModel):
     # The suite variant the run was made with (``evalproof run --variant``); None for a run of the
     # suite as written, and in run files written before evalproof 0.6.
     variant: str | None = None
+    # Trials (repeats) per case: ``evalproof run --trials`` or the suite's ``trials``. 1 in run
+    # files written before evalproof 0.7 and in imported runs that kept no repeats.
+    trials: int = 1
 
 
 class Run(BaseModel):
@@ -181,7 +187,23 @@ class Run(BaseModel):
     results: list[CaseResult]
 
     def by_id(self) -> dict[str, CaseResult]:
-        return {r.case_id: r for r in self.results}
+        """One result per case: its trial 0 (the first, should a file hold two)."""
+        out: dict[str, CaseResult] = {}
+        for r in self.results:
+            if r.trial == 0 and r.case_id not in out:
+                out[r.case_id] = r
+        return out
+
+    def by_case(self) -> dict[str, list[CaseResult]]:
+        """Every trial of each case, in trial order; cases in the order the run lists them."""
+        out: dict[str, list[CaseResult]] = {}
+        for r in self.results:
+            out.setdefault(r.case_id, []).append(r)
+        return {cid: sorted(rs, key=lambda r: r.trial) for cid, rs in out.items()}
+
+    @property
+    def trials(self) -> int:
+        return self.info.trials
 
     def scorer_names(self) -> list[str]:
         names: list[str] = []

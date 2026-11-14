@@ -14,11 +14,18 @@ The variant arrives as ``ctx.vars``. ``v1`` sets ``calendar_for_outings: false``
 left off: asked whether to go on a picnic or a hike, the agent then answers from the forecast alone
 and never looks at the calendar. The reply still reads well, which is why a check on the tool
 calls, not on the words, is what finds it. ``v2`` sets the flag, so the agent looks at both.
+
+``flaky`` (in ``suite-flaky.yaml``) sets ``flaky_calendar: 0.4``: on an outing question it forgets
+the calendar in about 40% of the trials, so a case fails some runs and passes others, which one run
+per case cannot show and ``--trials 5`` can. The coin is ``random.Random(f"{case_id}:{trial}")``, so
+which trial forgets is fixed: the same on every machine and every run, and the example stays
+deterministic and offline.
 """
 
 from __future__ import annotations
 
 import difflib
+import random
 import re
 from collections.abc import Callable
 from typing import Any
@@ -242,9 +249,16 @@ def _turn(rec: TraceRecorder, text: str, memory: dict[str, Any], check_calendar:
         rec.reply(" ".join(parts))
 
 
+def _forgets_calendar(ctx: RunContext) -> bool:
+    """The ``flaky`` variant's coin: true for a fixed 40% of (case, trial) pairs, whatever the
+    machine, because the generator is seeded by the pair and by nothing else."""
+    chance = float(ctx.vars.get("flaky_calendar", 0.0))
+    return chance > 0 and random.Random(f"{ctx.case_id}:{ctx.trial}").random() < chance
+
+
 def run(question: str, ctx: RunContext) -> dict[str, Any]:
     """The system under test: one conversation, the case input then each later turn."""
-    check_calendar = bool(ctx.vars.get("calendar_for_outings", True))
+    check_calendar = bool(ctx.vars.get("calendar_for_outings", True)) and not _forgets_calendar(ctx)
     memory: dict[str, Any] = {"city": ctx.state.get("home_city"), "day": None, "pending": None}
     rec = TraceRecorder()
     for message in [question, *ctx.turns]:

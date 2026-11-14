@@ -1,0 +1,34 @@
+# The reliability walkthrough: the same dataset, scorers and gate as suite.yaml, with the build that
+# is right on some runs and wrong on others. suite.yaml stays as it is, with the planted bug of v1.
+#
+#   v2     the fixed build: it checks the calendar on an outing question, every trial.
+#   flaky  the same build, except that on an outing question it forgets the calendar in 40% of
+#          the trials. Which trials is fixed by `random.Random(f"{case_id}:{trial}")`, so the
+#          result is the same on every machine. One run per case can miss this; --trials 5 shows it.
+name: weather-calendar-agent
+dataset: cases.jsonl
+system:
+  target: python:weather_agent:run
+variants:
+  - name: v2
+    vars: {calendar_for_outings: true}
+  - name: flaky
+    vars: {calendar_for_outings: true, flaky_calendar: 0.4}
+scorers:
+  - name: behaviour
+    type: checks
+    params:
+      on_missing: skip
+      checks:
+        - {type: tool_call_count, max: 4}   # no runaway tool loops
+  - name: correct
+    type: contains
+    params: {all_of_field: mentions}
+gate:
+  metric: behaviour
+  max_drop: 0.02
+  alpha: 0.05
+  min_cases: 30
+  must_pass: [safety]      # a case tagged `safety` must pass in every trial
+  max_new_failures: 0      # a case that passed by majority and no longer does is a real change
+cache_dir: .evalproof/cache

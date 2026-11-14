@@ -139,6 +139,94 @@ def mcnemar_exact(b: int, c: int) -> float:
     return min(1.0, 2 * binom_cdf(min(b, c), n))
 
 
+PERMUTATION_DRAWS = 20_000  # sign draws of the Monte Carlo test
+EXACT_ENUMERATION_MAX = 16  # most nonzero differences that are enumerated (2**16 sign patterns)
+# |S*| >= |S| - tolerance counts as extreme, so ties are not lost to rounding
+_TIE_TOLERANCE = 1e-12
+
+
+@dataclass(frozen=True)
+class SignFlip:
+    """The result of ``sign_flip_test``: ``method`` is ``"exact"`` (``draws`` is 0) or
+    ``"monte carlo"`` (``draws`` sign draws)."""
+
+    p_value: float
+    method: str
+    draws: int = 0
+
+
+def _integer_dp_p(steps: list[int], observed: int) -> float:
+    """Exact ``P(|S*| >= |observed|)`` for ``S* = sum(±step)`` with equal-odds signs, by dynamic
+    programming over the integer sums.
+
+    ``S* = 2W - T`` where ``T`` is the sum of the steps and ``W`` the sum of those given a plus
+    sign, so it tracks the distribution of ``W`` one step at a time. The probabilities are floats
+    (halving is exact until 2**-53, and the error after that is far below anything a p-value is
+    compared with), which keeps a suite of thousands of cases fast.
+    """
+    total = sum(steps)
+    dist = np.zeros(total + 1, dtype=np.float64)
+    dist[0] = 1.0
+    for step in steps:
+        shifted = np.zeros_like(dist)
+        shifted[step:] = dist[: total + 1 - step]
+        dist = 0.5 * (dist + shifted)
+    sums = 2 * np.arange(total + 1) - total
+    return float(min(1.0, dist[np.abs(sums) >= abs(observed)].sum()))
+
+
+def sign_flip_test(
+    diffs: Sequence[float] | FloatArray,
+    *,
+    grid: int | None = None,
+    n_draws: int = PERMUTATION_DRAWS,
+    seed: int = 0,
+) -> SignFlip:
+    """Two-sided paired sign-flip permutation test on per-case differences.
+
+    Under the null hypothesis that the two systems are alike, each difference is as likely to be
+    positive as negative. The statistic is the sum ``S`` of the differences and the p-value is
+    ``P(|S*| >= |S| - 1e-12)`` over random sign assignments ``S*``:
+
+    * every difference zero: ``p = 1``;
+    * ``grid`` given and every ``d * grid`` a whole number (pass/fail rates over ``grid`` trials):
+      exact, by dynamic programming over integer sums, for any number of cases;
+    * otherwise exact by enumerating all sign patterns when at most 16 differences are nonzero;
+    * otherwise Monte Carlo: ``n_draws`` seeded sign draws, ``p = (hits + 1) / (draws + 1)``,
+      which is never 0 and never anti-conservative.
+    """
+    d = np.asarray(diffs, dtype=np.float64)
+    if d.size == 0:
+        raise ValueError("no differences")
+    nonzero = d[np.abs(d) > _TIE_TOLERANCE]
+    if nonzero.size == 0:
+        return SignFlip(1.0, "exact")
+    if grid is not None and grid > 0:
+        scaled = nonzero * grid
+        whole = np.rint(scaled)
+        if np.allclose(scaled, whole, rtol=0.0, atol=1e-9):
+            steps = [int(abs(x)) for x in whole]
+            return SignFlip(_integer_dp_p(steps, int(whole.sum())), "exact")
+    observed = abs(float(nonzero.sum()))
+    m = int(nonzero.size)
+    if m <= EXACT_ENUMERATION_MAX:
+        patterns = np.arange(1 << m)[:, None] >> np.arange(m)[None, :] & 1
+        sums = (1.0 - 2.0 * patterns) @ nonzero
+        hits = int(np.sum(np.abs(sums) >= observed - _TIE_TOLERANCE))
+        return SignFlip(hits / (1 << m), "exact")
+    rng = np.random.default_rng(seed)
+    hits = 0
+    drawn = 0
+    chunk = max(1, 2_000_000 // m)  # bounds the sign matrix, however many cases there are
+    while drawn < n_draws:
+        size = min(chunk, n_draws - drawn)
+        signs = rng.integers(0, 2, size=(size, m), dtype=np.int8)
+        sums = (1.0 - 2.0 * signs) @ nonzero
+        hits += int(np.sum(np.abs(sums) >= observed - _TIE_TOLERANCE))
+        drawn += size
+    return SignFlip((hits + 1) / (n_draws + 1), "monte carlo", n_draws)
+
+
 def holm(pvalues: Sequence[float]) -> list[float]:
     """Holm–Bonferroni adjusted p-values, in the order given.
 
