@@ -1,3 +1,3 @@
 """The package version: the single place it is written. pyproject.toml reads it at build time."""
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
