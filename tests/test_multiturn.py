@@ -69,10 +69,12 @@ def test_bad_agent_fields_name_the_case_and_the_line(
         load_dataset(path)
 
 
-def test_any_check_type_is_accepted_at_this_layer(tmp_path: Path) -> None:
-    # Only the shape is checked here; the vocabulary belongs to the checks scorer.
-    (case,) = load_dataset(_dataset(tmp_path, {"id": "a", "input": "q", "expect": [{"type": "?"}]}))
-    assert case.expect == [{"type": "?"}]
+def test_the_checks_vocabulary_is_enforced_at_load(tmp_path: Path) -> None:
+    good = [{"type": "tool_called", "name": "x"}]
+    (case,) = load_dataset(_dataset(tmp_path, {"id": "a", "input": "q", "expect": good}))
+    assert case.expect == good
+    with pytest.raises(DatasetError, match=r"expect\[0\] has unknown type '\?'"):
+        load_dataset(_dataset(tmp_path, {"id": "b", "input": "q", "expect": [{"type": "?"}]}))
 
 
 # --- direct model targets ---------------------------------------------------------------------

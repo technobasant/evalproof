@@ -23,6 +23,8 @@ ScorerType = Literal[
     "mrr",
     "ndcg",
     "llm_judge",
+    "checks",
+    "python",
 ]
 
 
@@ -98,6 +100,15 @@ class ScorerConfig(BaseModel):
     name: str
     type: ScorerType
     params: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _check_params(self) -> ScorerConfig:
+        # The scorers with a fixed vocabulary are checked when the suite loads, not mid-run.
+        if self.type in ("checks", "python"):
+            from evalproof.scorers import validate_scorer_params  # imports this module
+
+            validate_scorer_params(self.type, self.params)
+        return self
 
 
 class CalibrationConfig(BaseModel):

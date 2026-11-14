@@ -4,6 +4,28 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+### Breaking
+
+- The case fields `turns`, `state` and `expect` now have a meaning (the user turns that follow
+  `input`, the initial session state, and the inline checks of the `checks` scorer) and are
+  validated when the dataset loads: `turns` must be a list of strings or objects, `state` an
+  object, `expect` a list of valid checks. A dataset that uses one of these names for something
+  else fails to load with a message that says to rename the field.
+
+### Added
+
+- A `checks` scorer asserts on what an agent did: the tools it called and with which arguments
+  (`tool_called`, `tool_not_called`, `tool_args_contain`, `forbidden_arg_values`, `tool_order`,
+  `tool_succeeded`, `tool_call_count`, `rounds`), and what it said (`output_contains`,
+  `output_omits`, `output_regex`, `output_cites_tool_result`), with `any_of`, `not` and `python`
+  checks to combine them. Checks come from the suite (`params.checks`) and from each case
+  (`expect`), are validated when the suite or the dataset loads, and are deterministic, so
+  `evalproof verify` re-scores them.
+- A `python` scorer calls a function of your own, `fn: module:function`, which returns a bool, a
+  number from 0 to 1, a `(bool, reason)` pair or a `Score`; an exception or any other return
+  value leaves the case undecided. `verify` re-scores it only when the scorer sets
+  `deterministic: true`.
+
 ## [0.5.2] — 2026-11-14
 
 No behaviour changes: documentation, and `evalproof init` now pins 0.5.2 in the workflows it writes.
