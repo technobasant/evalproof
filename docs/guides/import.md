@@ -1,5 +1,5 @@
 ---
-description: Turn promptfoo, Inspect, DeepEval, lm-eval, garak, Google ADK, CSV and JSONL results into run files that compare and the gate read.
+description: Turn promptfoo, Inspect, DeepEval, lm-eval, garak, Google ADK, Claude Code plugin eval, CSV and JSONL results into run files that compare and the gate read.
 ---
 
 # Import results from other tools
@@ -14,6 +14,7 @@ evalproof import deepeval .deepeval/.latest_test_run.json --out runs/candidate.j
 evalproof import lm-eval results/gpt2/samples_hellaswag_2026-11-12T10-20-30.jsonl --out runs/gpt2.json
 evalproof import garak garak.report.jsonl --out runs/scan.json
 evalproof import adk .adk/eval_history/app_evalset_1788817991.2.evalset_result.json --out runs/adk.json
+evalproof import claude-plugin-eval aggregate-result.json --system with --out runs/with.json
 evalproof import csv results.csv --system a --out runs/a.json       # id,metric,passed,score,...
 evalproof import jsonl results.jsonl --wide --id-field case --out runs/a.json  # one column per metric
 ```
@@ -49,6 +50,14 @@ Import each side with the same importer, then gate as usual, for example
   failed follow ADK's status, and a metric ADK did not evaluate is undecided. The tool calls come
   from the session's events, or from each invocation's intermediate data. This importer is
   experimental: it was written from ADK's source and no real result file was available.
+* Claude Code plugin evals (`aggregate-result.json`, from `claude plugin eval`, `schemaVersion: 1`)
+  hold two systems when the suite ran with `--ablation with-without`: the `with` and `without`
+  arms. `--system with` or `--system without` picks one (a file with both needs it). Each case is a
+  case of the run, its runs are repeats, and the metrics are the run's `score` and one per grader
+  (`withOnly` graders are shown but have no verdict, and are left out of the `without` arm). A run
+  with an `error` or an `aborted` stop counts as a failure on every metric. A suite that did not
+  finish (`partial`) is imported with a warning. No trace is read. This importer is experimental:
+  it was written from the writer's schema and no real result file was available.
 
 ## Next steps
 

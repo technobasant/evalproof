@@ -254,7 +254,18 @@ def parse_jsonl(text: str, path: Path) -> list[dict[str, Any]]:
 
 
 def _merge_scores(scores: list[Score], epochs: str, repeated: bool) -> Score:
-    """Collapse one metric's scores over a case's repeats into a single score."""
+    """Collapse one metric's scores over a case's repeats into a single score. The judge cost of
+    every repeat stays on it: ``compare`` adds up the judge costs of the scores it finds."""
+    merged = _merge_values(scores, epochs, repeated)
+    judge = sum(s.judge_cost_usd for s in scores)
+    return (
+        merged.model_copy(update={"judge_cost_usd": judge})
+        if judge != merged.judge_cost_usd
+        else merged
+    )
+
+
+def _merge_values(scores: list[Score], epochs: str, repeated: bool) -> Score:
     if len(scores) == 1 and (epochs != "mean" or not repeated):
         return scores[0]
     decided = [s for s in scores if s.value is not None]
@@ -361,7 +372,14 @@ def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Opt
         for r in sample.repeats:
             if r.output.error:
                 reason = f"system error: {r.output.error[:200]}"
-                r.scores = {n: Score(value=0.0, passed=False, reason=reason) for n in names}
+                # The judge was paid for whatever the run produced, so its cost stays.
+                judged = {n: s.judge_cost_usd for n, s in r.scores.items()}
+                r.scores = {
+                    n: Score(
+                        value=0.0, passed=False, reason=reason, judge_cost_usd=judged.get(n, 0.0)
+                    )
+                    for n in names
+                }
 
     repeated = any(len(s.repeats) > 1 for s in samples)
     trials = 1

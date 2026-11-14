@@ -1,0 +1,470 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.322",
+  "startedAt": "2026-11-14T10:00:00.000Z",
+  "durationSeconds": 212,
+  "costUsd": 0.4746,
+  "partial": false,
+  "suite": {
+    "root": "/path/to/my-plugin/evals",
+    "ablation": "with-without",
+    "threshold": 1,
+    "concurrency": 1,
+    "plugins": [
+      {
+        "name": "my-plugin",
+        "version": "0.1.0",
+        "path": "/path/to/my-plugin"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "commit-message",
+      "dir": "commit-message",
+      "source": "prompt.md",
+      "promptMarkdown": "Write me a commit message for this change: I renamed getUser to fetchUser.",
+      "runsPerCase": 2,
+      "timeoutSeconds": 300,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "criteria",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "PASS if the message mentions the rename.",
+          "config": {}
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0412,
+            "judgeCostUsd": 0.0021,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-1/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "criteria",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "feat: rename getUser to fetchUser"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ],
+            "durationSeconds": 21.4,
+            "startedAt": "2026-11-14T10:00:01.000Z"
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.0388,
+            "judgeCostUsd": 0.0021,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-2/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "criteria",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  true
+                ],
+                "evidence": "update code"
+              },
+              {
+                "name": "skill-fired",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ],
+            "durationSeconds": 18.9,
+            "startedAt": "2026-11-14T10:00:02.000Z"
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.0275,
+            "judgeCostUsd": 0.0021,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-3/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "criteria",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "Updated names"
+              }
+            ],
+            "durationSeconds": 15.2,
+            "startedAt": "2026-11-14T10:00:03.000Z"
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.0301,
+            "judgeCostUsd": 0.0021,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-4/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "criteria",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL PASS FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  true,
+                  false
+                ],
+                "evidence": "Rename function"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.5,
+        "passRate": 0.5,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.5
+      }
+    },
+    {
+      "name": "rename-symbol",
+      "dir": "rename-symbol",
+      "source": "prompt.md",
+      "promptMarkdown": "Rename the function getUser to fetchUser across src/ and update the tests.",
+      "runsPerCase": 2,
+      "timeoutSeconds": 300,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "tests-updated",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "pattern": "fetchUser",
+            "target": "file"
+          }
+        },
+        {
+          "name": "criteria",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "PASS if no caller still uses getUser.",
+          "config": {}
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.0903,
+            "judgeCostUsd": 0.0021,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-5/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tests-updated",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched fetchUser",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "criteria",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  false
+                ],
+                "evidence": "renamed in 4 files"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 2x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ],
+            "durationSeconds": 44.0,
+            "startedAt": "2026-11-14T10:00:05.000Z"
+          },
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 10,
+            "costUsd": 0.121,
+            "judgeCostUsd": 0.0021,
+            "error": "timed out after 300s",
+            "tracePath": "/tmp/eval-sandbox-6/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tests-updated",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched fetchUser",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "criteria",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  true
+                ],
+                "evidence": "two callers still use getUser"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ],
+            "durationSeconds": 300.0,
+            "startedAt": "2026-11-14T10:00:06.000Z"
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.0511,
+            "judgeCostUsd": 0.0021,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-7/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tests-updated",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in file",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "criteria",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "renamed in src/ only"
+              }
+            ],
+            "durationSeconds": 30.0,
+            "startedAt": "2026-11-14T10:00:07.000Z"
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.0102,
+            "judgeCostUsd": 0,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-8/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [],
+            "durationSeconds": 9.0,
+            "startedAt": "2026-11-14T10:00:08.000Z",
+            "aborted": {
+              "server": "github",
+              "tool": "create_issue",
+              "reason": "agent-mock call budget of 3 exceeded"
+            }
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.75,
+        "passRate": 0.5,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.75
+      },
+      "advisories": [
+        "case ran 2 runs per arm; 5 or more give a steadier score"
+      ]
+    },
+    {
+      "name": "explain-stack-trace",
+      "dir": "explain-stack-trace",
+      "source": "prompt.md",
+      "promptMarkdown": "Explain this stack trace and say which line to fix.",
+      "runsPerCase": 2,
+      "timeoutSeconds": 300,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "criteria",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "PASS if it names the failing line.",
+          "config": {}
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.0334,
+            "judgeCostUsd": 0.0019,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-9/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "criteria",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "line 42 raises KeyError"
+              }
+            ],
+            "durationSeconds": 12.7,
+            "startedAt": "2026-11-14T10:00:09.000Z"
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.031,
+            "judgeCostUsd": 0.0019,
+            "error": null,
+            "tracePath": "/tmp/eval-sandbox-10/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "criteria",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL PASS FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  true,
+                  false
+                ],
+                "evidence": "the stack trace is long"
+              }
+            ],
+            "durationSeconds": 11.9,
+            "startedAt": "2026-11-14T10:00:10.000Z"
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.5,
+        "passRate": 0.5
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 3,
+    "casesPassed": 0,
+    "overallScore": 0.5833,
+    "overallPassRate": 0.5,
+    "meanDelta": 0.625
+  }
+}

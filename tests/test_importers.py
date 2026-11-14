@@ -742,6 +742,7 @@ def test_every_format_is_registered() -> None:
         "lm-eval",
         "garak",
         "adk",
+        "claude-plugin-eval",
         "jsonl",
         "csv",
     )

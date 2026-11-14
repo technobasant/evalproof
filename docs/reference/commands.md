@@ -89,7 +89,7 @@ evalproof import FORMAT FILE --out PATH [options]
 
 | Argument | Required | What it is |
 |---|---|---|
-| `FORMAT` | yes | the tool or table layout the file is from: `promptfoo`, `inspect`, `deepeval`, `lm-eval`, `garak`, `adk`, `jsonl`, `csv` |
+| `FORMAT` | yes | the tool or table layout the file is from: `promptfoo`, `inspect`, `deepeval`, `lm-eval`, `garak`, `adk`, `claude-plugin-eval`, `jsonl`, `csv` |
 | `FILE` | yes | the results file to import |
 
 | Flag | Type | Default | What it does |

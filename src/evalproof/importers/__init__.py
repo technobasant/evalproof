@@ -26,7 +26,16 @@ from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
 
-from evalproof.importers import adk, deepeval, garak, inspect_ai, lm_eval, promptfoo, table
+from evalproof.importers import (
+    adk,
+    claude_plugin_eval,
+    deepeval,
+    garak,
+    inspect_ai,
+    lm_eval,
+    promptfoo,
+    table,
+)
 from evalproof.importers._common import (
     EPOCHS,
     EXPERIMENTAL_FORMATS,
@@ -43,6 +52,7 @@ _READERS: dict[str, Callable[[Path, Options], Run]] = {
     "lm-eval": lm_eval.read,
     "garak": garak.read,
     "adk": adk.read,
+    "claude-plugin-eval": claude_plugin_eval.read,
     "jsonl": table.read_jsonl,
     "csv": table.read_csv,
 }
