@@ -6,7 +6,8 @@ applies the rules that must not differ between formats, so that a run imported f
 promptfoo and one from Inspect behave the same in ``compare`` and the gate:
 
 * system errors score as failures on every metric, as they do in native runs;
-* repeats collapse to one result per case (``mean``, ``first``, ``all`` or ``any``);
+* repeats collapse to one result per case (``mean``, ``first``, ``all`` or ``any``), or, with
+  ``trials``, stay as the trials of the case (every case needs the same number of repeats);
 * the dataset hash is computed the same way.
 """
 
@@ -25,7 +26,7 @@ from evalproof._version import __version__
 from evalproof.dataset import canonical_json
 from evalproof.models import CaseResult, Run, RunInfo, Score, SystemOutput
 
-EPOCHS = ("mean", "first", "all", "any")
+EPOCHS = ("mean", "first", "all", "any", "trials")
 
 
 class ImportFormatError(ValueError):
@@ -270,6 +271,26 @@ def _collapse(sample: Sample, epochs: str, repeated: bool) -> CaseResult:
     return CaseResult(case_id=sample.case_id, output=_merge_output(repeats, epochs), scores=scores)
 
 
+def _keep_trials(samples: list[Sample]) -> tuple[int, list[CaseResult]]:
+    """Every repeat of a case becomes one of its trials, numbered in the order the file gave
+    them. ``Run`` holds ``k`` trials for every case, so the repeats must be equal in number."""
+    counts = {s.case_id: len(s.repeats) for s in samples}
+    k = counts[samples[0].case_id]
+    odd = next((cid for cid, n in counts.items() if n != k), None)
+    if odd is not None:
+        raise ImportFormatError(
+            f"--epochs trials needs the same number of repeats for every case: case "
+            f"{samples[0].case_id!r} has {k} but case {odd!r} has {counts[odd]}. Use "
+            "--epochs mean to collapse the repeats instead"
+        )
+    kept = [
+        repeat.model_copy(update={"case_id": s.case_id, "trial": trial})
+        for s in samples
+        for trial, repeat in enumerate(s.repeats)
+    ]
+    return k, kept
+
+
 def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Options) -> Run:
     """Apply the shared rules and assemble the ``Run`` an importer found."""
     if opts.epochs not in EPOCHS:
@@ -289,10 +310,15 @@ def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Opt
                 r.scores = {n: Score(value=0.0, passed=False, reason=reason) for n in names}
 
     repeated = any(len(s.repeats) > 1 for s in samples)
-    results = [_collapse(s, opts.epochs, repeated) for s in samples]
-    for sample, result in zip(samples, results, strict=True):
+    trials = 1
+    if opts.epochs == "trials":
+        trials, results = _keep_trials(samples)
+    else:
+        results = [_collapse(s, opts.epochs, repeated) for s in samples]
+    hashes = {s.case_id: imported_case_hash(s.case_id, s.input) for s in samples}
+    for result in results:
         # An imported case carries no tags, so its content hash is its case hash.
-        result.case_hash = result.content_hash = imported_case_hash(sample.case_id, sample.input)
+        result.case_hash = result.content_hash = hashes[result.case_id]
 
     environment = {"imported_from": fmt}
     if meta.schema:
@@ -313,6 +339,7 @@ def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Opt
         wall_time_s=meta.wall_time_s,
         evalproof_version=__version__,
         seed=0,
+        trials=trials,
         environment=environment,
     )
     return Run(info=info, results=results)
