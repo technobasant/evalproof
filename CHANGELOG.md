@@ -4,6 +4,13 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+### Documentation
+
+- MEASUREMENTS §9 calibrates the support-qa judge against reviewed labels for a random 30
+  baseline cases (`examples/support-qa/human-review/`), next to the answer key on the same
+  cases; `measure.py` prints the tables (#4). The README install section and a new use-cases
+  section were rewritten.
+
 ## [0.5.1] — 2026-11-13
 
 Upgrading: run files written by 0.5.0 keep working. They have no tag-free hash, so `compare`

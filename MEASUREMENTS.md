@@ -17,6 +17,7 @@ latency tables from them without a model.
 | evalproof / Python | 0.1.0 / 3.13.15 |
 | Golden set | 83 questions about a product; 9 are not answerable from the facts. Every run in `runs/` used [`cases.v1.jsonl`](examples/support-qa/cases.v1.jsonl), dataset hash `c6f08ac201023363`; `cases.jsonl` is the revised set from section 8 (`55ba005be14c0f20`), whose runs are in `runs/v2/` |
 | "Gold" | a per-question regex answer key, written before any model output was seen and not changed after. It stands in for human review; it is not human labelling. |
+| Reviewed labels (section 9) | pass/fail for the 30 baseline cases of the seed-0 random sample, read against the rubric and the product facts, in [`human-review/`](examples/support-qa/human-review) |
 | Change under test | grounded system prompt → "friendly, always give a complete answer" prompt; same model |
 
 ## 1. The two runs
@@ -213,15 +214,75 @@ With the references fixed, the thinking judge's one remaining miss is q83, where
 correct dollar price as an invented answer to a question about euros. The gate's decision is
 the same as before: 6 worse, 1 better, p = 0.125, pass with a warning.
 
-The readings in sections 4 and 8 are careful case-by-case reads, not an independent human
-review; issue #4 tracks calibrating against human-reviewed labels.
+The readings in sections 4 and 8 are careful case-by-case reads of the contested cases only.
+Section 9 reads a random sample instead.
+
+## 9. Calibrating against reviewed labels (issue #4)
+
+Sections 3 and 4 calibrated against the answer key and then found the key wrong. Here the key
+is replaced by labels that were read. The 30 baseline cases are the seed-0 random sample that
+`calibrate --gold-sample 30` would draw, so PPI's assumption of a random gold sample holds. Each
+answer was marked pass or fail against [`rubric.md`](examples/support-qa/rubric.md) and the
+product facts, in [`review-sheet.csv`](examples/support-qa/human-review/review-sheet.csv) (the
+verdicts are also in [`labels.jsonl`](examples/support-qa/human-review/labels.jsonl) for
+`calibrate --labels`). The verdicts were drafted with a model (Claude) and checked and accepted
+by the maintainer: one reviewer's check, not an independent panel. q22 was read against its
+corrected reference.
+
+The labels give 22 passes and 8 failures. Against them:
+
+* the answer key is wrong on **one** case of the 30: q28, where the answer gives the Free plan a
+  trial and the key only checks that Plus and Team appear (the failure section 4 found in the
+  candidate);
+* the audited labels of sections 4 and 8 agree on all 29 cases they decide. The 30th, q66,
+  which they left ambiguous, is a fail here: asked whether there is a Microsoft Teams
+  integration, the answer opens "Yes" and then says there is none, and the rubric fails an
+  answer that contradicts itself.
+
+| Judge · gold (30 cases) | TPR / FPR | κ | Gold only | ACC | PPI |
+|---|---:|---:|---:|---:|---:|
+| thinking off · answer key | 95.7% / 14.3% | 0.814 | 76.7% [59.1, 88.2] | 77.2% [55.8, 92.7] | 77.4% [62.6, 92.1] |
+| thinking off · reviewed | 95.5% / **25.0%** | 0.734 | 73.3% [55.6, 85.8] | 74.0% [42.2, 92.4] | 74.0% [57.9, 90.2] |
+| thinking on · answer key | 95.7% / 14.3% | 0.814 | 76.7% [59.1, 88.2] | 78.7% [57.6, 94.5] | 79.2% [64.8, 93.7] |
+| thinking on · reviewed | 100.0% / 12.5% | **0.911** | 73.3% [55.6, 85.8] | 75.2% [57.8, 85.5] | 75.9% [63.1, 88.7] |
+
+The raw judge rate on all 83 is 77.1% with thinking off and 78.3% with it on (the `runs/v2/`
+verdicts). The best truth available for all 83, the audited labels with q66 failed, is 78.3%.
+
+**What this shows.**
+
+* **One relabelled case moved the corrected rate about 3 points down** for the published
+  judge (ACC 77.2% → 74.0%, PPI 77.4% → 74.0%). With 8 failures in the sample, one more wrong
+  answer the judge passed is 11 points of FPR, 14% → 25%. Error rates estimated on 30 labels
+  are that fragile.
+* **The move went away from the best truth, not towards it**: 74.0% against 78.3%, where the
+  raw judge rate was 1.2 points off. The sample holds 8 failures in 30 (26.7%) against 18 in 83
+  (21.7%) for the full set, and the correction inherits that luck. Every interval still covers
+  78.3%; the ACC interval is 50 points wide.
+* **Better labels separate the two judges; the key could not.** Against the key on these 30
+  cases the judges tie at κ 0.814. Against the reviewed labels the thinking judge reaches 0.911
+  and the judge without thinking falls to 0.734: the thinking judge failed q28, which the key
+  passed, and its one miss is q66.
+* **On a random sample the key was wrong once in 30** (Wilson 95% CI 0.6%–16.7%), not the 7 of
+  13 section 4 found. Section 4 read only the cases where the key and the judge disagreed,
+  and the key's errors cluster in the questions the facts do not answer (q76–q78), none of
+  which fell in this sample. "7 of 13" describes the disagreements, not the key's overall
+  error rate.
+
+Section 3's conclusion stands and gets sharper: at this size a 30-case gold sample decides
+little about the pass rate, whoever labels it. What it does show is the confusion matrix,
+which is where the reviewed labels earned their keep: they found the judge passing an answer
+that contradicts itself (q66) and an invented trial (q28), and that the reasoning judge
+catches the second.
 
 ## Limits
 
 * One machine, one pair of small local models, one product domain, 83 cases. The numbers
   describe this setup; the method is what transfers.
 * The answer key is a stand-in for human review, and section 4 shows it is wrong in
-  predictable ways. A real deployment should calibrate against human labels.
+  predictable ways. A real deployment should calibrate against human labels. Section 9's
+  reviewed labels cover 30 baseline cases, read by one reviewer with a model's draft; the
+  candidate run has no reviewed sample.
 * Ollama's determinism with a fixed seed was checked on 20 cases on this backend only.
 * Section 8 measures a reasoning judge on one model and one domain. Its literal reading
   helped here and hurt where the reference itself was wrong; that balance will differ

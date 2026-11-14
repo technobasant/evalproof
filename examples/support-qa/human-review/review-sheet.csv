@@ -1,0 +1,31 @@
+id,question,reference answer,model answer,your verdict (pass/fail)
+q05,How is the Enterprise plan priced?,Custom pricing.,"The Enterprise plan is custom priced with a minimum of 50 seats, and the cost is determined based on the number of seats.",pass
+q06,How much would a nonprofit pay per user per month for Team?,"40% off $11, so $6.60 per user per month.",A nonprofit would pay $11 per user per month for the Team plan.,fail
+q07,How much does one user save per year on Plus by paying annually instead of monthly?,$12 a year ($72 monthly vs $60 annual).,"The Plus plan offers a year-to-year payment option at $60 per user, which saves $6 per user per month compared to the monthly $6.",fail
+q13,How much storage does the Free plan include?,100 MB.,The Free plan includes 100 MB of storage.,pass
+q18,How long is version history kept on Plus?,90 days.,"On the Plus plan, version history is kept for 90 days.",pass
+q19,How long is version history kept on Team?,365 days.,"On Team, version history is kept for 365 days.",pass
+q22,Which plan has an admin console?,Team (and Enterprise).,The Team plan includes an admin console.,pass
+q23,Does Enterprise include audit log export?,Yes.,"Yes, Enterprise includes audit log export.",pass
+q28,Which plans have a free trial?,Plus and Team.,"The Free plan has a 21-day free trial, and the Plus and Team plans also have a 21-day free trial.",fail
+q31,"If I cancel a monthly plan, when does it stop working?",At the end of the current billing period.,"If you cancel a monthly plan, it will stop working immediately upon cancellation.",fail
+q33,Can I pay by bank transfer on the Team plan?,"No, bank transfer is only available on Enterprise.","Bank transfer is available only on Enterprise plans, so you cannot pay by bank transfer on the Team plan.",pass
+q34,Can I pay with Bitcoin?,No; card or PayPal (bank transfer on Enterprise).,"Bitcoin is not accepted as a payment method for Quillfox plans. The accepted methods are credit or debit cards, and PayPal. Bank transfers are available only on Enterprise.",pass
+q36,Can Team admins add seats in the middle of a billing cycle?,"Yes, any time; the charge is prorated by day.","Yes, Team admins can add seats at any time; the charge is prorated by day.",pass
+q37,What's the maximum attachment size on Plus?,25 MB.,The maximum attachment size on Plus is 200 MB.,fail
+q39,How many notes can one notebook hold?,"5,000.","One notebook can hold up to 5,000 notes.",pass
+q40,How many notes can I share publicly on the Free plan?,Up to 5.,"On the Free plan, you can share up to 5 notes publicly.",pass
+q44,What is the minimum iOS version?,iOS 16 or later.,The minimum iOS version supported by Quillfox is 16.,pass
+q46,Can I run Quillfox on Windows 10?,Only Windows 11 is supported.,"Yes, Quillfox is available on Windows 10 through its web app and desktop applications.",fail
+q47,Does the web app work offline?,"No, the web app needs a connection; desktop and mobile work offline.","Yes, the web app supports offline editing. The web app needs a connection to sync changes within 5 seconds when online.",fail
+q50,Is there a dark mode?,Yes.,"Yes, dark mode is available on all platforms.",pass
+q52,Which interface languages are available?,"English, German, Spanish, Japanese and Nepali.","The interface languages available on Quillfox are English, German, Spanish, Japanese, and Nepali.",pass
+q54,Which TLS version is used in transit?,TLS 1.3.,The data is encrypted in transit with TLS 1.3.,pass
+q55,Does Quillfox support SMS two-factor codes?,No — an authenticator app or a security key only.,Quillfox does not support SMS two-factor authentication. It supports two-factor authentication using an authenticator app or a security key.,pass
+q58,Can I move my data from the US region to the EU later?,"No, the region cannot be changed after signup.","The region where your data is hosted cannot be changed later, as it is chosen at signup and cannot be modified.",pass
+q62,Can I import my notes from Evernote?,"Yes, from .enex files.","Yes, you can import notes from Evernote using the import feature available in Quillfox.",pass
+q63,Which plans include the REST API?,Team and Enterprise.,The Team and Enterprise plans include the REST API.,pass
+q65,Which integrations are available?,"Slack, Google Drive and GitHub.","The integrations available include Slack, Google Drive, and GitHub. There is no Microsoft Teams integration yet.",pass
+q66,Is there a Microsoft Teams integration?,Not yet.,"Yes, Quillfox offers an integration with Slack, Google Drive, and GitHub. There is no Microsoft Teams integration yet.",fail
+q68,Can people without an account view my shared notes?,"Yes, guests can view shared notes without an account.","Yes, guests can view shared notes without an account.",pass
+q71,How fast does support reply on Plus?,Within 1 business day.,Support replies within 1 business day on Plus.,pass
