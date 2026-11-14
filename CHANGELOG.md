@@ -4,7 +4,16 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
-Nothing yet. Changes merged after 0.7.1 are listed here until the next release.
+Changes merged after 0.7.1 are listed here until the next release.
+
+### Added
+
+- `evalproof.adapters.otel.from_spans` (experimental) builds an agent's trace from OpenTelemetry
+  spans, as OTLP/JSON, the collector's file exporter output, the Python SDK's `span.to_json()`
+  objects or a list of spans, for the GenAI semantic conventions (also Google ADK and the Vercel
+  AI SDK), OpenInference and the Vercel legacy `ai.toolCall` spans. When the spans were exported
+  with content capture off it warns, names the setting to turn on, and sets
+  `trace.meta["content_captured"] = False`. See the OpenTelemetry tab of the adapters guide.
 
 ## [0.7.1] — 2026-11-14
 

@@ -10,11 +10,12 @@ yours, the adapter only reads what it returned.
 * ``langchain.from_messages``: LangChain and LangGraph messages.
 * ``claude_agent_sdk.from_messages``: the messages the Claude Agent SDK yields.
 * ``openai_agents.from_result``: an OpenAI Agents SDK ``RunResult``.
+* ``otel.from_spans``: OpenTelemetry spans as OTLP/JSON or the Python SDK's JSON (experimental).
 """
 
 from __future__ import annotations
 
-from evalproof.adapters import adk, claude_agent_sdk, langchain, openai_agents
+from evalproof.adapters import adk, claude_agent_sdk, langchain, openai_agents, otel
 from evalproof.adapters._common import AgentResult
 from evalproof.adapters.recorder import TraceRecorder, mcp_call
 
@@ -26,4 +27,5 @@ __all__ = [
     "langchain",
     "mcp_call",
     "openai_agents",
+    "otel",
 ]
