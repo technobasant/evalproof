@@ -15,7 +15,14 @@ import httpx
 
 from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache
-from evalproof.config import GenerationParams, SuiteConfig, TargetConfig, suite_fingerprint
+from evalproof.config import (
+    MAX_TRIALS,
+    ConfigError,
+    GenerationParams,
+    SuiteConfig,
+    TargetConfig,
+    suite_fingerprint,
+)
 from evalproof.dataset import case_hash, content_hash, dataset_hash, load_dataset
 from evalproof.models import Case, CaseResult, Run, RunInfo
 from evalproof.providers import (
@@ -113,8 +120,8 @@ def environment(
     return env
 
 
-def score_case(case: Case, system: System, scorers: list[Scorer]) -> CaseResult:
-    out = system.run(case)
+def score_case(case: Case, system: System, scorers: list[Scorer], trial: int = 0) -> CaseResult:
+    out = system.run(case, trial=trial)
     return CaseResult(
         case_id=case.id,
         tags=case.tags,
@@ -122,6 +129,7 @@ def score_case(case: Case, system: System, scorers: list[Scorer]) -> CaseResult:
         scores={s.name: s.score(case, out) for s in scorers},
         case_hash=case_hash(case),
         content_hash=content_hash(case),
+        trial=trial,
     )
 
 
@@ -134,10 +142,19 @@ def run_suite(
     progress: Progress | None = None,
     system_override: TargetConfig | None = None,
     variant: str | None = None,
+    trials: int | None = None,
+    on_plan: Callable[[int, int], None] | None = None,
 ) -> Run:
     """Run the suite and score it. ``variant`` names one of the suite's ``variants``: its partial
     ``system`` override is merged over the suite's system (unless ``system_override`` replaces the
-    target outright), and its ``vars`` reach the system."""
+    target outright), and its ``vars`` reach the system.
+
+    Each case runs ``trials`` times (default: the suite's ``trials``), every run scored on its own;
+    the results come back in case order, then trial order, however the runs were scheduled.
+    ``on_plan(cases, trials)`` is called once before the first run."""
+    n_trials = cfg.trials if trials is None else trials
+    if not 1 <= n_trials <= MAX_TRIALS:
+        raise ConfigError(f"trials must be between 1 and {MAX_TRIALS}, got {n_trials}")
     variant_vars = cfg.variant(variant).vars if variant is not None else {}
     system_cfg = system_override or cfg.variant_system(variant)
     cases = load_dataset(cfg.resolve(cfg.dataset))
@@ -154,6 +171,7 @@ def run_suite(
         search_path=str(Path(cfg.base_dir).resolve()),
         variant=variant,
         vars=variant_vars,
+        trials=n_trials,
     )
 
     judge: Provider | None = None
@@ -169,23 +187,26 @@ def run_suite(
         system.provider = system_models
     scorers = [make_scorer(s, cfg, judge) for s in cfg.scorers]
 
+    if on_plan:
+        on_plan(len(cases), n_trials)
+    jobs = [(case, trial) for case in cases for trial in range(n_trials)]
     started = datetime.now(UTC)
     t0 = time.perf_counter()
     results: list[CaseResult] = []
     if cfg.concurrency == 1:
-        for i, case in enumerate(cases, start=1):
-            res = score_case(case, system, scorers)
+        for i, (case, trial) in enumerate(jobs, start=1):
+            res = score_case(case, system, scorers, trial)
             results.append(res)
             if progress:
-                progress(i, len(cases), res)
+                progress(i, len(jobs), res)
     else:
         with ThreadPoolExecutor(max_workers=cfg.concurrency) as pool:
-            futures = [pool.submit(score_case, c, system, scorers) for c in cases]
+            futures = [pool.submit(score_case, c, system, scorers, t) for c, t in jobs]
             for i, fut in enumerate(futures, start=1):
                 res = fut.result()
                 results.append(res)
                 if progress:
-                    progress(i, len(cases), res)
+                    progress(i, len(jobs), res)
     wall = time.perf_counter() - t0
 
     info = RunInfo(
@@ -200,6 +221,7 @@ def run_suite(
         seed=cfg.seed,
         suite_hash=suite_fingerprint(cfg, system_cfg, variant),
         variant=variant,
+        trials=n_trials,
         environment=environment(
             cfg,
             client,

@@ -21,6 +21,7 @@ from evalproof.cache import CachedProvider, ResponseCache
 from evalproof.calibration import calibrate
 from evalproof.compare import compare_runs
 from evalproof.config import (
+    MAX_TRIALS,
     ConfigError,
     GateConfig,
     SuiteConfig,
@@ -76,6 +77,17 @@ def _emit(markdown: str, path: str | None, *, quiet: bool = False) -> None:
 def _clip(text: str, limit: int = 200) -> str:
     text = " ".join(text.split())
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _trials(text: str) -> int:
+    """argparse type of ``--trials``: a whole number from 1 to ``MAX_TRIALS``."""
+    try:
+        value = int(text)
+    except ValueError:
+        value = 0
+    if not 1 <= value <= MAX_TRIALS:
+        raise argparse.ArgumentTypeError(f"must be a whole number from 1 to {MAX_TRIALS}")
+    return value
 
 
 def _check_writable(path: Path) -> None:
@@ -155,6 +167,10 @@ def _run_variant(
             if i == n:
                 sys.stderr.write("\n")
 
+    def plan(cases: int, trials: int) -> None:
+        if trials > 1 and not args.quiet:
+            sys.stderr.write(f"{cases} cases × {trials} trials = {cases * trials} runs\n")
+
     if variant is not None and not args.quiet:
         sys.stderr.write(f"variant {variant}\n")
     run = run_suite(
@@ -164,6 +180,8 @@ def _run_variant(
         progress=progress,
         system_override=override,
         variant=variant,
+        trials=args.trials,
+        on_plan=plan,
     )
     out = out_path or f"runs/{cfg.name}-{run.info.started_at.replace(':', '')}.json"
     save_run(run, out)
@@ -290,7 +308,9 @@ def cmd_rehash(args: argparse.Namespace) -> int:
     out = Path(args.out or args.run)
     _check_writable(out)
     save_run(rehashed, out)
-    sys.stderr.write(f"rehashed {len(rehashed.results)} cases in {out}\n")
+    n_cases = len({r.case_id for r in rehashed.results})
+    trials = f" × {rehashed.trials} trials" if rehashed.trials > 1 else ""
+    sys.stderr.write(f"rehashed {n_cases} cases{trials} in {out}\n")
     return EXIT_PASS
 
 
@@ -469,6 +489,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     r.add_argument("--limit", type=int)
     r.add_argument("--no-cache", action="store_true")
+    r.add_argument(
+        "--trials",
+        type=_trials,
+        metavar="K",
+        help=f"run each case K times (1 to {MAX_TRIALS}), overriding the suite's trials",
+    )
     r.add_argument("--system", help="override the system target")
     r.add_argument("--system-prompt-file", help="override the system prompt")
     r.add_argument("--label", help="name this system in reports")
@@ -516,7 +542,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=EPOCHS,
         default="mean",
         help="how repeats of one case collapse: mean (default), first, all (every repeat must "
-        "pass) or any",
+        "pass) or any; or trials, which keeps each repeat as its own trial of the case",
     )
     im.add_argument("--markdown", help="also append the report to this file")
     im.add_argument(

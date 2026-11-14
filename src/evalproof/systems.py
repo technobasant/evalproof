@@ -23,8 +23,14 @@ from typing import Any, Protocol
 import httpx
 from pydantic import ValidationError
 
-from evalproof.cache import CachedProvider, ResponseCache
-from evalproof.config import ConfigError, Pricing, TargetConfig
+from evalproof.cache import CachedProvider, ResponseCache, trial_scope
+from evalproof.config import (
+    ConfigError,
+    GenerationParams,
+    Pricing,
+    TargetConfig,
+    trial_params,
+)
 from evalproof.models import Case, SystemOutput, Trace
 from evalproof.providers import (
     CLI_PROVIDERS,
@@ -44,7 +50,8 @@ class RunContext:
 
     ``turns`` are the user turns after ``input`` (turn 0); ``state`` is the case's initial session
     state; ``variant`` and ``vars`` are the suite variant being run and its variables; ``trial`` is
-    the repeat index (always 0 for now). Each call gets its own copies of the mutable parts.
+    the repeat index, 0 to ``trials - 1`` (always 0 when the suite runs each case once). Each
+    call gets its own copies of the mutable parts.
     """
 
     case_id: str
@@ -56,7 +63,9 @@ class RunContext:
     trial: int = 0
 
 
-def _context(case: Case, variant: str | None, variant_vars: dict[str, Any]) -> RunContext:
+def _context(
+    case: Case, variant: str | None, variant_vars: dict[str, Any], trial: int = 0
+) -> RunContext:
     return RunContext(
         case_id=case.id,
         input=case.input,
@@ -64,13 +73,14 @@ def _context(case: Case, variant: str | None, variant_vars: dict[str, Any]) -> R
         state=copy.deepcopy(case.state),
         variant=variant,
         vars=copy.deepcopy(variant_vars),
+        trial=trial,
     )
 
 
 class System(Protocol):
     name: str
 
-    def run(self, case: Case) -> SystemOutput: ...
+    def run(self, case: Case, *, trial: int = 0) -> SystemOutput: ...
 
 
 def render(template: str, variables: dict[str, Any]) -> str:
@@ -108,11 +118,18 @@ class LLMSystem:
         msgs.append(self._user(case))
         return msgs
 
-    def run(self, case: Case) -> SystemOutput:
-        if case.turns:
-            return self._converse(case)
+    def run(self, case: Case, *, trial: int = 0) -> SystemOutput:
+        """Trial ``t`` of a case: the same prompt, with the seed shifted by ``t`` (when the suite
+        sets one) and the call keyed as that trial's in the response cache."""
+        params = trial_params(self.cfg.params, trial)
+        with trial_scope(trial):
+            if case.turns:
+                return self._converse(case, params)
+            return self._single(case, params)
+
+    def _single(self, case: Case, params: GenerationParams) -> SystemOutput:
         try:
-            resp = self.provider.chat(self.messages(case), self.cfg.params)
+            resp = self.provider.chat(self.messages(case), params)
         except ProviderError as exc:
             return SystemOutput(output="", error=str(exc))
         return SystemOutput(
@@ -124,7 +141,7 @@ class LLMSystem:
             cached=resp.cached,
         )
 
-    def _converse(self, case: Case) -> SystemOutput:
+    def _converse(self, case: Case, params: GenerationParams) -> SystemOutput:
         """Send the turns in order, each after the model's previous reply, through the same
         provider (and cache) as a single call. The system prompt goes once, at the start."""
         msgs = self.messages(case)
@@ -140,7 +157,7 @@ class LLMSystem:
                     self._user(case, turn=turn),
                 ]
             try:
-                resp = self.provider.chat(msgs, self.cfg.params)
+                resp = self.provider.chat(msgs, params)
             except ProviderError as exc:
                 # What the earlier turns cost is still spent, so budgets see it.
                 return SystemOutput(
@@ -296,11 +313,11 @@ class PythonSystem:
         self.func: Callable[..., Any] = func
         self._wants_ctx = _accepts_ctx(func)
 
-    def run(self, case: Case) -> SystemOutput:
+    def run(self, case: Case, *, trial: int = 0) -> SystemOutput:
         start = time.perf_counter()
         try:
             if self._wants_ctx:
-                result = self.func(case.input, ctx=_context(case, self.variant, self.vars))
+                result = self.func(case.input, ctx=_context(case, self.variant, self.vars, trial))
             else:
                 result = self.func(case.input)
             coerced = _coerce(result)
@@ -311,8 +328,9 @@ class PythonSystem:
 
 class HttpSystem:
     """POSTs ``{"id", "input"}`` and, when the case or variant has them, ``turns``, ``state``,
-    ``variant`` and ``vars``. Expects JSON ``{"output", "retrieved"?, "trace"?, "tokens_in"?,
-    "tokens_out"?, "cost_usd"?}`` or plain text."""
+    ``variant`` and ``vars``; with more than one trial per case, also ``trial``. Expects JSON
+    ``{"output", "retrieved"?, "trace"?, "tokens_in"?, "tokens_out"?, "cost_usd"?}`` or plain
+    text."""
 
     def __init__(
         self,
@@ -321,14 +339,16 @@ class HttpSystem:
         *,
         variant: str | None = None,
         vars: dict[str, Any] | None = None,
+        trials: int = 1,
     ) -> None:
         self.cfg = cfg
         self.name = cfg.label or cfg.target
         self.variant = variant
         self.vars = dict(vars or {})
+        self.trials = trials  # the body carries ``trial`` only when a case runs more than once
         self._client = client or httpx.Client(timeout=cfg.timeout_s)
 
-    def _body(self, case: Case) -> dict[str, Any]:
+    def _body(self, case: Case, trial: int = 0) -> dict[str, Any]:
         body: dict[str, Any] = {"id": case.id, "input": case.input}
         for key, value in (
             ("turns", case.turns),
@@ -338,10 +358,12 @@ class HttpSystem:
         ):
             if value:
                 body[key] = value
+        if self.trials > 1:
+            body["trial"] = trial
         return body
 
-    def run(self, case: Case) -> SystemOutput:
-        body = self._body(case)
+    def run(self, case: Case, *, trial: int = 0) -> SystemOutput:
+        body = self._body(case, trial)
 
         def call() -> httpx.Response:
             resp = self._client.post(self.cfg.target, json=body)
@@ -399,6 +421,7 @@ def make_system(
     *,
     variant: str | None = None,
     vars: dict[str, Any] | None = None,
+    trials: int = 1,
 ) -> System:
     kind = cfg.kind
     if kind == "python":
@@ -406,7 +429,7 @@ def make_system(
             cfg.target, search_path=search_path, pricing=cfg.pricing, variant=variant, vars=vars
         )
     if kind == "http":
-        return HttpSystem(cfg, client=client, variant=variant, vars=vars)
+        return HttpSystem(cfg, client=client, variant=variant, vars=vars, trials=trials)
     provider: Provider = make_provider(cfg, client=client)
     if cache is not None:
         provider = CachedProvider(provider, cache, base_url=cfg.base_url)
