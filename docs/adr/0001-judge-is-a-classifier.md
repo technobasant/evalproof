@@ -1,3 +1,7 @@
+---
+description: Records the decision to treat an LLM judge as a classifier with error rates and calibrate it against gold labels.
+---
+
 # 1. An LLM judge is a classifier, and its pass rate is classify-and-count
 
 Status: accepted · 2026-10

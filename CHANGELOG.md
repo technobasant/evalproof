@@ -4,6 +4,27 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-11-14
+
+Documentation. No change to behaviour, the run file or the cache.
+
+### Documentation
+
+- The documentation site is rebuilt around four sections: Get started, Guides, Reference and
+  About, each with an overview page, a home page, light and dark themes, "Last updated" dates and
+  an edit link on every page. Fonts and images are served from the site itself, so a page makes no
+  request to a third-party host. Every 0.7.0 URL still resolves.
+- New reference pages: every suite-file key with its type and default (Configuration), the run
+  file format and what older files load as (Run file format), every exit code with its causes
+  (Exit codes), and a glossary. Tests fail when a config field, a command option, a scorer or an
+  exit code is missing from them.
+- New pages: Troubleshooting (symptom, cause and fix for the error messages evalproof prints),
+  Upgrading (what to change from 0.5 onwards), Versioning and support, and Security and data
+  handling (what is sent, what is stored, how credentials and coding-agent logins are handled).
+- The roadmap is current: importers, rubric sets and fact checks for 0.8, a coding-agent add-on
+  for 0.9.
+- SECURITY.md lists 0.7.x as the supported line.
+
 ## [0.7.0] — 2026-11-14
 
 Reliability: run each case several times, and compare and gate on what the trials show. The
@@ -542,7 +563,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/technobasant/evalproof/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/technobasant/evalproof/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/technobasant/evalproof/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/technobasant/evalproof/compare/v0.5.1...v0.5.2

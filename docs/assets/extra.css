@@ -1,0 +1,19 @@
+/* Small refinements to Material: the home page hero and the card grid. Nothing else. */
+.md-typeset .hero {
+  padding: 1.5rem 0 0.5rem;
+}
+.md-typeset .hero h1 {
+  margin: 0 0 0.4rem;
+  font-size: 2.4rem;
+  letter-spacing: -0.02em;
+}
+.md-typeset .hero .lead {
+  max-width: 38rem;
+  font-size: 1.1rem;
+}
+.md-typeset .grid.cards > ul > li {
+  padding: 0.2rem 0.8rem;
+}
+.md-typeset .grid.cards p {
+  margin: 0.4rem 0;
+}

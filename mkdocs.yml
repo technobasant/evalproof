@@ -4,7 +4,7 @@ site_url: https://basantbhattarai.com.np/evalproof/
 repo_url: https://github.com/technobasant/evalproof
 repo_name: technobasant/evalproof
 edit_uri: edit/main/docs/
-copyright: Apache-2.0
+copyright: "© 2026 Basant Bhattarai · Apache-2.0"
 
 # Internal design specs stay in the repository; they are not part of the site.
 exclude_docs: |
@@ -12,23 +12,63 @@ exclude_docs: |
 
 theme:
   name: material
+  custom_dir: overrides
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  icon:
+    repo: fontawesome/brands/github
   features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.indexes
     - navigation.top
+    - navigation.footer
+    - toc.follow
     - search.suggest
+    - search.highlight
+    - search.share
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+    - content.action.view
+    - announce.dismiss
   palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
+      primary: indigo
+      accent: teal
       toggle:
-        icon: material/weather-night
+        icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
+      primary: indigo
+      accent: teal
       toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
+        icon: material/brightness-4
+        name: Switch to system preference
+
+extra_css:
+  - assets/extra.css
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/technobasant/evalproof
+      name: evalproof on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/evalproof/
+      name: evalproof on PyPI
 
 # `mkdocs build --strict` (CI runs it) turns every one of these into an error.
 validation:
@@ -40,7 +80,18 @@ validation:
 markdown_extensions:
   - admonition
   - attr_list
+  - def_list
+  - md_in_html
   - tables
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
   - pymdownx.snippets:
@@ -54,6 +105,13 @@ markdown_extensions:
 
 plugins:
   - search
+  # Fonts and external images are downloaded at build time and served from the site itself.
+  - privacy
+  # "Last updated" under each page. It reads the git history, so CI checks out with fetch-depth: 0.
+  - git-revision-date-localized:
+      type: date
+      fallback_to_build_date: true
+      enable_creation_date: false
   - mkdocstrings:
       handlers:
         python:
@@ -73,12 +131,14 @@ plugins:
 
 nav:
   - Home: index.md
-  - Getting started:
+  - Get started:
+      - getting-started/index.md
       - Install: getting-started/install.md
-      - What it needs to run: getting-started/credentials.md
       - Five-minute quickstart: getting-started/quickstart.md
+      - What it needs to run: getting-started/credentials.md
       - Use cases: getting-started/use-cases.md
   - Guides:
+      - guides/index.md
       - Providers: guides/providers.md
       - Testing agents: guides/testing-agents.md
       - Repeated trials: guides/repeated-trials.md
@@ -87,20 +147,30 @@ nav:
       - Import results from other tools: guides/import.md
       - From Python: guides/python.md
       - In CI: guides/ci.md
+      - Troubleshooting: guides/troubleshooting.md
   - Reference:
+      - reference/index.md
       - Commands: reference/commands.md
+      - Configuration: reference/configuration.md
+      - Run file format: reference/run-file.md
+      - Exit codes: reference/exit-codes.md
       - Concepts: reference/concepts.md
       - API reference: reference/api.md
+      - Glossary: glossary.md
   - About:
+      - about/index.md
       - Architecture: about/architecture.md
       - Decisions:
-          - Overview: about/decisions.md
+          - about/decisions/index.md
           - "0001 The judge is a classifier": adr/0001-judge-is-a-classifier.md
           - "0002 Local-first providers": adr/0002-local-first-providers.md
           - "0003 Gate on significance, not delta": adr/0003-gate-on-significance-not-delta.md
           - "0004 Agent CLIs as providers": adr/0004-agent-clis-as-providers.md
       - How it relates to other tools: about/related-tools.md
       - Limits: about/limits.md
+      - Versioning and support: about/versioning.md
+      - Security and data handling: about/security.md
+      - Upgrading: about/upgrading.md
       - Roadmap: about/roadmap.md
       - Measurements: about/measurements.md
       - Changelog: about/changelog.md

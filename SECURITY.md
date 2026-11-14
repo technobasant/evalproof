@@ -7,8 +7,8 @@ only supported line.
 
 | Version | Supported |
 |---|---|
-| 0.2.x | yes |
-| < 0.2 | no |
+| 0.7.x | yes |
+| < 0.7 | no |
 
 ## Reporting a vulnerability
 

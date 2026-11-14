@@ -56,14 +56,14 @@ dependencies (httpx, numpy, pydantic, PyYAML); no vendor SDK, no optional extras
 
 ```bash
 uvx evalproof --version
-uvx evalproof@0.7.0 init          # pin a version
+uvx evalproof@0.7.1 init          # pin a version
 ```
 
 **Install the CLI** on your `PATH`, isolated from your projects:
 
 ```bash
 uv tool install evalproof         # or: pipx install evalproof
-evalproof --version               # evalproof 0.7.0
+evalproof --version               # evalproof 0.7.1
 ```
 
 **Add it to a project**, to call it from Python or pin it with the project's other dev tools:
@@ -74,11 +74,12 @@ uv run evalproof --version
 ```
 
 **Upgrade** with `uv tool upgrade evalproof`, `pipx upgrade evalproof` or
-`pip install -U evalproof`. Run files from older versions keep working; see the
-[changelog](CHANGELOG.md) for what changed.
+`pip install -U evalproof`. Run files from older versions keep working; see
+[Upgrading](https://basantbhattarai.com.np/evalproof/about/upgrading/) for what to change and the [changelog](CHANGELOG.md) for everything
+that changed.
 
 **In GitHub Actions**, no install step is needed: the composite action
-`technobasant/evalproof@v0.7.0` runs the evalproof of the tag you pin
+`technobasant/evalproof@v0.7.1` runs the evalproof of the tag you pin
 ([In CI](https://basantbhattarai.com.np/evalproof/guides/ci/)).
 
 ## What it needs to run
@@ -137,9 +138,9 @@ The offline example, the retrieval example and the LLM example are on the
 The site at **[basantbhattarai.com.np/evalproof](https://basantbhattarai.com.np/evalproof/)** has:
 
 * [Getting started](https://basantbhattarai.com.np/evalproof/getting-started/install/): install, what it needs to run, the quickstart, use cases.
-* [Guides](https://basantbhattarai.com.np/evalproof/guides/providers/): providers, testing agents, repeated trials, readiness, Agent SDK adapters, importing other tools' results, calling it from Python, and CI.
-* [Reference](https://basantbhattarai.com.np/evalproof/reference/commands/): every command, the concepts, and the [API](https://basantbhattarai.com.np/evalproof/reference/api/).
-* [About](https://basantbhattarai.com.np/evalproof/about/architecture/): architecture, [decisions](https://basantbhattarai.com.np/evalproof/about/decisions/), how it relates to other tools, limits, the roadmap, the [measured run](https://basantbhattarai.com.np/evalproof/about/measurements/) and the [changelog](https://basantbhattarai.com.np/evalproof/about/changelog/).
+* [Guides](https://basantbhattarai.com.np/evalproof/guides/providers/): providers, testing agents, repeated trials, readiness, Agent SDK adapters, importing other tools' results, calling it from Python, CI, and [troubleshooting](https://basantbhattarai.com.np/evalproof/guides/troubleshooting/).
+* [Reference](https://basantbhattarai.com.np/evalproof/reference/commands/): every command and flag, the [suite configuration](https://basantbhattarai.com.np/evalproof/reference/configuration/), the [run file format](https://basantbhattarai.com.np/evalproof/reference/run-file/), the [exit codes](https://basantbhattarai.com.np/evalproof/reference/exit-codes/), the concepts, the [API](https://basantbhattarai.com.np/evalproof/reference/api/) and a [glossary](https://basantbhattarai.com.np/evalproof/glossary/).
+* [About](https://basantbhattarai.com.np/evalproof/about/architecture/): architecture, [decisions](https://basantbhattarai.com.np/evalproof/about/decisions/), how it relates to other tools, limits, [versioning and support](https://basantbhattarai.com.np/evalproof/about/versioning/), [security and data handling](https://basantbhattarai.com.np/evalproof/about/security/), [upgrading](https://basantbhattarai.com.np/evalproof/about/upgrading/), the roadmap, the [measured run](https://basantbhattarai.com.np/evalproof/about/measurements/) and the [changelog](https://basantbhattarai.com.np/evalproof/about/changelog/).
 
 [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) ·
 [Security policy](SECURITY.md) · [Code of conduct](CODE_OF_CONDUCT.md) ·

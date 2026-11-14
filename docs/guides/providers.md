@@ -1,7 +1,13 @@
+---
+description: Every model target evalproof can call, the key it reads, and how to use a logged-in Claude Code or Codex as the judge.
+---
+
 # Providers
 
-The target is `<provider>:<model>`; the model name is everything after the first colon, so
-`openrouter:anthropic/claude-sonnet-4.5` and `ollama:qwen3:8b` both work. Two native adapters
+The target of a system or a judge is `<provider>:<model>`, and this page lists every provider evalproof can call and how to configure it. It is for anyone choosing a model, pointing evalproof at a gateway, or using a logged-in coding agent as the judge.
+
+The model name is everything after the first colon, so
+`openrouter:anthropic/claude-sonnet-4.5` and `ollama:qwen3:8b` both work. There are two native adapters
 (`ollama`, `anthropic`) and one OpenAI-compatible adapter driven by a table of provider
 profiles ([`providers/profiles.py`](https://github.com/technobasant/evalproof/blob/main/src/evalproof/providers/profiles.py), each row cites the
 provider's documentation). Plain HTTP throughout, no vendor SDK. Two more targets run a coding
@@ -9,6 +15,8 @@ agent you already have logged in, `claude-code` and `codex`: see
 [Use your Claude Code or Codex login](#use-your-claude-code-or-codex-login). Three experimental
 ones run OpenCode, Cursor and GitHub Copilot the same way: see
 [Experimental providers](#experimental-providers).
+
+## Every target
 
 | Provider | Example target | Key variable | Where |
 |---|---|---|---|
@@ -35,7 +43,11 @@ ones run OpenCode, Cursor and GitHub Copilot the same way: see
 | `cursor` | `cursor:auto` | none: your Cursor login | local CLI, experimental |
 | `copilot` | `copilot:auto` | none: your GitHub Copilot login | local CLI, experimental |
 
-```yaml
+## Pointing a target at your own endpoint
+
+The `system` and `judge` blocks take these keys to reach a gateway or a regional endpoint:
+
+```yaml title="suite.yaml"
 system:
   target: openai-compatible:gpt-4o    # a gateway, LiteLLM proxy, TGI, SGLang, ...
   base_url: https://llm-gateway.internal/v1
@@ -69,13 +81,21 @@ system:
 If Claude Code or Codex is already logged in on your machine, either can be the judge or the
 system under test, with no API key:
 
-```yaml
-judge:
-  target: claude-code:haiku        # an alias (haiku, sonnet, opus) or a full model id
-system:
-  target: codex:gpt-6-luna
-concurrency: 4
-```
+=== "Claude Code"
+
+    ```yaml title="suite.yaml"
+    judge:
+      target: claude-code:haiku        # an alias (haiku, sonnet, opus) or a full model id
+    concurrency: 4
+    ```
+
+=== "Codex"
+
+    ```yaml title="suite.yaml"
+    system:
+      target: codex:gpt-6-luna
+    concurrency: 4
+    ```
 
 Run `evalproof doctor suite.yaml` first. It prints each CLI's path, version, login mode and
 the isolation flags it will pass, and exits 1 if a target of the suite is not usable. Without a
@@ -151,18 +171,22 @@ it is the same model either way. `evalproof doctor` prints the mode in effect an
 
 ### Experimental providers
 
-`opencode:`, `cursor:` and `copilot:` follow the same rules as the two above: your own logged-in
-binary, run as a subprocess in a fresh directory in the system temp directory (empty but for
-Cursor's permission file), its API-key variable removed from the child's environment unless
-`api_key_env` names one, a bounded runtime, and the CLI, its version and an isolation tag
-(`opencode/0`, `cursor/2`, `copilot/2`) in the run and in the cache key. They are experimental
-because their isolation is less proven than Claude Code's and Codex's. Each prints
-`evalproof: <name> provider is experimental` on stderr the first time it is used in a process.
-Like the other two they ignore `temperature`, `seed` and `max_tokens`, and `evalproof doctor`
-without a suite lists each of them whose binary is on `PATH`. One difference from the two
-above: Cursor and Copilot have no system-prompt option, so they keep their own agent system
-prompt and your system text goes in front of the prompt under a heading, as an instruction in
-the user turn. What was checked, and what was not:
+!!! warning "Experimental"
+
+    `opencode:`, `cursor:` and `copilot:` follow the same rules as the two above: your own logged-in
+    binary, run as a subprocess in a fresh directory in the system temp directory (empty but for
+    Cursor's permission file), its API-key variable removed from the child's environment unless
+    `api_key_env` names one, a bounded runtime, and the CLI, its version and an isolation tag
+    (`opencode/0`, `cursor/2`, `copilot/2`) in the run and in the cache key. They are experimental
+    because their isolation is less proven than Claude Code's and Codex's. Each prints
+    `evalproof: <name> provider is experimental` on stderr the first time it is used in a process.
+    Like the other two they ignore `temperature`, `seed` and `max_tokens`, and `evalproof doctor`
+    without a suite lists each of them whose binary is on `PATH`. One difference from the two
+    above: Cursor and Copilot have no system-prompt option, so they keep their own agent system
+    prompt and your system text goes in front of the prompt under a heading, as an instruction in
+    the user turn.
+
+What was checked, and what was not:
 
 * **`opencode:<provider>/<model>`** runs `opencode run --standalone --archived --format json`
   with a custom agent that has every tool off and every permission denied, your system text as
@@ -254,3 +278,9 @@ the user turn. What was checked, and what was not:
     output includes reasoning); a missing file means 0, never a failure. Only
     `COPILOT_GITHUB_TOKEN` is removed; `GH_TOKEN` and `GITHUB_TOKEN` are left because `gh` and CI
     set them for other reasons. `doctor` prints `auth: not checked`.
+
+## Next steps
+
+* Check what each target needs in CI: [What it needs to run](../getting-started/credentials.md).
+* Put a target to work: [In CI](ci.md#in-ci) and [Testing agents](testing-agents.md#testing-agents).
+* An error from a provider or a CLI: [Troubleshooting](troubleshooting.md).
