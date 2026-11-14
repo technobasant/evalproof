@@ -36,6 +36,15 @@ def test_binary_comparison_counts_discordant_pairs() -> None:
     assert cmp.same_dataset and cmp.baseline_label == "base"
 
 
+def test_variant_runs_of_one_target_get_distinct_labels() -> None:
+    b, c = _pair(10, regress=0)
+    b.info.system = c.info.system = "python:agent:run"
+    b.info.variant, c.info.variant = "prompt-v1", "prompt-v2"
+    cmp = compare_runs(b, c)
+    assert cmp.baseline_label == "python:agent:run (prompt-v1)"
+    assert cmp.candidate_label == "python:agent:run (prompt-v2)"
+
+
 def test_continuous_comparison_and_undecided() -> None:
     base = make_run({f"c{i}": {"s": 0.8} for i in range(30)} | {"u": {"s": None}})
     cand = make_run({f"c{i}": {"s": 0.6} for i in range(30)} | {"u": {"s": 0.5}})

@@ -203,8 +203,9 @@ def _failed_cases(run: Run, max_cases: int) -> list[str]:
 
 def run_markdown(run: Run, max_cases: int = 10) -> str:
     """The run's summary table. ``max_cases`` caps the failed-cases list; 0 leaves it out."""
+    variant = f" · variant `{run.info.variant}`" if run.info.variant else ""
     lines = [
-        f"## {run.info.suite} — `{run.info.system}`",
+        f"## {run.info.suite} — `{run.info.system}`{variant}",
         "",
         f"{len(run.results)} cases · wall {run.info.wall_time_s:.1f} s · "
         f"dataset `{run.info.dataset_hash}`",

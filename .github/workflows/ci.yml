@@ -134,6 +134,27 @@ jobs:
           }
           check noisy 1
           check good 0
+      - name: the agent example gates on tool behaviour
+        run: |
+          for v in v1 v2; do
+            uv run evalproof run examples/agent-tools/suite.yaml \
+              --variant "$v" --out "/tmp/agent-$v.json" --quiet > /dev/null
+          done
+          set +e
+          check() {
+            uv run evalproof compare "/tmp/agent-$1.json" "/tmp/agent-$2.json" \
+              --suite examples/agent-tools/suite.yaml --gate > /dev/null
+            got=$?
+            if [ "$got" != "$3" ]; then echo "::error::agent $1 to $2: expected exit $3, got $got"; exit 1; fi
+            echo "agent $1 to $2 → exit $got (expected $3)"
+          }
+          check v1 v2 0
+          check v2 v1 1
+          uv run evalproof readiness examples/agent-tools/suite.yaml \
+            --require behaviour,regression-gate > /dev/null
+          got=$?
+          if [ "$got" != "0" ]; then echo "::error::agent readiness: expected exit 0, got $got"; exit 1; fi
+          echo "agent readiness → exit $got (expected 0)"
 
   # The Streamlit app imports src/ directly, so a library change can break it without
   # failing the tests above. Install the app's own requirements, as Streamlit Community

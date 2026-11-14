@@ -4,6 +4,64 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+### Breaking
+
+- The case fields `turns`, `state` and `expect` now have a meaning (the user turns that follow
+  `input`, the initial session state, and the inline checks of the `checks` scorer) and are
+  validated when the dataset loads: `turns` must be a list of strings or objects, `state` an
+  object, `expect` a list of valid checks. A dataset that uses one of these names for something
+  else fails to load with a message that says to rename the field.
+
+### Added
+
+- A `checks` scorer asserts on what an agent did: the tools it called and with which arguments
+  (`tool_called`, `tool_not_called`, `tool_args_contain`, `forbidden_arg_values`, `tool_order`,
+  `tool_succeeded`, `tool_call_count`, `rounds`), and what it said (`output_contains`,
+  `output_omits`, `output_regex`, `output_cites_tool_result`), with `any_of`, `not` and `python`
+  checks to combine them. Checks come from the suite (`params.checks`) and from each case
+  (`expect`), are validated when the suite or the dataset loads, and are deterministic, so
+  `evalproof verify` re-scores them.
+- A `python` scorer calls a function of your own, `fn: module:function`, which returns a bool, a
+  number from 0 to 1, a `(bool, reason)` pair or a `Score`; an exception or any other return
+  value leaves the case undecided. `verify` re-scores it only when the scorer sets
+  `deterministic: true`.
+- `evalproof.adapters` turns what Google ADK, LangChain and LangGraph, the Claude Agent SDK and
+  the OpenAI Agents SDK return into the trace a python system hands back, and `TraceRecorder`
+  with `mcp_call` builds one by hand. No SDK is imported; tokens and cost roll up from the trace.
+- Suite `variants` run the same cases, scorers and gate against another model, prompt or flag:
+  each has a `name`, optional `vars` and an optional `system` merged over the suite's.
+  `evalproof run --variant NAME` (repeatable) or `--all-variants` writes `runs/<variant>.json`,
+  and the run file records the variant. A python system whose function has a `ctx` parameter gets
+  a `RunContext` (`case_id`, `input`, `turns`, `state`, `variant`, `vars`, `trial`).
+- Multi-turn cases run on every target that can hold a conversation: a python system gets the
+  later turns as `ctx.turns`, an http system gets `turns`, `state`, `variant` and `vars` in the
+  POST body, and a direct model target plays the turns in order, each after its previous reply.
+  A coding-agent CLI takes one prompt per call, so a suite with `turns` cases on one is refused
+  before any case runs.
+- `evalproof readiness SUITE [--run FILE] [--json] [--require dim,...]` reads a suite and its
+  dataset, and optionally a run file, and reports for each dimension of quality (correctness,
+  behaviour, quality, regression gate, reliability, cost and latency, safety, robustness,
+  multi-turn, load, production monitoring) whether it is covered, partly covered, missing or out
+  of scope, with the evidence. It makes no model call. It exits 1 when a `--require`d dimension
+  is not covered, and `--json` is for CI.
+- `examples/agent-tools`, an offline agent example: a plain-Python agent with two fake tools and
+  no model, 35 cases with inline `expect` checks (three multi-turn, five tagged `safety`, five
+  `robustness`), and two variants. `v1` plants a bug that skips a tool for one intent, and only
+  the `checks` scorer sees it, since the reply still reads well. The committed run files in
+  `runs/` gate `v1` to `v2` with exit 0 and `v2` to `v1` with exit 1, and `evalproof readiness`
+  reports its gaps. CI runs both directions and the readiness `--require` on every commit.
+- The README has a "Testing agents" section: the trace contract (what a python system returns,
+  the `ToolCall` fields and `ctx`), a table of every check with what it needs and when it passes,
+  multi-turn cases (`turns`, `state`), variants (`--variant`, `--all-variants`), the example, and
+  what `readiness` reports. "Agent SDK adapters" is now a subsection of it.
+- Credentials are stated plainly. The README has a "What it needs to run" section, a table of
+  each target, the variable it reads, whether it works locally and in CI, and where it is allowed.
+  `evalproof init` prints what the chosen judge needs, locally and in CI. `evalproof init --ci
+  api-key --cli-auth oauth-token` writes a workflow that passes `CLAUDE_CODE_OAUTH_TOKEN` from a
+  repository secret, for Claude Code only and for your own repository and CI only (a usage error
+  for Codex or any other target). `evalproof doctor` prints, for each target, the credential it
+  would use and whether that works in CI; it checks variable names only and never reads a value.
+
 ## [0.5.2] — 2026-11-14
 
 No behaviour changes: documentation, and `evalproof init` now pins 0.5.2 in the workflows it writes.

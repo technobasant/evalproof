@@ -107,6 +107,12 @@ def dataset_change_note(cmp: Comparison) -> str | None:
     )
 
 
+def _label(run: Run) -> str:
+    """The run's system, with its variant when it has one: two variants of a suite often run the
+    same target, and only the variant tells them apart."""
+    return f"{run.info.system} ({run.info.variant})" if run.info.variant else run.info.system
+
+
 def records_case_hashes(run: Run) -> bool:
     """True when every result carries a ``case_hash`` (written by evalproof 0.5 or newer)."""
     return bool(run.results) and all(r.case_hash is not None for r in run.results)
@@ -248,8 +254,8 @@ def compare_runs(
         metrics=out,
         baseline=run_stats(baseline),
         candidate=run_stats(candidate),
-        baseline_label=baseline.info.system,
-        candidate_label=candidate.info.system,
+        baseline_label=_label(baseline),
+        candidate_label=_label(candidate),
         same_judge=not judge_changes,
         judge_changes=judge_changes,
         system_changes=environment_changes(baseline, candidate, SYSTEM_KEYS),

@@ -19,12 +19,17 @@ from pathlib import Path
 
 from evalproof.config import ConfigError
 from evalproof.providers import LLM_PROVIDERS, PROFILES, parse_target
+from evalproof.providers.agent_cli import CLAUDE_OAUTH_ENV
 
 # The tag of the composite action (``action.yml``) the generated workflows use. The
 # ``evalproof`` version that ``run`` is pinned to in the api-key variant is the same release.
 ACTION_REF = "v0.5.2"
 
 CI_MODES = ("keyless", "api-key", "none")
+
+# What the api-key workflow hands a coding-agent CLI: its API key (the default), or, for Claude
+# Code only, the token ``claude setup-token`` prints.
+CLI_AUTHS = ("api-key", "oauth-token")
 
 ANTHROPIC_DEFAULT = "anthropic:claude-haiku-5-5"
 OLLAMA_DEFAULT = "ollama:qwen3:8b"
@@ -236,7 +241,12 @@ def render_suite(judge: Judge) -> str:
     )
 
 
-def render_ci_text(ci: str, judge: Judge) -> str:
+def _ci_secret(judge: Judge, cli_auth: str) -> str:
+    """The repository secret the api-key workflow reads for this judge."""
+    return CLAUDE_OAUTH_ENV if cli_auth == "oauth-token" else _key_env(judge)
+
+
+def render_ci_text(ci: str, judge: Judge, cli_auth: str = "api-key") -> str:
     if ci == "keyless":
         return (
             "Commit `evals/runs/latest.json` with your change. CI makes no model calls: "
@@ -253,13 +263,22 @@ def render_ci_text(ci: str, judge: Judge) -> str:
             "Commit `evals/runs/latest.json` on the main branch to set the baseline. "
             "`.github/workflows/evalproof.yml` runs the suite on a pull request that changes "
             "`evals/` (add the paths that hold your prompt to `WATCH` in the workflow) with the "
-            f"`{_key_env(judge)}` repository secret and compares the result with that file; "
+            f"`{_ci_secret(judge, cli_auth)}` repository secret and compares the result with "
+            "that file; "
             "it fails on a regression that is both large enough to matter and statistically "
             "significant (exit 1; exit 3 over a budget; exit 4 when it cannot decide). Pull "
             "requests from forks get no secrets, so the workflow runs nothing for them. "
             "Responses are cached between runs."
         )
-        if judge.provider in AGENT_CLIS:
+        if cli_auth == "oauth-token":
+            text += (
+                f" The run step passes `{CLAUDE_OAUTH_ENV}` from that secret and sets no "
+                "`EVALPROOF_CLI_AUTH`, so the CLI signs in with the token; locally it keeps "
+                "using your login. The token comes from `claude setup-token`: use it only in "
+                "your own repository and CI, and use an API key for a secret shared across a "
+                "team or organisation."
+            )
+        elif judge.provider in AGENT_CLIS:
             text += (
                 " The run step sets `EVALPROOF_CLI_AUTH=api-key`, so the CLI uses that key "
                 "instead of a login; locally it keeps using your login."
@@ -272,10 +291,11 @@ def render_ci_text(ci: str, judge: Judge) -> str:
     )
 
 
-def render_workflow(ci: str, judge: Judge, pinned: str | None) -> str:
+def render_workflow(ci: str, judge: Judge, pinned: str | None, cli_auth: str = "api-key") -> str:
     if ci == "keyless":
         return fill(template("workflow-keyless.yml"), {"ACTION_REF": ACTION_REF})
     cli = AGENT_CLIS.get(judge.provider)
+    oauth = cli_auth == "oauth-token"
     key_var = _key_env(judge)
     values = {
         "ACTION_REF": ACTION_REF,
@@ -297,30 +317,87 @@ def render_workflow(ci: str, judge: Judge, pinned: str | None) -> str:
                 f"      # `evalproof init` did not find {cli.binary}, so this installs the "
                 "latest:\n      # replace latest with the version your run file records."
             )
-    return fill(
-        template("workflow-api-key.yml"), values, frozenset({"cli"}) if cli else frozenset()
-    )
+    flags = {"cli"} if cli else set()
+    if oauth:
+        flags.add("oauth")  # the token replaces both the API key and EVALPROOF_CLI_AUTH
+    else:
+        flags.add("key")
+        if cli:
+            flags.add("cliauth")
+    return fill(template("workflow-api-key.yml"), values, frozenset(flags))
 
 
-def build_files(judge: Judge, ci: str, skill: bool, pinned: str | None) -> list[tuple[str, str]]:
+def build_files(
+    judge: Judge, ci: str, skill: bool, pinned: str | None, cli_auth: str = "api-key"
+) -> list[tuple[str, str]]:
     """Every file to write, as (path relative to the target directory, content)."""
     out = [
         ("evals/suite.yaml", render_suite(judge)),
         ("evals/cases.jsonl", template("cases.jsonl")),
         (
             "evals/README.md",
-            fill(template("evals-readme.md"), {"CI_TEXT": render_ci_text(ci, judge)}),
+            fill(template("evals-readme.md"), {"CI_TEXT": render_ci_text(ci, judge, cli_auth)}),
         ),
         ("evals/.gitignore", template("gitignore")),
     ]
     if ci != "none":
-        out.append((".github/workflows/evalproof.yml", render_workflow(ci, judge, pinned)))
+        out.append(
+            (".github/workflows/evalproof.yml", render_workflow(ci, judge, pinned, cli_auth))
+        )
     if skill:
         body = template("SKILL.md")
         # Two copies, not a symlink, so a Windows checkout works.
         out.append((".agents/skills/evalproof/SKILL.md", body))
         out.append((".claude/skills/evalproof/SKILL.md", body))
     return out
+
+
+def _hosted_key(judge: Judge) -> str | None:
+    """The environment variable a hosted judge reads its API key from; None for a local one."""
+    if judge.api_key_env:
+        return judge.api_key_env
+    profile = PROFILES.get(judge.provider)
+    if profile is None or profile.local:
+        return None
+    return profile.api_key_env
+
+
+def requirement_lines(judge: Judge, ci: str, cli_auth: str = "api-key") -> list[str]:
+    """What the starter suite needs to run, locally and in CI, for the chosen judge.
+
+    The same facts as the README's "What it needs to run" table, for the one target ``init``
+    chose. Names variables only; it reads none."""
+    cli = AGENT_CLIS.get(judge.provider)
+    key = _hosted_key(judge)
+    if cli:
+        local = f"your {cli.label} login (`{cli.binary}` on PATH, logged in); no API key"
+    elif key:
+        local = f"{key} in your environment"
+    else:
+        local = f"a local model server ({judge.provider}) running, with the model pulled"
+    if ci == "keyless":
+        remote = "no secrets: keyless mode makes no model calls in CI, it compares run files"
+    elif ci == "none":
+        remote = "nothing set up: no workflow was written"
+    elif cli_auth == "oauth-token":
+        remote = (
+            f"the {CLAUDE_OAUTH_ENV} repository secret, from `claude setup-token`; "
+            "your own repository and CI only (use an API key for a secret shared across a "
+            "team or organisation)"
+        )
+    elif cli:
+        remote = f"the {cli.key_env} repository secret, with EVALPROOF_CLI_AUTH=api-key"
+        if judge.provider == "codex":
+            remote += (
+                "; a personal Codex login belongs only on trusted private infrastructure, "
+                "never on public repositories or for open source work"
+            )
+    else:
+        remote = f"the {_key_env(judge)} repository secret"
+    lines = [f"locally: {local}", f"in CI: {remote}"]
+    if ci == "api-key":
+        lines.append("pull requests from forks never receive secrets, so the workflow skips them")
+    return lines
 
 
 def init_project(
@@ -330,12 +407,27 @@ def init_project(
     ci: str = "keyless",
     skill: bool = True,
     force: bool = False,
+    cli_auth: str = "api-key",
     emit: Callable[[str], None] = print,
 ) -> int:
     """Write the starter files into ``directory``; returns the exit code (always 0)."""
     if ci not in CI_MODES:
         raise ConfigError(f"--ci must be one of {', '.join(CI_MODES)}, got {ci!r}")
+    if cli_auth not in CLI_AUTHS:
+        raise ConfigError(f"--cli-auth must be one of {', '.join(CLI_AUTHS)}, got {cli_auth!r}")
     chosen = choose_judge(judge)
+    if cli_auth == "oauth-token":
+        if ci != "api-key":
+            raise ConfigError(
+                "--cli-auth oauth-token changes the secret the api-key workflow passes, so it "
+                f"needs --ci api-key (got --ci {ci})"
+            )
+        if chosen.provider != "claude-code":
+            raise ConfigError(
+                f"--cli-auth oauth-token works only with a claude-code judge, and the judge is "
+                f"{chosen.target!r}. Pass --judge claude-code:<model>, or leave --cli-auth out "
+                "to use an API key (Codex and every other target have no token option)."
+            )
     # An api-key workflow needs the key variable and, for a CLI judge, its pinned version.
     pinned = None
     if ci == "api-key":
@@ -343,7 +435,7 @@ def init_project(
         cli = AGENT_CLIS.get(chosen.provider)
         found = shutil.which(cli.binary) if cli else None
         pinned = cli_version(found) if found else None
-    files_to_write = build_files(chosen, ci, skill, pinned)
+    files_to_write = build_files(chosen, ci, skill, pinned, cli_auth)
 
     emit(f"evalproof init: judge {chosen.target} ({chosen.reason})")
     root = directory.resolve()
@@ -358,6 +450,12 @@ def init_project(
 
     if chosen.warning:
         emit(f"note: {chosen.warning}")
+    if cli_auth == "oauth-token":
+        emit(
+            f"warning: {CLAUDE_OAUTH_ENV} is a Claude login token from `claude setup-token`. "
+            "Use it in your own repository and CI only; for a secret shared across a team or "
+            "organisation use an API key (leave --cli-auth out)."
+        )
     cli = AGENT_CLIS.get(chosen.provider)
     if ci == "api-key" and cli:
         if pinned:
@@ -368,7 +466,12 @@ def init_project(
     emit("next:")
     emit("  uvx evalproof run evals/suite.yaml --out evals/runs/latest.json")
     if ci == "api-key":
-        emit(f"  add the repository secret {_key_env(chosen)}, then commit evals/ and .github/")
+        secret = _ci_secret(chosen, cli_auth)
+        emit(f"  add the repository secret {secret}, then commit evals/ and .github/")
     else:
         emit("  commit evals/ (including evals/runs/latest.json) with your change")
+    emit("")
+    emit("what it needs to run:")
+    for line in requirement_lines(chosen, ci, cli_auth):
+        emit(f"  {line}")
     return 0

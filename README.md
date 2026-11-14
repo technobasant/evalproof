@@ -77,11 +77,33 @@ What else you need depends on what you run:
 
 | To | You need |
 |---|---|
-| `compare`, `calibrate`, `verify`, `rehash`, `report`, `import`, `init`, `doctor` | nothing: they read run files and make no model call |
+| `compare`, `calibrate`, `verify`, `rehash`, `report`, `import`, `init`, `doctor`, `readiness` | nothing: they read run files and make no model call |
 | `run` against a Python function or an HTTP endpoint | that function or endpoint |
 | `run` on a local model | [Ollama](https://ollama.com) (the default), vLLM, LM Studio or llama.cpp, with the model pulled |
 | `run` on a hosted model | the provider's key in an environment variable ([Providers](#providers)) |
 | `run` with your Claude Code or Codex login | the `claude` or `codex` CLI on your `PATH`, logged in; check with `evalproof doctor` |
+
+## What it needs to run
+
+Which credential a run needs depends on what the system and the judge are. **Keyless mode needs no
+secrets:** CI compares run files you committed and makes no model call. Fork pull requests never
+receive secrets, so no workflow runs a model for them.
+
+| Target | Credential variable | Local use | CI use | Where allowed |
+|---|---|---|---|---|
+| No model: a Python function or an HTTP endpoint with no LLM behind it, or committed run files | none | nothing | nothing | anywhere, including fork pull requests |
+| Local models (Ollama, vLLM, LM Studio, llama.cpp) | none | the server running, with the model pulled | a server on the runner, started in a workflow step | anywhere |
+| Hosted APIs (Anthropic, OpenAI and the rest of [Providers](#providers)) | the provider's key, such as `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | the variable in your environment | the key as a repository secret | your own repository; fork pull requests never receive it |
+| Claude Code CLI | `ANTHROPIC_API_KEY` (api-key mode) or `CLAUDE_CODE_OAUTH_TOKEN` | your Claude Code login, no variable | `ANTHROPIC_API_KEY` as a secret with `EVALPROOF_CLI_AUTH=api-key`, or `CLAUDE_CODE_OAUTH_TOKEN` as a secret (made by `claude setup-token`) | the token: your own repository and your own CI only; use an API key for a secret shared across a team or an organisation |
+| Codex CLI | `OPENAI_API_KEY` | your Codex login, no variable | `OPENAI_API_KEY` as a secret with `EVALPROOF_CLI_AUTH=api-key` | a personal Codex login only on trusted private infrastructure, never on public repos or for open source work |
+
+`evalproof init --ci api-key` writes the workflow with the secret for the judge it chose, and
+prints this requirement for that judge when it finishes. For Claude Code,
+`evalproof init --ci api-key --cli-auth oauth-token` passes `CLAUDE_CODE_OAUTH_TOKEN` instead of
+the API key and warns that it is for your own repository and CI only; Codex has no token option.
+`evalproof doctor` prints, for each CLI target, which credential it would use here and whether
+that works in CI ("login only, not available in CI", or usable from a secret). It looks at the
+names of environment variables, never at their values.
 
 ## Use cases
 
@@ -223,7 +245,7 @@ The browser app in [`app/`](app) runs locally too:
 | Command | What it does |
 |---|---|
 | `evalproof init` | write a starter suite, a CI workflow and an agent skill; no model call |
-| `evalproof run SUITE` | run the suite and write a run file; `--gate` applies the baseline-free checks (`min_pass_rate`, `must_pass`); `--show N` lists N failed cases |
+| `evalproof run SUITE` | run the suite and write a run file; `--gate` applies the baseline-free checks (`min_pass_rate`, `must_pass`); `--show N` lists N failed cases; `--variant NAME` (repeatable) or `--all-variants` runs the suite's [variants](#variants-one-suite-several-builds), one run file each |
 | `evalproof compare BASE CAND` | compare two runs on paired cases; `--gate` turns the result into an exit code; `--show N` prints both answers for N regressed cases |
 | `evalproof verify RUN SUITE` | check, with no model call, that a run file was made with this suite, covers exactly the dataset's cases as they are now, and has the scores its deterministic scorers give the stored outputs |
 | `evalproof rehash RUN SUITE` | add per-case hashes to a run file written before 0.5, from the dataset it scored; no model call |
@@ -232,6 +254,7 @@ The browser app in [`app/`](app) runs locally too:
 | `evalproof calibrate RUN` | measure the judge against gold labels and correct its pass rate |
 | `evalproof pairwise A B` | judge two runs head to head, in both orders |
 | `evalproof doctor [SUITE]` | check the agent CLIs a suite uses; no model call |
+| `evalproof readiness SUITE [--run FILE] [--json] [--require DIM,...]` | report which parts of quality the suite covers (correctness, tool use, quality, gate, cost, safety, and so on) and which it leaves untested; exits 1 when a `--require`d one is not covered; no model call |
 
 ## Providers
 
@@ -517,7 +540,8 @@ and for a CLI target the CLI, its version, the isolation scheme and the model th
 running anything.
 
 **Scorers** — `exact_match`, `contains`, `regex` (accept/reject answer keys),
-`json_schema`, `numeric_tolerance`, `recall_at_k`, `mrr`, `ndcg`, and `llm_judge`: a strict
+`json_schema`, `numeric_tolerance`, `recall_at_k`, `mrr`, `ndcg`, `checks` (what an agent did:
+[Testing agents](#testing-agents)), and `llm_judge`: a strict
 JSON verdict, one retry on an unparseable reply, and an explicit *undecided* state that is
 counted, never scored as a pass. `evalproof pairwise` judges two runs head to head in both
 orders and reports order-dependent verdicts as ties.
@@ -617,6 +641,404 @@ gate:
 ```bash
 evalproof compare baseline.json candidate.json --gate --metric judge --metric answer_key
 ```
+
+## Testing agents
+
+An agent can give a fluent answer for the wrong reason: it skipped a tool, called one with the
+wrong argument, or made up a number. A text-only scorer cannot see that. evalproof tests what an
+agent *did* as well as what it said, and none of it needs a model: the `checks` scorer reads a
+trace, a record of the tool calls and replies, and the gate treats the result like any other
+pass rate.
+
+### What the system returns: the trace
+
+A python system (`target: python:agent:run`) returns a dict, and the `trace` in it is what the
+checks read.
+
+| Key | What it is |
+|---|---|
+| `output` | the final reply, a string (required) |
+| `trace` | a dict or an `evalproof.models.Trace` |
+| `retrieved`, `tokens_in`, `tokens_out`, `cost_usd` | optional, as for any python system |
+
+A `Trace` has `responses` (the reply to each user turn; the last is `output`), `tool_calls`,
+`rounds` (model calls, when known), `usage` (tokens and cost per model call) and `meta` (anything
+else). Each tool call is a `ToolCall`:
+
+| Field | What it is |
+|---|---|
+| `name`, `args`, `result` | the tool, the arguments it got and what it returned |
+| `ok`, `error` | `ok` is `false` for a call that failed, with the `error` text |
+| `turn` | the 0-based user turn the call belongs to |
+| `id`, `latency_ms` | optional |
+
+`TraceRecorder` builds the dict by hand, for an agent in plain Python:
+
+```python
+# agent.py
+from evalproof import RunContext
+from evalproof.adapters import TraceRecorder
+
+
+def run(question: str, ctx: RunContext) -> dict:
+    rec = TraceRecorder()
+    rec.round()
+    rec.tool("get_weather", {"city": "Paris"}, result={"temp_c": 20})
+    rec.reply("It is 20 degrees in Paris.")
+    return rec.result()
+```
+
+A tool call belongs to the turn under way (the number of replies recorded so far) unless `turn=`
+says otherwise; pass `ok=False` and an `error` for a call that failed. For an agent built on an
+SDK, the [adapters below](#agent-sdk-adapters) build the same dict from what the SDK returns.
+
+**`ctx`.** Declare a parameter named `ctx` and the function is called as `run(input, ctx=ctx)`.
+A `RunContext` has `case_id`, `input`, `turns` (the user turns after the input), `state` (the
+case's initial session state), `variant` and `vars` (the suite variant being run and its
+variables), and `trial` (the repeat index, always 0 for now). Each call gets its own copies of the
+mutable parts.
+
+### The `checks` scorer
+
+```yaml
+scorers:
+  - name: behaviour
+    type: checks
+    params:
+      on_missing: skip           # a case with no checks is left out; `pass` (the default) passes it
+      checks:                    # applied to every case
+        - {type: tool_call_count, max: 6}
+gate: {metric: behaviour, max_drop: 0.02, min_cases: 30}
+```
+
+Each case lists its own checks in `expect` (or in the field `params.field` names), and the scorer
+applies those after the suite-wide ones:
+
+```json
+{"id": "w01", "input": "What's the weather in Paris today?",
+ "expect": [
+   {"type": "tool_called", "name": "get_weather", "args": {"city": "Paris", "day": "today"}},
+   {"type": "tool_not_called", "name": "get_events"},
+   {"type": "output_cites_tool_result", "name": "get_weather", "min_matches": 2}]}
+```
+
+A case passes when every check passes (`mode: all`, the default); `mode: fraction` scores the
+share that passed, and the case still counts as passed only when all did. A typo in a check, an
+unknown key or a bad value fails when the suite or the dataset loads, with the path to it. A case
+whose system errored fails every check.
+
+| Check | Needs | Optional | It passes when |
+|---|---|---|---|
+| `tool_called` | `name` | `args`, `args_match`, `min`, `max`, `turn` | the tool was called (once or more, or as many times as `min` and `max` allow, counting only calls whose arguments match `args`); `max: 0` alone means never |
+| `tool_not_called` | `name` | `args`, `args_match`, `turn` | no call of the tool (with matching `args`, if given) |
+| `tool_args_contain` | `name`, `arg`, `value` | `turn` | some call of the tool has an argument `arg` that contains `value`: a substring of a string, a member of a list, otherwise equal |
+| `forbidden_arg_values` | `arg`, `values` | `name`, `turn` | no call (of the tool `name`, if given) has `arg` equal to, or containing, one of `values` |
+| `tool_order` | `calls` | `match`, `turn` | the calls (tool names, or objects with `name`, `args`, `args_match`) happened in this order; see `match` below |
+| `tool_succeeded` | | `name`, `turn` | no call (of the tool `name`, if given) failed (`ok` is true on all) |
+| `tool_call_count` | `min` or `max` | `name`, `turn` | the number of calls (of the tool `name`, if given) is within `min` and `max` |
+| `rounds` | `min` or `max` | | the trace's `rounds` is within `min` and `max`; fails when the trace reports none |
+| `output_contains` | `text` | `all`, `case_sensitive`, `turn` | the reply contains `text`, a string or a list of them (all of them unless `all: false`); not case sensitive unless `case_sensitive: true` |
+| `output_omits` | `text` | `case_sensitive`, `turn` | the reply contains none of `text` |
+| `output_regex` | `pattern` | `flags`, `turn` | `pattern` is found in the reply; `flags` are any of `i`, `m`, `s` |
+| `output_cites_tool_result` | `name` | `min_matches`, `rel_tol`, `strict`, `turn` | the reply states at least `min_matches` (default 1) of the numbers in the tool's results, each equal within `rel_tol` (default 1e-6) or equal to the result rounded to the digits the reply wrote; 0, 1 and years are ignored unless `strict: true`; fails when the tool was not called |
+| `any_of` | `checks` | | at least one of the listed checks passes |
+| `not` | `check` | | the inner check fails |
+| `python` | `fn` | | `fn` (`module:function`, importable from the suite's directory) returns true when called as `fn(case, output)` with the case and its `SystemOutput`; it may return a `bool`, a `(bool, reason)` pair or a `Score`; a function that raises leaves the case undecided |
+
+How the keys work:
+
+* **`args` and `args_match`.** Every key in `args` must be in the call's arguments with the same
+  value (numbers compare as numbers, `1 == 1.0`). The default, `args_match: exact`, wants strings
+  and lists to be equal; `args_match: contains` lets a string be a substring and a list hold at
+  least the listed elements. Nested objects are compared the same way, key by key.
+* **`match`** (in `tool_order`). `subsequence` (the default) wants the listed calls in that order,
+  with others allowed in between. `exact` wants exactly those calls and no others, in that order.
+  `any_order` wants each listed call matched by a call of its own, whatever the order.
+* **`turn`.** A tool check looks only at the calls of that user turn; a text check reads the reply
+  to that turn instead of the final output. Turns count from 0, and 0 is the case's `input`.
+* **Missing evidence.** A check on the tool calls, rounds or a cited result fails with "no trace"
+  when the output has no trace (`rounds` also fails when the trace reports no round count), and
+  `not` does not turn that into a pass: "was not called" cannot be concluded from a missing trace.
+  A text check on the reply of a turn that has none fails the same way.
+
+### Several turns
+
+A case with `turns` is a conversation: `input` is turn 0 and each later user turn follows. A case
+may also carry `state`, an object holding the initial session state the system starts from.
+
+```json
+{"id": "m01", "input": "What's the weather like?", "turns": ["Paris"],
+ "expect": [
+   {"type": "tool_not_called", "name": "get_weather", "turn": 0},
+   {"type": "output_contains", "text": "which city", "turn": 0},
+   {"type": "tool_called", "name": "get_weather", "args": {"city": "Paris", "day": "today"}, "turn": 1}]}
+```
+
+A python system gets the later turns as `ctx.turns` and the state as `ctx.state`. An http system
+gets `turns`, `state`, `variant` and `vars` in the POST body when they are set. A direct model
+target plays the turns in order, each after the model's previous reply, and its output is the last
+reply. A coding-agent CLI takes one prompt per call, so a suite with `turns` cases on one is refused
+up front, before any case runs.
+
+### Variants: one suite, several builds
+
+A variant is another way to run the same cases, scorers and gate: a different model, prompt or
+flag. Name them in the suite:
+
+```yaml
+variants:
+  - name: v1
+    vars: {calendar_for_outings: false}
+  - name: v2
+    vars: {calendar_for_outings: true}
+    system: {target: "python:agent:run_v2"}   # optional: merged over the suite's `system`
+```
+
+```bash
+evalproof run suite.yaml --variant v1 --variant v2     # or --all-variants
+evalproof compare runs/v1.json runs/v2.json --suite suite.yaml --gate
+```
+
+Each variant writes `runs/<variant>.json` (`--out` names a file only when one variant runs), and
+the run file records the variant, so `compare` names it in its report. A variant's `vars` reach a
+python system as `ctx.vars`, an http system in the request body, and a model prompt as template
+fields. A variant name uses only `a-z`, `0-9`, `.`, `_` and `-`.
+
+### Example: a planted bug that only the tool calls show
+
+[`examples/agent-tools`](examples/agent-tools) is an agent in plain Python (two fake tools, a
+keyword planner, no model and no network) with 35 cases, including `safety`, `robustness` and
+three multi-turn cases, and two variants. `v1` has a planted bug: asked whether to go on a picnic,
+the agent answers from the forecast alone and never looks at the calendar. Its reply still reads
+well, so a text scorer passes it; the `behaviour` scorer fails 8 cases, and the gate fails v1
+against v2 with exit 1. CI runs both directions on every commit.
+
+```bash
+uv run evalproof run examples/agent-tools/suite.yaml --all-variants
+uv run evalproof compare runs/v1.json runs/v2.json \
+  --suite examples/agent-tools/suite.yaml --gate; echo $?   # 0: v2 fixes it
+uv run evalproof compare runs/v2.json runs/v1.json \
+  --suite examples/agent-tools/suite.yaml --gate; echo $?   # 1: v1 is the regression
+```
+
+### What a suite covers: `evalproof readiness`
+
+```bash
+evalproof readiness suite.yaml [--run FILE] [--json] [--require behaviour,regression-gate]
+```
+
+It reads the suite and the dataset (and a run file, if you pass one) and reports, with no model
+call, which of eleven dimensions the suite covers: correctness, behaviour (tool use), quality,
+regression gate, reliability, cost and latency, safety, robustness, multi-turn, load and
+production monitoring. Each is `covered`, `partial`, `missing` or `out of scope`, with the evidence.
+
+* **correctness** is covered by a deterministic scorer that grades answers against a key
+  (`contains`, `regex`, and so on); **behaviour** by a `checks` scorer, when at least half the
+  cases have a check on the tool calls or rounds; **quality** by an `llm_judge` scorer, calibrated.
+* **regression gate** needs a `gate` block, and `min_cases` no larger than the dataset;
+  **cost and latency** need `max_cost_usd` or `max_p95_latency_ms` in it.
+* **safety** and **robustness** are covered when a case is tagged `safety` or `robustness`;
+  **multi-turn** is at most partial, since evalproof cannot say how many multi-turn cases are
+  enough.
+* **reliability** is always `missing` in this release, because repeated trials are not here yet.
+  **load** and **production monitoring** are out of scope: use a load-testing tool and an
+  observability platform.
+
+The report says what the suite measures, not that the measurement is good enough. `--require`
+turns it into a gate: the exit code is 1 unless every named dimension is covered, and 2 for a
+usage error. The names are `correctness`, `behaviour`, `quality`, `regression-gate`,
+`reliability`, `cost-latency`, `safety`, `robustness`, `multi-turn`, `load` and
+`production-monitoring`.
+
+### Agent SDK adapters
+
+A python system (`target: python:agent:run`) returns `{"output", "trace", ...}`, and the `trace`
+is what the `checks` scorer reads: the tools called, their arguments and results, the rounds,
+the tokens. `evalproof.adapters` builds that dict from what four agent SDKs return. The
+adapters import no SDK and read objects or plain dicts, so they work with any version that keeps
+the field names they cite; each module's header gives the package version and file:line of every
+field it reads. Tokens and cost roll up from the trace, so `max_cost_usd` and the budgets see an
+agent's spend. Cost is set only where the SDK reports one (Claude); otherwise the target's
+`pricing` applies. A turn boundary is read from the input where it shows (ADK user events, a
+LangChain human message, a Claude `ResultMessage`), else every call is turn 0. For a multi-turn
+case where each user turn is a separate call to the SDK, pass one item per turn: a list of ADK
+event lists, a list of Claude message lists (one per `query()` call), or a list of OpenAI
+results. The python function gets the later turns as `ctx.turns`.
+
+**Google ADK** — `adk.from_events(events)`; pairs `function_call` and `function_response` parts
+by id, then by name and order. A tool that returns `{"error": ...}` is recorded as failed.
+`run_async` does not yield the user's message by default, so for several turns pass one event
+list per run (or `session.events`).
+
+```python
+# agent.py
+import asyncio
+
+from google.adk.agents import LlmAgent
+from google.adk.runners import InMemoryRunner
+from google.genai import types
+
+from evalproof.adapters import adk
+
+
+def get_weather(city: str) -> dict:
+    """Current weather for a city."""
+    return {"city": city, "temp_c": 20}
+
+
+agent = LlmAgent(name="assistant", model="gemini-2.5-flash", tools=[get_weather])
+runner = InMemoryRunner(agent=agent, app_name="evals")
+
+
+async def _events(question: str) -> list:
+    session = await runner.session_service.create_session(app_name="evals", user_id="eval")
+    message = types.Content(role="user", parts=[types.Part.from_text(text=question)])
+    return [
+        e
+        async for e in runner.run_async(user_id="eval", session_id=session.id, new_message=message)
+    ]
+
+
+def run(question: str) -> dict:
+    return adk.from_events(asyncio.run(_events(question)))
+```
+
+**LangChain and LangGraph** — `langchain.from_messages(messages)` takes the message list or the
+state dict an agent returns; `ToolMessage.status == "error"` marks a failed call.
+
+```python
+# agent.py
+from langchain.agents import create_agent
+from langchain_core.tools import tool
+
+from evalproof.adapters import langchain
+
+
+@tool
+def next_meeting(day: str) -> str:
+    """The first calendar entry on a day."""
+    return f"{day}: 10:00 planning"
+
+
+agent = create_agent("openai:gpt-5.5", [next_meeting], system_prompt="Answer calendar questions.")
+
+
+def run(question: str) -> dict:
+    state = agent.invoke({"messages": [{"role": "user", "content": question}]})
+    return langchain.from_messages(state)
+```
+
+**Claude Agent SDK** — `claude_agent_sdk.from_messages(messages)`; `ToolResultBlock.is_error`
+marks a failed call, the usage comes from the per-model `model_usage` of the final
+`ResultMessage`, and `cost_usd` is its `total_cost_usd`. Those are running totals of a session;
+pass one message list per `query()` call and the sessions' totals are added.
+
+```python
+# agent.py
+import asyncio
+
+from claude_agent_sdk import ClaudeAgentOptions, create_sdk_mcp_server, query, tool
+
+from evalproof.adapters import claude_agent_sdk
+
+
+@tool("get_weather", "Current weather for a city", {"city": str})
+async def get_weather(args):
+    return {"content": [{"type": "text", "text": f"{args['city']}: 20 C, clear"}]}
+
+
+options = ClaudeAgentOptions(
+    mcp_servers={"weather": create_sdk_mcp_server(name="weather", tools=[get_weather])},
+    system_prompt="Answer weather questions.",
+    max_turns=5,  # also allow the tool with allowed_tools, as the SDK docs show
+)
+
+
+async def _messages(question: str) -> list:
+    return [m async for m in query(prompt=question, options=options)]
+
+
+def run(question: str) -> dict:
+    return claude_agent_sdk.from_messages(asyncio.run(_messages(question)))
+```
+
+**OpenAI Agents SDK** — `openai_agents.from_result(result)` takes a `RunResult`, or a list of
+them for a multi-turn case (one result per user turn). The SDK has no field that says a tool
+failed: it turns an exception into a plain string, by default the fixed text in
+`openai_agents.DEFAULT_TOOL_ERROR`, and an output equal to that text is recorded as failed. For a
+tool with its own `failure_error_function`, pass `error_if=lambda output: ...`, which replaces
+the default test (`error_if=lambda output: False` turns it off).
+
+```python
+# agent.py
+from agents import Agent, Runner, function_tool
+
+from evalproof.adapters import openai_agents
+
+
+@function_tool
+def next_meeting(day: str) -> str:
+    """The first calendar entry on a day."""
+    return f"{day}: 10:00 planning"
+
+
+agent = Agent(name="assistant", instructions="Answer calendar questions.", tools=[next_meeting])
+
+
+def run(question: str) -> dict:
+    return openai_agents.from_result(Runner.run_sync(agent, question))
+```
+
+**Plain Python, or MCP** — `TraceRecorder` builds the same dict by hand, and `mcp_call` records
+an MCP `CallToolResult` (`isError` makes the call fail):
+
+```python
+import asyncio
+
+from evalproof.adapters import TraceRecorder, mcp_call
+
+
+def run(question: str) -> dict:
+    rec = TraceRecorder()
+    rec.round()
+    rec.tool("get_weather", {"city": "Paris"}, result={"temp_c": 20})
+    args = {"day": "Monday"}
+    result = asyncio.run(mcp_session.call_tool("next_meeting", args))  # an mcp ClientSession
+    mcp_call(rec, "next_meeting", args, result)
+    rec.usage(model="m", tokens_in=120, tokens_out=30)
+    rec.reply("It is 20 degrees in Paris, and the first meeting is at 10:00.")
+    return rec.result()
+```
+
+**TypeScript (Vercel AI SDK).** An app in another language joins through an `http` target
+(`target: http://localhost:3000/eval`). evalproof POSTs `{"id", "input"}` and reads
+`{"output", "trace", ...}` back, with the `trace` in evalproof's field names, so the app maps
+`generateText`'s `text`, `toolCalls`, `toolResults` and `usage` (all steps, in `ai` 7) itself:
+
+```ts
+import { generateText } from "ai";
+
+export async function POST(req: Request) {
+  const { input } = await req.json();
+  const r = await generateText({ model, tools, prompt: input }); // your model and tools
+  return Response.json({
+    output: r.text,
+    trace: {
+      tool_calls: r.toolCalls.map((c) => ({
+        id: c.toolCallId,
+        name: c.toolName,
+        args: c.input,
+        result: r.toolResults.find((t) => t.toolCallId === c.toolCallId)?.output,
+      })),
+      usage: [{ role: "agent", tokens_in: r.usage.inputTokens ?? 0, tokens_out: r.usage.outputTokens ?? 0 }],
+    },
+  });
+}
+```
+
+Set `ok: false` and `error` on a call that failed, and `turn` (counting from 0) on the calls
+of a multi-turn case. `rounds` is the number of model calls (`r.steps.length`), `responses` one
+reply per turn.
 
 ## Import results from other tools
 

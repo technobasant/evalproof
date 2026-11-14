@@ -86,9 +86,19 @@ def _rescore(
 
 
 def verify_run(run: Run, cfg: SuiteConfig) -> Verification:
-    """Check ``run`` against ``cfg`` as loaded now (its ``system``, not an override)."""
+    """Check ``run`` against ``cfg`` as loaded now (its ``system``, not an override). A run made
+    with a variant is checked against that variant of the suite."""
     problems: list[str] = []
-    expected = suite_fingerprint(cfg)
+    variant = run.info.variant
+    if variant is not None and all(v.name != variant for v in cfg.variants):
+        return Verification(
+            ok=False,
+            cases=len(load_dataset(cfg.resolve(cfg.dataset))),
+            problems=[
+                f"the run was made with variant `{variant}`, which the suite does not define"
+            ],
+        )
+    expected = suite_fingerprint(cfg, variant=variant)
     if run.info.suite_hash is None:
         problems.append(
             "the run has no suite hash (it was written before evalproof 0.5, or imported): "

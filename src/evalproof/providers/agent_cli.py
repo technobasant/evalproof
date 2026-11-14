@@ -58,6 +58,9 @@ AUTH_TIMEOUT_S = 30.0
 # of the fingerprint or the cache key.
 AUTH_ENV = "EVALPROOF_CLI_AUTH"
 AUTH_MODES = ("login", "api-key")
+# The token ``claude setup-token`` prints. It is not an API key, so login mode does not remove it
+# and the CLI uses it in either mode: a CI job can sign a Claude Code CLI in from a secret.
+CLAUDE_OAUTH_ENV = "CLAUDE_CODE_OAUTH_TOKEN"
 
 # A CLI exposes no sampling controls, so the fingerprint and the cache key say so.
 SAMPLING = "cli-default"

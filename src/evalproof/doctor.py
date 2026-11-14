@@ -15,7 +15,13 @@ from typing import TextIO
 
 from evalproof.config import GenerationParams, TargetConfig, load_config
 from evalproof.providers import parse_target
-from evalproof.providers.agent_cli import AUTH_ENV, CLI_PROVIDERS, cli_version
+from evalproof.providers.agent_cli import (
+    AUTH_ENV,
+    CLAUDE_OAUTH_ENV,
+    CLI_PROVIDERS,
+    AgentCLIProvider,
+    cli_version,
+)
 from evalproof.providers.agent_cli_experimental import EXPERIMENTAL_PROVIDERS
 from evalproof.providers.base import ProviderError
 
@@ -66,6 +72,49 @@ def experimental_warnings(kind: str, model: str, roles: list[str]) -> list[str]:
             "your plan allows one"
         )
     return warnings
+
+
+def credential_lines(kind: str, cfg: TargetConfig, provider: AgentCLIProvider) -> list[str]:
+    """Which credential the target would use here, and whether that works in CI.
+
+    Looks only at the names of environment variables (``name in os.environ``), never at a
+    value, so nothing secret can be printed or logged. A login is a file on this machine, so it
+    is never available in CI; a key or token can be, from a secret."""
+    secret = provider.strip_vars[0]  # the variable a CI secret is mapped to
+    ci_key = f"map a repository secret to {secret} and set {AUTH_ENV}=api-key"
+    if cfg.api_key_env:
+        env = cfg.api_key_env
+        return [
+            f"credential: ${env} (the suite's api_key_env), passed as {provider.key_var}",
+            f"in CI: usable; map a repository secret to {env}",
+        ]
+    if provider.auth_mode == "api-key":
+        present = [v for v in provider.strip_vars if v in os.environ]
+        have = (
+            f"{', '.join(present)}; set here"
+            if present
+            else (f"{' or '.join(provider.strip_vars)}; not set here")
+        )
+        return [f"credential: {have} ({AUTH_ENV}=api-key)", f"in CI: usable; {ci_key}"]
+    if kind == "claude-code" and CLAUDE_OAUTH_ENV in os.environ:
+        return [
+            f"credential: {CLAUDE_OAUTH_ENV}; set here, and login mode leaves it in place",
+            "in CI: usable from a secret, in your own repository and CI only; for a secret "
+            f"shared across a team or organisation, {ci_key}",
+        ]
+    login = f"credential: your {kind} login on this machine"
+    use_key = f"in CI: login only, not available in CI; use an API key ({ci_key})"
+    if kind == "claude-code":
+        use_key += (
+            f", or, in your own repository and CI only, {CLAUDE_OAUTH_ENV} from "
+            "`claude setup-token`"
+        )
+    elif kind == "codex":
+        use_key += (
+            "; a personal Codex login belongs only on trusted private infrastructure, never "
+            "on public repositories or for open source work"
+        )
+    return [login, use_key]
 
 
 def check_target(cfg: TargetConfig, roles: list[str], out: TextIO) -> bool:
@@ -126,6 +175,8 @@ def check_target(cfg: TargetConfig, roles: list[str], out: TextIO) -> bool:
             f"{kind} login is used (name the variable in api_key_env, or set "
             f"{AUTH_ENV}=api-key, to use a key)\n"
         )
+    for line in credential_lines(kind, cfg, provider):
+        out.write(f"  {line}\n")
     return ok
 
 
