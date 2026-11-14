@@ -9,6 +9,7 @@ measurements also report where that key is itself wrong.
 
 from __future__ import annotations
 
+import json
 import random
 import statistics
 from pathlib import Path
@@ -277,6 +278,44 @@ def reasoning_judge(cfg) -> list[str]:
     return out
 
 
+def reviewed_labels() -> list[str]:
+    """Section 9: calibrate against the reviewed 30-case sample instead of the key (issue #4)."""
+    path = HERE / "human-review" / "labels.jsonl"
+    labels = {
+        rec["id"]: bool(rec["label"])
+        for rec in (json.loads(line) for line in path.read_text(encoding="utf-8").splitlines())
+    }
+    runs = HERE / "runs"
+    base = load_run(runs / "baseline.json")
+    key = verdicts(base, "answer_key")
+    aud = audited(base, "baseline")
+    # The best truth for all 83: the audited labels, with q66 failed as the review did.
+    best = {**aud, **{c: v for c, v in labels.items() if c not in aud}}
+    out = [
+        "## Calibration against reviewed labels (issue #4)",
+        "",
+        f"{len(labels)} baseline cases (the seed-0 random sample), {sum(labels.values())} pass. "
+        f"The answer key disagrees on {[c for c in sorted(labels) if labels[c] != key[c]]}; "
+        "the audited labels on "
+        f"{[c for c in sorted(labels) if c in aud and labels[c] != aud[c]]} "
+        f"(not decided there: {[c for c in sorted(labels) if c not in aud]}). "
+        f"Best truth on all 83: {100 * sum(best.values()) / len(best):.1f}%.",
+        "",
+    ]
+    judges = (
+        ("thinking off", load_run(runs / "v2" / "baseline.json")),
+        ("thinking on", load_run(runs / "v2" / "baseline.reasoning-judge.json")),
+    )
+    for name, run in judges:
+        for gold_name, gold in (
+            ("reviewed labels", labels),
+            ("answer key, same 30", {c: key[c] for c in labels}),
+        ):
+            rep = calibrate(run, "judge", labels=gold, seed=0)
+            out += [f"### Judge {name}, gold = {gold_name}", "", calibration_markdown(rep)]
+    return out
+
+
 def main() -> None:
     cfg = load_config(HERE / "suite.yaml")
     base = load_run(HERE / "runs" / "baseline.json")
@@ -299,6 +338,8 @@ def main() -> None:
     lines += ["## Latency", "", f"- baseline: {latency(base)}", f"- candidate: {latency(cand)}", ""]
     if (HERE / "runs" / "candidate.reasoning-judge.json").exists():
         lines += reasoning_judge(cfg)
+    if (HERE / "human-review" / "labels.jsonl").exists():
+        lines += reviewed_labels()
     print("\n".join(lines))
 
 

@@ -27,6 +27,9 @@ uv run evalproof compare examples/support-qa/runs/baseline.json \
   examples/support-qa/runs/candidate.json --suite examples/support-qa/suite.yaml --gate
 uv run evalproof calibrate examples/support-qa/runs/baseline.json \
   --judge-scorer judge --gold-scorer answer_key --gold-sample 30
+# The same 30 cases, read against the rubric instead of the key (MEASUREMENTS §9)
+uv run evalproof calibrate examples/support-qa/runs/baseline.json \
+  --judge-scorer judge --labels examples/support-qa/human-review/labels.jsonl
 # The runs in runs/ were recorded on cases.v1.jsonl; point the suite's `dataset` at it to
 # reproduce them exactly. cases.jsonl is the revised set, whose runs are in runs/v2/.
 # The reasoning judge (MEASUREMENTS §8): same cached answers, judge thinking on
