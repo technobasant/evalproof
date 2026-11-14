@@ -953,4 +953,5 @@ def test_public_api() -> None:
         "langchain",
         "mcp_call",
         "openai_agents",
+        "otel",
     }
