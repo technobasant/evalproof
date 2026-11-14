@@ -92,12 +92,21 @@ jobs:
       - name: Run the suite
         if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
-#@@IF cli
+#@@IF cliauth
           # The suite is written for a developer's own login and names no key. This tells the
           # @@CLI_BINARY@@ CLI to use the key below instead of a login.
           EVALPROOF_CLI_AUTH: api-key
 #@@END
+#@@IF key
           @@KEY_VAR@@: ${{ secrets.@@KEY_VAR@@ }}
+#@@END
+#@@IF oauth
+          # The suite names no key, so the CLI stays in login mode, which leaves this token alone.
+          # `claude setup-token` makes it. Use it only in a repository and CI of your own; for a
+          # secret shared across a team or an organisation use an API key instead
+          # (`evalproof init --ci api-key` without --cli-auth).
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+#@@END
         run: |
           set -euo pipefail
           uvx evalproof@@@PIP_VERSION@@ run evals/suite.yaml --out "$RUNNER_TEMP/evalproof-candidate.json" --quiet

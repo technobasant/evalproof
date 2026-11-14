@@ -56,7 +56,7 @@ from evalproof.report import (
     to_json,
 )
 from evalproof.runner import load_run, run_suite, save_run
-from evalproof.scaffold import CI_MODES, init_project
+from evalproof.scaffold import CI_MODES, CLI_AUTHS, init_project
 from evalproof.scorers import pairwise
 from evalproof.verify import verify_markdown, verify_run
 
@@ -321,6 +321,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         ci=args.ci,
         skill=not args.no_skill,
         force=args.force,
+        cli_auth=args.cli_auth,
         emit=_say,
     )
 
@@ -447,6 +448,14 @@ def build_parser() -> argparse.ArgumentParser:
         default="keyless",
         help="keyless: CI compares committed run files, no model calls (default); "
         "api-key: CI runs the suite with a secret; none: no workflow",
+    )
+    ini.add_argument(
+        "--cli-auth",
+        choices=CLI_AUTHS,
+        default="api-key",
+        help="with --ci api-key and a coding-agent CLI judge, what the workflow passes the CLI: "
+        "its API key (default), or oauth-token: CLAUDE_CODE_OAUTH_TOKEN from `claude "
+        "setup-token`, for claude-code in your own repository and CI only",
     )
     ini.add_argument("--no-skill", action="store_true", help="do not write the agent skill")
     ini.add_argument("--force", action="store_true", help="overwrite files that already exist")

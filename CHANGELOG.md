@@ -34,6 +34,13 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   multi-turn, load, production monitoring) whether it is covered, partly covered, missing or out
   of scope, with the evidence. It makes no model call. It exits 1 when a `--require`d dimension
   is not covered, and `--json` is for CI.
+- Credentials are stated plainly. The README has a "What it needs to run" section, a table of
+  each target, the variable it reads, whether it works locally and in CI, and where it is allowed.
+  `evalproof init` prints what the chosen judge needs, locally and in CI. `evalproof init --ci
+  api-key --cli-auth oauth-token` writes a workflow that passes `CLAUDE_CODE_OAUTH_TOKEN` from a
+  repository secret, for Claude Code only and for your own repository and CI only (a usage error
+  for Codex or any other target). `evalproof doctor` prints, for each target, the credential it
+  would use and whether that works in CI; it checks variable names only and never reads a value.
 
 ## [0.5.2] — 2026-11-14
 
