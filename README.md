@@ -49,14 +49,14 @@ dependencies (httpx, numpy, pydantic, PyYAML); no vendor SDK, no optional extras
 
 ```bash
 uvx evalproof --version
-uvx evalproof@0.5.1 init          # pin a version
+uvx evalproof@0.5.2 init          # pin a version
 ```
 
 **Install the CLI** on your `PATH`, isolated from your projects:
 
 ```bash
 uv tool install evalproof         # or: pipx install evalproof
-evalproof --version               # evalproof 0.5.1
+evalproof --version               # evalproof 0.5.2
 ```
 
 **Add it to a project**, to call it from Python or pin it with the project's other dev tools:
@@ -71,7 +71,7 @@ uv run evalproof --version
 [changelog](CHANGELOG.md) for what changed.
 
 **In GitHub Actions**, no install step is needed: the composite action
-`technobasant/evalproof@v0.5.1` runs the evalproof of the tag you pin ([In CI](#in-ci)).
+`technobasant/evalproof@v0.5.2` runs the evalproof of the tag you pin ([In CI](#in-ci)).
 
 What else you need depends on what you run:
 
@@ -718,7 +718,7 @@ The composite action runs `compare --gate`, appends the report to the job summar
 fails the job on exit codes 1, 3 or 4:
 
 ```yaml
-- uses: technobasant/evalproof@v0.5.1
+- uses: technobasant/evalproof@v0.5.2
   with:
     baseline: eval/baseline.json     # produced on main, e.g. as a build artifact
     candidate: eval/candidate.json   # produced on this branch

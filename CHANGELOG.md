@@ -4,12 +4,17 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [0.5.2] — 2026-11-14
+
+No behaviour changes: documentation, and `evalproof init` now pins 0.5.2 in the workflows it writes.
+
 ### Documentation
 
 - MEASUREMENTS §9 calibrates the support-qa judge against reviewed labels for a random 30
   baseline cases (`examples/support-qa/human-review/`), next to the answer key on the same
   cases; `measure.py` prints the tables (#4). The README install section and a new use-cases
-  section were rewritten.
+  section were rewritten, and PyPI shows the new README from this release.
+- `CITATION.cff` gives the current version again; it had stayed at 0.3.0.
 
 ## [0.5.1] — 2026-11-13
 
@@ -404,7 +409,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/technobasant/evalproof/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/technobasant/evalproof/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/technobasant/evalproof/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/technobasant/evalproof/compare/v0.4.0...v0.4.1
