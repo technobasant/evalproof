@@ -17,7 +17,7 @@ from typing import Any
 from evalproof.config import ConfigError, ScorerConfig, SuiteConfig
 from evalproof.models import Case, Run
 from evalproof.scorers import DETERMINISTIC_TYPES
-from evalproof.scorers.checks import _TRACE_TYPES
+from evalproof.scorers.checks import TRACE_TYPES
 
 COVERED = "covered"
 PARTIAL = "partial"
@@ -49,7 +49,7 @@ DIMENSION_NAMES = tuple(name for name, _ in DIMENSIONS)
 CORRECTNESS_TYPES = tuple(sorted(DETERMINISTIC_TYPES - {"checks"}))
 
 # The checks that read the trace (what the agent did): the ones a plain-text reply cannot satisfy.
-BEHAVIOUR_CHECKS = _TRACE_TYPES
+BEHAVIOUR_CHECKS = TRACE_TYPES
 
 TAGGED = {"safety": "safety", "robustness": "robustness"}
 

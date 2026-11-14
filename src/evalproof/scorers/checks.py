@@ -45,7 +45,7 @@ _VOCAB: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 CHECK_TYPES = tuple(_VOCAB)
 
 # The checks that read ``trace``: without one they fail with "no trace".
-_TRACE_TYPES = frozenset(
+TRACE_TYPES = frozenset(
     {
         "tool_called",
         "tool_not_called",
@@ -507,7 +507,7 @@ class _Evaluation:
 
     def run(self, check: dict[str, Any]) -> _Verdict:
         kind = check["type"]
-        if kind in _TRACE_TYPES and self.out.trace is None:
+        if kind in TRACE_TYPES and self.out.trace is None:
             return _missing("no trace")
         return getattr(self, f"_{kind}")(check)  # type: ignore[no-any-return]
 

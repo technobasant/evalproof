@@ -755,8 +755,10 @@ def run(question: str) -> dict:
 
 **OpenAI Agents SDK** — `openai_agents.from_result(result)` takes a `RunResult`, or a list of
 them for a multi-turn case (one result per user turn). The SDK has no field that says a tool
-failed (it turns an exception into a plain string), so every call is `ok` unless you pass
-`error_if=lambda output: ...`.
+failed: it turns an exception into a plain string, by default the fixed text in
+`openai_agents.DEFAULT_TOOL_ERROR`, and an output equal to that text is recorded as failed. For a
+tool with its own `failure_error_function`, pass `error_if=lambda output: ...`, which replaces
+the default test (`error_if=lambda output: False` turns it off).
 
 ```python
 # agent.py
