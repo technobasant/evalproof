@@ -4,7 +4,10 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
-Reliability: run each case several times, and compare and gate on what the trials show.
+## [0.7.0] — 2026-11-14
+
+Reliability: run each case several times, and compare and gate on what the trials show. The
+documentation moves to a site, [basantbhattarai.com.np/evalproof](https://basantbhattarai.com.np/evalproof/).
 
 ### Added
 
@@ -52,13 +55,24 @@ Reliability: run each case several times, and compare and gate on what the trial
   case the same build gives McNemar p = 0.25. CI runs both and checks `readiness --run` on the
   five trials.
 
+### Changed
+
+- `Run.by_id()` returns each case's trial 0 (the first, should a file hold two); it used to
+  return the last result with that id. `Run.by_case()` returns every trial of each case.
+
 ### Documentation
 
-- The README has a "Repeated trials" subsection under Testing agents (trials, `ctx.trial`, the
-  aggregates, pass@k and pass^k, the test used, majority flips, `must_pass` over every trial,
-  power, and the limit that a deterministic system shows no variation), the several-candidate
-  `compare` and the new `gate.aggregate` key. The agent example's README walks through the flaky
-  build, and its readiness table no longer says repeated trials are missing from the release.
+- A documentation site, built with MkDocs Material from `docs/` and published to GitHub Pages on
+  each release: getting started, guides, a command and configuration reference, an API reference
+  generated from the docstrings, the architecture, the decisions, the measured run and this
+  changelog. The README is now the front page (install, what it needs to run, the quickstart and
+  links into the site); its sections moved to the site unchanged. CI builds the site with
+  `--strict` on every push.
+- A "Repeated trials" guide (trials, `ctx.trial`, the aggregates, pass@k and pass^k, the test
+  used, majority flips, `must_pass` over every trial, power, and the limit that a deterministic
+  system shows no variation), the several-candidate `compare` and the new `gate.aggregate` key.
+  The agent example's README walks through the flaky build, and its readiness table no longer
+  says repeated trials are missing from the release.
 
 ## [0.6.0] — 2026-11-14
 
@@ -528,7 +542,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/technobasant/evalproof/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/technobasant/evalproof/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/technobasant/evalproof/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/technobasant/evalproof/compare/v0.5.0...v0.5.1
