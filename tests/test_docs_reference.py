@@ -259,8 +259,8 @@ def test_exit_codes_page_matches_the_constants() -> None:
 
 # --- URLs ---------------------------------------------------------------------------------------
 
-# Every page of the 0.7.0 docs. A page that moves must keep its old URL: either it stays where it
-# was, or the old path is listed under `redirects` in mkdocs.yml.
+# Every page of the 0.7.0 docs. No page may lose its URL: it stays where it was, or it becomes the
+# index of a section at the same URL (a/b.md -> a/b/index.md).
 PAGES_0_7_0 = [
     "index.md",
     "about/architecture.md",
@@ -295,7 +295,44 @@ PAGES_0_7_0 = [
 
 @pytest.mark.parametrize("page", PAGES_0_7_0)
 def test_every_0_7_0_url_still_resolves(page: str) -> None:
-    config = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
     same_url = (DOCS / page.removesuffix(".md") / "index.md").exists()  # a/b.md -> a/b/index.md
-    redirected = re.search(rf"(?m)^\s+{re.escape(page)}:", config) is not None
-    assert (DOCS / page).exists() or same_url or redirected, f"{page} has no page and no redirect"
+    assert (DOCS / page).exists() or same_url, f"{page} has lost its URL"
+
+
+# --- troubleshooting and glossary ---------------------------------------------------------------
+
+
+def test_troubleshooting_has_at_least_fifteen_entries_with_a_cause_and_a_fix() -> None:
+    page = _page("guides/troubleshooting.md")
+    entries = [part for part in re.split(r"(?m)^### ", page)[1:]]
+    assert len(entries) >= 15
+    for entry in entries:
+        title = entry.split("\n", 1)[0]
+        assert "**Cause:**" in entry and "**Fix:**" in entry, f"{title!r} lacks a cause or a fix"
+
+
+def test_glossary_defines_every_term() -> None:
+    page = _page("glossary.md")
+    terms = [
+        "ACC",
+        "Calibration",
+        "Case",
+        "Flaky case",
+        "Gate",
+        "Gold label",
+        "Judge",
+        "MDE",
+        "Majority flip",
+        "McNemar",
+        "pass@k",
+        "pass^k",
+        "PPI",
+        "Readiness",
+        "Run",
+        "Sign-flip test",
+        "Suite",
+        "Trial",
+        "Variant",
+    ]
+    missing = [term for term in terms if f"| {term} |" not in page]
+    assert not missing, f"glossary terms with no row: {missing}"

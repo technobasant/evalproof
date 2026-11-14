@@ -80,3 +80,4 @@ What else you need depends on what you run:
 
 * Run a first suite: the [five-minute quickstart](quickstart.md#five-minute-quickstart).
 * Check which credentials a run needs: [What it needs to run](credentials.md).
+* Moving from an older version: [Upgrading](../about/upgrading.md).

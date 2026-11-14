@@ -33,7 +33,7 @@ evalproof prints `evalproof: error: <message>` to stderr and exits 2. The causes
 * `evalproof run` where every case errored, with the first error in the message;
 * `evalproof compare` without `--gate` on two runs that cannot be compared.
 
-Any other exception also exits 2, with its type and message and a hint to set `EVALPROOF_DEBUG=1` for the traceback.
+Any other exception also exits 2, with its type and message and a hint to set `EVALPROOF_DEBUG=1` for the traceback. [Troubleshooting](../guides/troubleshooting.md) lists the common messages with their causes and fixes.
 
 ## Exit 3: a budget breach
 
@@ -50,6 +50,8 @@ The gate could not reach a verdict, and a pass would be wrong. The causes includ
 * the runs repeat each case a different number of times;
 * `evalproof verify` found that the run does not match the suite or the dataset;
 * `evalproof rehash` found that the dataset does not match the run.
+
+The message says which. [Troubleshooting](../guides/troubleshooting.md#comparing-and-gating) gives the fix for each.
 
 ## Several candidates
 
@@ -76,3 +78,4 @@ In GitHub Actions a step fails on any non-zero code, so the plain command is usu
 
 * The gate's settings: [Configuration](configuration.md#gate).
 * Every command and flag: [Commands](commands.md).
+* An error message and how to fix it: [Troubleshooting](../guides/troubleshooting.md).

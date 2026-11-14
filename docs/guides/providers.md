@@ -283,3 +283,4 @@ What was checked, and what was not:
 
 * Check what each target needs in CI: [What it needs to run](../getting-started/credentials.md).
 * Put a target to work: [In CI](ci.md#in-ci) and [Testing agents](testing-agents.md#testing-agents).
+* An error from a provider or a CLI: [Troubleshooting](troubleshooting.md).

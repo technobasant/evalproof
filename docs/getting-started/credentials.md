@@ -47,3 +47,4 @@ Which credential a run needs depends on what the system and the judge are. This 
 
 * Wire the gate into GitHub Actions: [In CI](../guides/ci.md#in-ci).
 * Every provider and the key it reads: [Providers](../guides/providers.md#providers).
+* What evalproof stores and sends: [Security and data handling](../about/security.md).

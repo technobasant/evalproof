@@ -71,3 +71,5 @@ gate returns 1 for the real regression and 0 for the noisy and refactored candid
 
 * Which secret each target needs: [What it needs to run](../getting-started/credentials.md).
 * How the gate decides: [Concepts](../reference/concepts.md#compare-and-gate).
+* What each exit code means: [Exit codes](../reference/exit-codes.md).
+* A gate that exits 4, or a verify failure: [Troubleshooting](troubleshooting.md#comparing-and-gating).

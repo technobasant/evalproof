@@ -171,10 +171,11 @@ With `trials` above 1, `results` holds one entry per case and trial, each with i
 
 ## Reading older files
 
-Every field added after 0.1 has a default, so any older file still loads. `compare` and the gate say what an older file lacks: without `case_hash` they cannot tell an edited case from an unchanged one, and `verify` needs a run made with evalproof 0.5 or newer. `evalproof rehash` adds the case hashes to a file from before 0.5.
+Every field added after 0.1 has a default, so any older file still loads. `compare` and the gate say what an older file lacks: without `case_hash` they cannot tell an edited case from an unchanged one, and `verify` needs a run made with evalproof 0.5 or newer. `evalproof rehash` adds the case hashes to a file from before 0.5. [Upgrading](../about/upgrading.md#run-files-from-older-versions) lists what each version lacks.
 
 ## Next steps
 
 * Produce a run file: [Commands](commands.md#evalproof-run).
 * Build one from another tool's results: [Import results from other tools](../guides/import.md#import-results-from-other-tools).
 * Read one from Python: [From Python](../guides/python.md).
+* Move to a newer version: [Upgrading](../about/upgrading.md).

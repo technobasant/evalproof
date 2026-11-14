@@ -112,9 +112,6 @@ plugins:
       type: date
       fallback_to_build_date: true
       enable_creation_date: false
-  # No 0.7.0 URL has moved. When a page moves, add `old/path.md: new/path.md` here
-  # (tests/test_docs_reference.py fails if a 0.7.0 URL loses its page and has no entry).
-  - redirects
   - mkdocstrings:
       handlers:
         python:
@@ -150,6 +147,7 @@ nav:
       - Import results from other tools: guides/import.md
       - From Python: guides/python.md
       - In CI: guides/ci.md
+      - Troubleshooting: guides/troubleshooting.md
   - Reference:
       - reference/index.md
       - Commands: reference/commands.md
@@ -158,6 +156,7 @@ nav:
       - Exit codes: reference/exit-codes.md
       - Concepts: reference/concepts.md
       - API reference: reference/api.md
+      - Glossary: glossary.md
   - About:
       - about/index.md
       - Architecture: about/architecture.md
@@ -169,6 +168,9 @@ nav:
           - "0004 Agent CLIs as providers": adr/0004-agent-clis-as-providers.md
       - How it relates to other tools: about/related-tools.md
       - Limits: about/limits.md
+      - Versioning and support: about/versioning.md
+      - Security and data handling: about/security.md
+      - Upgrading: about/upgrading.md
       - Roadmap: about/roadmap.md
       - Measurements: about/measurements.md
       - Changelog: about/changelog.md

@@ -6,7 +6,7 @@ description: Every evalproof command and flag, with its type and default, and th
 
 Every `evalproof` subcommand, its arguments and every flag with its type and default. It is for anyone writing a CI step or a script around the tool, and a test checks it against the command line so it cannot drift.
 
-`evalproof --version` prints the version and exits. A flag marked "flag" takes no value. A flag marked "repeatable" may be given several times. Where a default is "none" and the suite sets the value, the suite's value applies.
+`evalproof --version` prints the version and exits. A flag marked "flag" takes no value. A flag marked "repeatable" may be given several times. Where a default is "none" and the suite sets the value, the suite's value applies. [Upgrading](../about/upgrading.md) lists the flags and behaviour that changed between releases.
 
 | Command | What it does |
 |---|---|

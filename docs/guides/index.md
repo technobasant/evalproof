@@ -16,3 +16,4 @@ Each guide takes one task from start to finish. They are for people who have run
 | [Import results from other tools](import.md) | gate promptfoo, Inspect, DeepEval, lm-eval, CSV and JSONL results |
 | [From Python](python.md) | the same functions the CLI uses |
 | [In CI](ci.md) | the GitHub Action and the workflows `init` writes |
+| [Troubleshooting](troubleshooting.md) | what an error message means and how to fix it |

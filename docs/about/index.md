@@ -12,6 +12,9 @@ Design, limits and project information, for people deciding whether to adopt eva
 | [Decisions](decisions/index.md) | the design decisions, the alternatives and the ADRs |
 | [How it relates to other tools](related-tools.md) | promptfoo, DeepEval, Ragas and Inspect |
 | [Limits](limits.md) | what the measurements and the method do not show |
+| [Versioning and support](versioning.md) | version numbers, supported versions and Python, and how a release is published |
+| [Security and data handling](security.md) | what evalproof sends, stores and trusts |
+| [Upgrading](upgrading.md) | what to change when moving between releases |
 | [Roadmap](roadmap.md) | what is planned |
 | [Measurements](measurements.md) | the full method and every table behind the findings |
 | [Changelog](changelog.md) | every release |
