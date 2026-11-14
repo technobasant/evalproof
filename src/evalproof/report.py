@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import statistics
 from collections.abc import Sequence
 from dataclasses import asdict
 from typing import Any
@@ -13,6 +14,12 @@ from evalproof.compare import Comparison, MetricComparison, dataset_change_note
 from evalproof.gate import EXIT_CANNOT_GATE, GateDecision
 from evalproof.models import CaseResult, Run
 from evalproof.stats import percentile, wilson
+from evalproof.trials import (
+    all_trials_identical,
+    case_counts,
+    is_flaky,
+    pooled_rate_ci,
+)
 
 STATUS_ICON = {"pass": "✅ pass", "warn": "⚠️ pass with warnings", "fail": "❌ fail"}
 CANNOT_GATE = "⚠️ cannot gate"  # exit 4: nothing was decided, which is not a quality failure
@@ -188,28 +195,24 @@ def _failed_cases(run: Run, max_cases: int) -> list[str]:
     found = [(r, p) for r in run.results if (p := problem(r)) is not None]
     if not found or max_cases <= 0:
         return []
-    lines = ["", f"### Failed cases ({len(found)})", ""]
+    repeated = run.trials > 1
+    lines = ["", f"### Failed {'trials' if repeated else 'cases'} ({len(found)})", ""]
     for r, (kind, names) in found[:max_cases]:
         what = f"{kind} on {', '.join(names)}" if names else kind
         first = r.scores[names[0]] if names else None
         reason = r.output.error or (first.reason if first and first.reason else "")
+        label = f"`{r.case_id}` trial {r.trial}" if repeated else f"`{r.case_id}`"
         lines.append(
-            f"- `{r.case_id}` · {what}" + (f" · {_clip(reason, REASON_CHARS)}" if reason else "")
+            f"- {label} · {what}" + (f" · {_clip(reason, REASON_CHARS)}" if reason else "")
         )
     if len(found) > max_cases:
         lines.append(f"- … and {len(found) - max_cases} more")
     return lines
 
 
-def run_markdown(run: Run, max_cases: int = 10) -> str:
-    """The run's summary table. ``max_cases`` caps the failed-cases list; 0 leaves it out."""
-    variant = f" · variant `{run.info.variant}`" if run.info.variant else ""
+def _single_table(run: Run) -> list[str]:
+    """The summary table of a run with one trial per case."""
     lines = [
-        f"## {run.info.suite} — `{run.info.system}`{variant}",
-        "",
-        f"{len(run.results)} cases · wall {run.info.wall_time_s:.1f} s · "
-        f"dataset `{run.info.dataset_hash}`",
-        "",
         "| Scorer | Decided | Pass rate (95% CI) | Mean |",
         "|---|---:|---:|---:|",
     ]
@@ -230,6 +233,82 @@ def run_markdown(run: Run, max_cases: int = 10) -> str:
             f"| {name} | {len(decided)}/{len(scores)} | {rate} | "
             f"{'—' if mean is None else f'{mean:.3f}'} |"
         )
+    return lines
+
+
+def _repeated_table(run: Run) -> list[str]:
+    """The summary table of a run with several trials per case. Trials of one case are not
+    independent, so the pass rate is pooled over trials and its interval resamples cases."""
+    k = run.trials
+    lines = [
+        f"| Scorer | Decided | Pass rate (95% CI) | pass@{k} | pass^{k} | Mean | Within-case SD |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    by_case = run.by_case()
+    for name in run.scorer_names():
+        scores = [r.scores[name] for r in run.results if name in r.scores]
+        decided = [s for s in scores if s.value is not None]
+        counts = list(case_counts(run, name).values())
+        rate = at_least_one = every = "—"
+        if counts:
+            passes = sum(p for p, _ in counts)
+            trials = sum(d for _, d in counts)
+            lo, hi = pooled_rate_ci(counts)
+            rate = f"{_pct(passes / trials)} [{_pct(lo)}, {_pct(hi)}]"
+            at_least_one = _pct(sum(1 for p, _ in counts if p > 0) / len(counts))
+            every = _pct(sum(1 for p, d in counts if p == d) / len(counts))
+        per_case = [
+            [s.value for r in results if (s := r.scores.get(name)) and s.value is not None]
+            for results in by_case.values()
+        ]
+        means = [statistics.fmean(v) for v in per_case if v]
+        sds = [statistics.stdev(v) for v in per_case if len(v) > 1]
+        continuous = not counts and bool(decided)
+        mean = f"{statistics.fmean(means):.3f}" if means else "—"
+        spread = f"{statistics.fmean(sds):.3f}" if continuous and sds else "—"
+        lines.append(
+            f"| {name} | {len(decided)}/{len(scores)} | {rate} | {at_least_one} | {every} | "
+            f"{mean} | {spread} |"
+        )
+    return lines
+
+
+def _flaky_cases(run: Run, max_cases: int) -> list[str]:
+    """Cases with a pass and a fail among their decided trials, on any binary scorer."""
+    flaky: dict[str, list[str]] = {}
+    for name in run.scorer_names():
+        for case_id, (passes, decided) in case_counts(run, name).items():
+            if is_flaky(passes, decided):
+                flaky.setdefault(case_id, []).append(f"{name} {passes}/{decided}")
+    if max_cases <= 0:
+        return []
+    if not flaky:
+        return ["", "No flaky cases: no case both passed and failed across its trials."]
+    lines = ["", f"### Flaky cases ({len(flaky)})", ""]
+    lines += [f"- `{cid}` · {' · '.join(found)}" for cid, found in list(flaky.items())[:max_cases]]
+    if len(flaky) > max_cases:
+        lines.append(f"- … and {len(flaky) - max_cases} more")
+    return lines
+
+
+def run_markdown(run: Run, max_cases: int = 10) -> str:
+    """The run's summary table. ``max_cases`` caps the failed-cases and flaky-cases lists; 0
+    leaves them out. A run with several trials per case reports pass@k, pass^k and the flaky
+    cases as well."""
+    variant = f" · variant `{run.info.variant}`" if run.info.variant else ""
+    repeated = run.trials > 1
+    counted = (
+        f"{len(run.by_case())} cases × {run.trials} trials = {len(run.results)} runs"
+        if repeated
+        else f"{len(run.results)} cases"
+    )
+    lines = [
+        f"## {run.info.suite} — `{run.info.system}`{variant}",
+        "",
+        f"{counted} · wall {run.info.wall_time_s:.1f} s · dataset `{run.info.dataset_hash}`",
+        "",
+    ]
+    lines += _repeated_table(run) if repeated else _single_table(run)
     lat = [r.output.latency_ms for r in run.results if not r.output.error]
     lines += [
         "",
@@ -237,6 +316,14 @@ def run_markdown(run: Run, max_cases: int = 10) -> str:
         f"errors {sum(1 for r in run.results if r.output.error)} · "
         f"cached {sum(1 for r in run.results if r.output.cached)}",
     ]
+    if repeated:
+        if all_trials_identical(run):
+            lines += [
+                "",
+                "All trials identical: the system may be deterministic at these settings, so "
+                "repeating it shows no flakiness.",
+            ]
+        lines += _flaky_cases(run, max_cases)
     lines += _failed_cases(run, max_cases)
     return "\n".join(lines) + "\n"
 
@@ -254,6 +341,15 @@ def calibration_markdown(rep: CalibrationReport) -> str:
         "",
         f"Gold source: {rep.gold_source} · {rep.n_gold} labelled of {rep.n_judged} judged "
         f"· {rep.undecided_judge} undecided verdict(s) excluded",
+        *(
+            [
+                "",
+                f"Trial 0 of {rep.trials}: the run repeats each case, and calibration reads the "
+                "first trial of each.",
+            ]
+            if rep.trials > 1
+            else []
+        ),
         "",
         "| | Gold pass | Gold fail |",
         "|---|---:|---:|",

@@ -33,7 +33,8 @@ def rehash_run(run: Run, cfg: SuiteConfig) -> Run:
     """
     cases = load_dataset(cfg.resolve(cfg.dataset))
     # A ``--limit N`` run scored the dataset's first N cases and hashed only those.
-    head = cases[: len(run.results)]
+    # (A run with several trials per case holds one result per case and trial.)
+    head = cases[: len({r.case_id for r in run.results})]
     if dataset_hash(head) == run.info.dataset_hash and {c.id for c in head} == {
         r.case_id for r in run.results
     }:
