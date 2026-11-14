@@ -16,7 +16,8 @@ Top level, as written by 2.1.322:
   ``durationSeconds`` (wall-clock) its wall time.
 * ``partial`` and ``partialReason`` (``cost_ceiling``, ``interrupted`` or ``auth_failed``): when
   ``partial`` is true the suite did not finish, and the import warns with the reason, since the
-  cases it never reached are missing.
+  cases it never reached are missing, and records ``environment.partial`` and
+  ``environment.partial_reason`` in the run.
 * ``cases[]``: ``name``, ``promptMarkdown`` and ``arms``. ``arms.with`` is an array of runs, one per
   ``runsPerCase``; ``arms.without`` is the same for the no-plugin baseline and is present only when
   the suite ran with ``--ablation with-without``. An arm is a plain array, not keyed by plugin.
@@ -49,7 +50,8 @@ What it makes of them:
   ``without`` arm a ``withOnly`` grader is left out. A grader named ``score`` is imported as
   ``grader:score`` so that it does not replace the run's own metric;
 * when the cost ceiling skipped a run's judge graders (``skippedPaidGraders``) its score is not
-  comparable with the others, and the import names how many runs that is in a warning;
+  comparable with the others, and the import names how many runs that is in a warning and records
+  ``environment.skipped_paid_graders``;
 * no reply text (the file holds none), no tokens and no trace: ``tracePath`` names a ``trace.jsonl``
   in the run's sandbox that this importer does not read, and ``turns`` is not imported.
 """
@@ -103,8 +105,12 @@ def read(path: Path, opts: Options) -> Run:
     cases = data.get("cases")
     if not isinstance(cases, list):
         raise ImportFormatError(f"{path}: not a claude plugin eval result (no cases list)")
+    environment: dict[str, str] = {}
     if data.get("partial") is True:
         reason = data.get("partialReason")
+        environment["partial"] = "true"
+        if isinstance(reason, str) and reason:
+            environment["partial_reason"] = reason
         opts.warn(
             f"{path}: the suite did not finish (partial, reason: "
             f"{reason if isinstance(reason, str) and reason else 'not given'}); the cases it "
@@ -139,6 +145,7 @@ def read(path: Path, opts: Options) -> Run:
         if isinstance(run, dict) and run.get("skippedPaidGraders") is True
     )
     if unjudged:
+        environment["skipped_paid_graders"] = "true"
         opts.warn(
             f"{path}: the cost ceiling skipped the judge graders of {unjudged} run(s) in the "
             f"{arm!r} arm; their scores are not comparable with the others"
@@ -152,6 +159,7 @@ def read(path: Path, opts: Options) -> Run:
         wall_time_s=finite(data.get("durationSeconds")) or 0.0,
         schema=SCHEMA,
         tool_version=claude_version if isinstance(claude_version, str) else "",
+        environment=environment,
     )
     return build_run(FORMAT, path, samples, meta, opts)
 

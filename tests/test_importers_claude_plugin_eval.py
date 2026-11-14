@@ -272,10 +272,14 @@ def test_a_partial_suite_warns_with_the_reason(tmp_path: Path) -> None:
     assert "did not finish" in notes[0]
     assert "cost_ceiling" in notes[0]
     assert len(run.results) == 3  # what it ran is still imported
+    assert run.info.environment["partial"] == "true"
+    assert run.info.environment["partial_reason"] == "cost_ceiling"
     del data["partialReason"]
     notes.clear()
-    import_run("claude-plugin-eval", _write(tmp_path, data), system="with", warn=notes.append)
+    run = import_run("claude-plugin-eval", _write(tmp_path, data), system="with", warn=notes.append)
     assert "reason: not given" in notes[0]
+    assert run.info.environment["partial"] == "true"
+    assert "partial_reason" not in run.info.environment
 
 
 def test_skipped_judge_graders_are_named(tmp_path: Path) -> None:
@@ -283,10 +287,16 @@ def test_skipped_judge_graders_are_named(tmp_path: Path) -> None:
     _case(data, COMMIT)["arms"]["with"][0]["skippedPaidGraders"] = True
     _case(data, RENAME)["arms"]["with"][1]["skippedPaidGraders"] = True
     notes: list[str] = []
-    import_run("claude-plugin-eval", _write(tmp_path, data), system="with", warn=notes.append)
+    run = import_run("claude-plugin-eval", _write(tmp_path, data), system="with", warn=notes.append)
     assert len(notes) == 1
     assert "skipped the judge graders of 2 run(s)" in notes[0]
     assert "not comparable" in notes[0]
+    assert run.info.environment["skipped_paid_graders"] == "true"
+
+
+def test_a_complete_suite_records_neither_marker() -> None:
+    env = import_run("claude-plugin-eval", FIXTURE, system="with", warn=_quiet).info.environment
+    assert not {"partial", "partial_reason", "skipped_paid_graders"} & set(env)
 
 
 @pytest.mark.parametrize("version", [2, 0, "1", True, 1.5])

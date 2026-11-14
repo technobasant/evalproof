@@ -49,7 +49,8 @@ What it makes of them:
 * ``suite`` and, unless ``--system`` gives a label, the system are the ``eval_set_id``; there are
   no tags. Latency, tokens and the judge's ``rubric_scores`` are not imported.
 
-An ADK eval set (a dataset, with ``eval_cases``) is not a result and is refused with a pointer.
+An ADK eval set (a dataset, with ``eval_cases``) is not a result and is refused with a pointer to
+``evalproof import-dataset adk``, which reads it as cases.
 """
 
 from __future__ import annotations
@@ -105,7 +106,8 @@ def read(path: Path, opts: Options) -> Run:
             raise ImportFormatError(
                 f"{path}: this is an ADK eval set (a dataset of cases, with eval_cases), not a "
                 "result; import the *.evalset_result.json that `adk eval` saved under "
-                ".adk/eval_history"
+                ".adk/eval_history, or turn this file into a dataset with "
+                "`evalproof import-dataset adk`"
             )
         raise ImportFormatError(
             f"{path}: not an ADK eval result (no eval_case_results list); expected the "

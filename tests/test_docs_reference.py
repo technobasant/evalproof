@@ -36,6 +36,7 @@ from evalproof.gate import (
     EXIT_REGRESSION,
     EXIT_USAGE,
 )
+from evalproof.importers import DATASET_FORMATS, EXPERIMENTAL_FORMATS, FORMATS
 from evalproof.models import (
     CaseResult,
     ModelUsage,
@@ -213,8 +214,13 @@ def test_commands_page_lists_every_argument_and_flag(command: str) -> None:
         if isinstance(action, argparse._HelpAction):
             continue
         if not action.option_strings:
-            if _row(section, action.dest.upper()) is None:
+            argument_row = _row(section, action.dest.upper())
+            if argument_row is None:
                 problems.append(f"argument {action.dest} has no row")
+                continue
+            for choice in action.choices or ():
+                if f"`{choice}`" not in argument_row:
+                    problems.append(f"argument {action.dest}: the row does not list `{choice}`")
             continue
         flag = next(o for o in action.option_strings if o.startswith("--"))
         row = _row(section, flag)
@@ -227,6 +233,83 @@ def test_commands_page_lists_every_argument_and_flag(command: str) -> None:
             if f"`{choice}`" not in row:
                 problems.append(f"{flag}: the row does not list the choice `{choice}`")
     assert not problems, "\n".join(problems)
+
+
+def test_the_format_arguments_are_parsed_with_the_importer_choices() -> None:
+    """The FORMAT row check above is only as good as the choices the parser carries."""
+    subcommands = _subcommands()
+    for command, formats in (("import", FORMATS), ("import-dataset", DATASET_FORMATS)):
+        positional = next(a for a in subcommands[command]._actions if a.dest == "format")
+        assert tuple(positional.choices or ()) == tuple(formats), command
+
+
+def test_commands_page_documents_import_threshold_and_what_it_records() -> None:
+    sections = _sections(_page("reference/commands.md"))
+    row = _row(sections["evalproof import"], "--threshold")
+    assert row is not None, "evalproof import has no --threshold row"
+    for text in ("garak", "eval_threshold", "threshold_source", "cli", "default"):
+        assert text in row, f"the --threshold row does not mention {text}"
+
+
+def test_commands_page_documents_import_dataset_and_the_experimental_note() -> None:
+    sections = _sections(_page("reference/commands.md"))
+    dataset = sections["evalproof import-dataset"]
+    assert "--out" in dataset and "import.md#google-adk-eval-sets-as-a-dataset" in dataset
+    assert "conversation_scenario" in dataset or "user-simulation" in dataset
+    assert "environment.import_experimental" in sections["evalproof import"]
+    assert "[`evalproof import-dataset`](#evalproof-import-dataset)" in _page(
+        "reference/commands.md"
+    )
+
+
+def test_import_guide_has_a_section_for_every_importer_and_dataset_format() -> None:
+    page = _page("guides/import.md")
+    sections = _sections(page)
+    for fmt in FORMATS:
+        assert f"`{fmt}`" in page or f"evalproof import {fmt}" in page, f"{fmt} is not in import.md"
+    for fmt in DATASET_FORMATS:
+        assert f"evalproof import-dataset {fmt}" in page, (
+            f"import-dataset {fmt} is not in import.md"
+        )
+    for heading in (
+        "garak",
+        "Google ADK eval history",
+        "Claude Code plugin evals",
+        "Google ADK eval sets as a dataset",
+        "Tool trace",
+        "The threshold",
+    ):
+        assert heading in sections, f"import.md has no '{heading}' section"
+
+
+def test_import_guide_documents_the_experimental_importers_and_what_they_record() -> None:
+    page = _page("guides/import.md")
+    for fmt in sorted(EXPERIMENTAL_FORMATS):
+        assert f"evalproof import {fmt}" in page, f"{fmt} has no import command in import.md"
+    assert "experimental" in page
+    for text in (
+        "environment.import_experimental",
+        "environment.threshold_source",
+        "environment.trace_from",
+        "environment.partial",
+        "skipped_paid_graders",
+    ):
+        assert text in page, f"import.md does not mention {text}"
+
+
+def test_changelog_unreleased_lists_the_new_importers_and_import_dataset() -> None:
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    unreleased = text.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    for needle in (
+        "import garak",
+        "import --threshold",
+        "import adk",
+        "import claude-plugin-eval",
+        "import-dataset adk",
+        "environment.import_experimental",
+        "environment.trace_from",
+    ):
+        assert needle in unreleased, f"the Unreleased section does not mention {needle}"
 
 
 # --- run file -----------------------------------------------------------------------------------

@@ -1,0 +1,115 @@
+{
+  "eval_set_id": "synthetic_mixed",
+  "name": "Synthetic mixed eval set",
+  "description": "Invented for the importer tests: rubrics, state, a second turn, camelCase keys, an event-form call and a user-simulation case.",
+  "eval_cases": [
+    {
+      "eval_id": "refund_then_status",
+      "conversation": [
+        {
+          "invocation_id": "sm-1a",
+          "user_content": {
+            "parts": [{"text": "I want a refund for order 1042."}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "I have issued the refund for order 1042."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "lookup_order", "args": {"order_id": 1042}},
+              {"name": "issue_refund", "args": {"order_id": 1042, "reason": "customer request"}}
+            ],
+            "tool_responses": [],
+            "intermediate_responses": []
+          },
+          "rubrics": [
+            {
+              "rubric_id": "confirms_order",
+              "rubric_content": {"text_property": "The reply names the order that was refunded."},
+              "type": "FINAL_RESPONSE_QUALITY"
+            }
+          ]
+        },
+        {
+          "invocation_id": "sm-1b",
+          "user_content": {
+            "parts": [{"text": "Is it done?"}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "Yes. The refund of 25.00 is on its way."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [],
+            "tool_responses": [],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "support_agent",
+        "user_id": "user",
+        "state": {"customer_tier": "gold"}
+      },
+      "rubrics": [
+        {
+          "rubric_id": "polite",
+          "rubric_content": {"text_property": "The reply is polite."}
+        },
+        {
+          "rubric_id": "no_card_number",
+          "rubric_content": {"text_property": "The agent does not repeat a card number."},
+          "description": "Privacy",
+          "type": "TOOL_USE_QUALITY"
+        }
+      ]
+    },
+    {
+      "evalId": "weather_in_chicago",
+      "conversation": [
+        {
+          "invocationId": "sm-2a",
+          "userContent": {
+            "parts": [{"text": "Weather in chicago?"}],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [{"text": "It is clear in Chicago, 24 degrees Celsius."}],
+            "role": "model"
+          },
+          "intermediateData": {
+            "invocationEvents": [
+              {
+                "author": "weather_agent",
+                "content": {
+                  "parts": [{"functionCall": {"id": "call_1", "args": {"city": "chicago"}, "name": "get_weather"}}],
+                  "role": "model"
+                }
+              },
+              {
+                "author": "weather_agent",
+                "content": {
+                  "parts": [{"functionResponse": {"id": "call_1", "name": "get_weather", "response": {"status": "ok"}}}],
+                  "role": "user"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "sessionInput": {"appName": "weather_agent", "userId": "user", "state": {}}
+    },
+    {
+      "eval_id": "simulated_novice",
+      "conversation_scenario": {
+        "starting_prompt": "I need help with my order.",
+        "conversation_plan": "Ask for a refund, then ask whether it is done.",
+        "user_persona": "NOVICE"
+      },
+      "session_input": {"app_name": "support_agent", "user_id": "user", "state": {}}
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 """Command line.
 
-``evalproof init | run | import | compare | verify | rehash | calibrate | report | doctor |
-pairwise | readiness``
+``evalproof init | run | import | import-dataset | compare | verify | rehash | calibrate | report |
+doctor | pairwise | readiness``
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from evalproof.config import (
     format_validation_error,
     load_config,
 )
-from evalproof.dataset import DatasetError, load_dataset
+from evalproof.dataset import DatasetError, load_dataset, write_dataset
 from evalproof.doctor import run_doctor
 from evalproof.gate import (
     EXIT_BUDGET,
@@ -41,7 +41,7 @@ from evalproof.gate import (
     continuous_floors,
     decide,
 )
-from evalproof.importers import EPOCHS, FORMATS, import_run
+from evalproof.importers import DATASET_FORMATS, EPOCHS, FORMATS, import_dataset, import_run
 from evalproof.models import CaseResult, Run
 from evalproof.providers import ProviderError, make_provider
 from evalproof.readiness import (
@@ -477,6 +477,16 @@ def cmd_import(args: argparse.Namespace) -> int:
     return EXIT_PASS
 
 
+def cmd_import_dataset(args: argparse.Namespace) -> int:
+    def warn(message: str) -> None:
+        sys.stderr.write(f"evalproof: warning: {message}\n")
+
+    cases = import_dataset(args.format, args.file, warn=warn)
+    write_dataset(cases, args.out)
+    sys.stderr.write(f"wrote {len(cases)} case(s) to {args.out}\n")
+    return EXIT_PASS
+
+
 def cmd_calibrate(args: argparse.Namespace) -> int:
     run = load_run(args.run)
     labels = None
@@ -670,6 +680,23 @@ def build_parser() -> argparse.ArgumentParser:
     tab.add_argument("--system-field", help="column holding the system (default: system)")
     tab.add_argument("--wide", action="store_true", help="one row per case, one column per metric")
     im.set_defaults(func=cmd_import)
+
+    imd = sub.add_parser(
+        "import-dataset",
+        help="turn another tool's test cases into a dataset (JSONL) for a suite",
+        description="Read another tool's test cases and write them as an evalproof dataset, one "
+        "case per line. Writes cases, not a run: use `import` for results.",
+    )
+    imd.add_argument(
+        "format",
+        choices=DATASET_FORMATS,
+        help="the tool the cases are from (adk: an *.evalset.json or a flat *.test.json list)",
+    )
+    imd.add_argument("file")
+    imd.add_argument(
+        "--out", required=True, help="where to write the dataset (an existing file is replaced)"
+    )
+    imd.set_defaults(func=cmd_import_dataset)
 
     c = sub.add_parser(
         "compare",

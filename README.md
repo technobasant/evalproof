@@ -43,8 +43,9 @@ evalproof:
 It is local-first: Ollama is the default, every major hosted provider is one `target:` line
 away ([Providers](https://basantbhattarai.com.np/evalproof/guides/providers/)), a logged-in Claude Code or Codex can be the judge with no API
 key, and every model call is cached by content so re-runs are free and reproducible. Results
-from promptfoo, Inspect, DeepEval and lm-eval can be [imported](https://basantbhattarai.com.np/evalproof/guides/import/)
-and gated without re-running them.
+from promptfoo, Inspect, DeepEval, lm-eval, garak, Google ADK and Claude Code plugin evals can be
+[imported](https://basantbhattarai.com.np/evalproof/guides/import/) and gated without re-running
+them, and a Google ADK eval set can be turned into a dataset.
 
 ## Install
 
