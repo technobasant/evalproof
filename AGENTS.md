@@ -40,8 +40,8 @@ uvx zizmor@1.30.1 --offline --persona=regular .github/workflows action.yml   # w
   `examples/deterministic`, `examples/retrieval` and `examples/agent-tools` through
   `evalproof run` and `evalproof compare --gate` and asserts the exit codes. Run those
   commands by hand when you change gate behaviour.
-* The docs build takes the "Last updated" dates from git history. A page that git has not seen
-  yet can warn, and `--strict` fails on a warning: commit the page, then build.
+* The docs build needs a network (it downloads the theme's fonts) and takes the "Last updated"
+  dates from git history, which is why the CI job fetches the full history.
 
 ## Layout
 
