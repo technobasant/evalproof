@@ -30,7 +30,7 @@ These are covered by the guarantee:
 
 These are not:
 
-* **Anything marked experimental**: the `opencode:`, `cursor:` and `copilot:` providers, the Cursor sandbox, the `adk` and `claude-plugin-eval` importers and the OpenTelemetry adapter. They warn when used, and can change in a minor release until they are declared stable.
+* **Anything marked experimental**: the `opencode:`, `cursor:` and `copilot:` providers, the Cursor sandbox, the `adk` and `claude-plugin-eval` importers, the OpenTelemetry adapter, and the `import-dataset` formats `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse` and `phoenix` (written from each tool's documented fields, not yet checked against files exported by each tool). They can change in a minor release until they are declared stable. The adapters and importers warn when used, and so do the providers; the `import-dataset` formats are marked in [Import test cases](../guides/import-test-cases.md).
 * **What 1.0.0 added on top of that** is experimental too, without a warning, until it has been used in more projects: the `command:` target's input and output, the [JUnit reports](../reference/junit.md) (`--junit`) and the names of their test cases, the `checks` list in the gate's `--json` output, `init --platform gitlab`, the action's `pr-comment` input, the npm launcher and the container image's contents. They can change in a minor release, and the changelog says when.
 * **The coding-agent files** `init` writes: the text of the evalproof section of `AGENTS.md`, the skill's text and `init --agent-files-only`. The markers around the section and the rule that `init` never changes anything outside them are stable.
 * **Human-readable output**: the terminal and Markdown reports can be reworded or rearranged in any release. Read `--json` output or run files from scripts.
@@ -47,7 +47,8 @@ Fixes go into the latest minor release. Security fixes also go into the previous
 
 | Version | Supported |
 |---|---|
-| 1.0.x | yes |
+| 1.2.x | yes |
+| 1.1.x, 1.0.x | security fixes until 2027-02-13 |
 | < 1.0 | no |
 
 Report a vulnerability privately, as the [security policy](https://github.com/technobasant/evalproof/blob/main/SECURITY.md) describes. [Security and data handling](security.md) covers what evalproof stores and sends.
@@ -73,14 +74,16 @@ It has four runtime dependencies, each with a minimum version:
 
 ## How a release is built and published
 
-A release starts when a GitHub release is published. The `release` workflow then runs four jobs:
+A release starts when a GitHub release is published. The `release` workflow then runs five jobs:
 
 1. **Build and check.** It confirms the release tag matches the package version, runs the test suite, builds the distributions once, runs `twine check --strict` on them, and installs the wheel into a clean environment to confirm that `evalproof --version` prints the tagged version.
 2. **Publish to PyPI.** It uploads the files that were built, using [trusted publishing](https://docs.pypi.org/trusted-publishers/): the job holds a short-lived identity token and no stored PyPI token exists. PyPI attaches [PEP 740](https://peps.python.org/pep-0740/) attestations to each file.
 3. **Attach to the GitHub release.** It adds a build-provenance attestation for the same files and uploads them to the release.
 4. **Publish the container image.** It starts only after the PyPI upload succeeded, builds an image for `linux/amd64` and `linux/arm64` that installs the wheel from the first job (the file that is on PyPI, not a second build), and pushes it to `ghcr.io/technobasant/evalproof` with the tags `<version>`, `<major>.<minor>` and `latest`. A pre-release gets only its exact version tag. The job then attaches a build-provenance attestation to the pushed image, stored with it in the registry. See [Docker](../getting-started/install.md#docker).
 
-Jobs 3 and 4 run side by side once the files are on PyPI.
+5. **Publish the npm launcher.** Also after the PyPI upload, it publishes the `npm/` package to npm with [trusted publishing](https://docs.npmjs.com/trusted-publishers): no stored npm token exists, and npm attaches a provenance statement. The job first confirms that `npm/package.json` carries the tagged version.
+
+Jobs 3, 4 and 5 run side by side once the files are on PyPI.
 
 The documentation site is rebuilt and published to GitHub Pages on each published release, so it matches the latest release.
 

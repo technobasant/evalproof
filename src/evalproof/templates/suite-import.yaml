@@ -44,7 +44,8 @@ scorers:
 
 # Fail CI only when the score drops by more than 3 points AND the drop is unlikely to be chance.
 # The gate needs 20 paired cases before it will decide; with fewer it exits 4 ("cannot gate")
-# instead of passing.
+# instead of passing. It gates the scorer that checks the most cases. Every gated metric needs
+# its own 20, so add another scorer to `metrics: [...]` only once it checks that many.
 gate:
   metric: @@METRIC@@
   max_drop: 0.03

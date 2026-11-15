@@ -179,6 +179,11 @@ picks it. It never overwrites an existing file unless you pass `--force`, and it
 when the cases hold nothing a scorer can check. The existing `--out` file is replaced, as with the
 other import commands.
 
+Each scorer has a comment saying how many cases it checks, since an assertion in one test reaches
+only that case. The gate is set on the scorer that checks the most cases: a gated metric needs
+`min_cases` paired cases of its own (20 by default), so add another scorer to `gate.metrics`
+only once it checks that many.
+
 ## Start a repository from existing cases
 
 ```bash title="Terminal"

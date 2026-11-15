@@ -105,10 +105,20 @@ class ImportedDataset:
     format: str = ""
     prompt_template: str | None = None
     detected: bool = False
+    coverage: dict[str, int] = field(default_factory=dict)
+    """How many cases each scorer checks, by scorer name."""
 
     @property
     def needs_judge(self) -> bool:
         return any(s.type == "llm_judge" for s in self.scorers)
+
+    @property
+    def gate_metric(self) -> str | None:
+        """The scorer that checks the most cases (the first of them on a tie): the one to gate,
+        since a gated metric needs ``min_cases`` paired cases of its own."""
+        if not self.scorers:
+            return None
+        return max(self.scorers, key=lambda s: self.coverage.get(s.name, 0)).name
 
     def scorer_blocks(self) -> list[dict[str, Any]]:
         """The scorers as the plain mappings of a suite file."""
@@ -421,6 +431,7 @@ class Builder:
             notes=self._notes(),
             format=self.fmt,
             prompt_template=template if template is not None else choose_template(cases),
+            coverage=_coverage(self.drafts, names),
         )
 
     def _case(self, draft: Draft, cid: str, names: _FieldNames) -> Case:
@@ -551,6 +562,28 @@ def _scorers(drafts: list[Draft], names: _FieldNames) -> list[ScorerConfig]:
             ScorerConfig(name="rubrics", type="llm_judge", params={"case_rubrics": True})
         )
     return scorers
+
+
+def _coverage(drafts: list[Draft], names: _FieldNames) -> dict[str, int]:
+    """How many drafts each scorer of ``_scorers`` checks, by scorer name."""
+    counts: Counter[str] = Counter()
+    for d in drafts:
+        hit: set[str] = set()
+        for (base, sensitive), values in d.lists.items():
+            if values:
+                hit.add(names.scorer(names.family(base), sensitive))
+        if d.exact:
+            hit.add("exact")
+        if d.schema is not None:
+            hit.add("json_schema")
+        if d.checks:
+            hit.add("omits")
+        if d.judge:
+            hit.add("judge")
+        if d.rubrics:
+            hit.add("rubrics")
+        counts.update(hit)
+    return dict(counts)
 
 
 # --- the prompt template ----------------------------------------------------------------------

@@ -371,11 +371,9 @@ def render_gitlab_ci(ci: str, judge: Judge) -> str:
     return fill(template("workflow-gitlab-api-key.yml"), values)
 
 
-# --- the agent files ---------------------------------------------------------------------
+# --- the imported suite ------------------------------------------------------------------
 
 
-# The evalproof section of the repository's AGENTS.md sits between these two markers. ``init``
-# replaces what is between them and never touches the rest of the file.
 def render_import_suite(
     dataset: ImportedDataset, judge: Judge, *, source: str, dataset_path: str = "cases.jsonl"
 ) -> str:
@@ -389,7 +387,9 @@ def render_import_suite(
         )
     blocks = []
     for scorer in dataset.scorers:
-        lines = [f"  - name: {scorer.name}", f"    type: {scorer.type}"]
+        checked = dataset.coverage.get(scorer.name)
+        lines = [f"  # checks {checked} of {len(dataset.cases)} case(s)"] if checked else []
+        lines += [f"  - name: {scorer.name}", f"    type: {scorer.type}"]
         if scorer.params:
             lines.append(f"    params: {json.dumps(scorer.params)}")
         blocks.append("\n".join(lines))
@@ -414,7 +414,7 @@ def render_import_suite(
             "API_KEY_LINE": f"  api_key_env: {judge.api_key_env}" if judge.api_key_env else "",
             "TEMPLATE_LINE": template_line,
             "SCORERS": "\n".join(blocks),
-            "METRIC": dataset.scorers[0].name,
+            "METRIC": dataset.gate_metric or dataset.scorers[0].name,
         },
         frozenset({"judge"}) if dataset.needs_judge else frozenset(),
     )
@@ -426,6 +426,10 @@ def _wrap(note: str, width: int = 94) -> list[str]:
     return lines or [note]
 
 
+# --- the agent files ---------------------------------------------------------------------
+
+# The evalproof section of the repository's AGENTS.md sits between these two markers. ``init``
+# replaces what is between them and never touches the rest of the file.
 AGENTS_FILE = "AGENTS.md"
 AGENTS_BEGIN = "<!-- evalproof:begin -->"
 AGENTS_END = "<!-- evalproof:end -->"

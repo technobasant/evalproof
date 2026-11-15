@@ -206,6 +206,21 @@ def test_suite_out_writes_exactly_the_scorers_the_cases_need_and_no_judge(
     assert len(load_dataset(config.resolve(config.dataset))) == 2
 
 
+def test_suite_out_gates_the_scorer_that_checks_the_most_cases(tmp_path: Path) -> None:
+    # In this config only one of four cases has an `equals` (exact), while the defaultTest
+    # not-contains reaches every case: gating `exact` would leave the gate one paired case.
+    out = tmp_path / "cases.jsonl"
+    suite = tmp_path / "suite.yaml"
+    args = ["import-dataset", "promptfoo", str(PROMPTFOO_CONFIG), "--out", str(out)]
+    assert main([*args, "--suite-out", str(suite)]) == 0
+    config = load_config(suite)
+    assert config.scorers[0].name == "exact"
+    assert config.gate.metric == "omits"
+    text = suite.read_text(encoding="utf-8")
+    assert "  # checks 4 of 4 case(s)\n  - name: omits" in text
+    assert "  # checks 1 of 4 case(s)\n  - name: exact" in text
+
+
 def test_suite_out_adds_a_judge_block_only_when_a_scorer_needs_one(
     tmp_path: Path,
 ) -> None:
