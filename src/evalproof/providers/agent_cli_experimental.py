@@ -14,8 +14,8 @@ Three things differ from the stable pair, and each is a consequence of what the 
   replacement of the agent's own system prompt.
 * ``copilot`` reads the prompt on stdin (verified), but ``cursor`` takes it as an argument: nothing
   in the Cursor docs says it reads stdin. The prompt is therefore visible in ``ps`` while a cursor
-  call runs, and a prompt over ``ARGV_PROMPT_LIMIT`` bytes is refused instead of failing in
-  ``execve``. stdin is closed.
+  call runs, and a prompt over the OS limit (``argv_limit``) is refused instead of failing in
+  ``execve`` or ``CreateProcess``. stdin is closed.
 * ``opencode`` has no system-prompt flag either, but its agent config has a ``prompt`` field, and
   the config can be given inline in an environment variable, so the system text travels there.
 """
@@ -24,16 +24,17 @@ from __future__ import annotations
 
 import json
 import os
+import posixpath
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import time
-from pathlib import Path
-from typing import Any, ClassVar
+from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import Any, ClassVar, NamedTuple
 
+from evalproof._fsutil import rmtree_retry
 from evalproof.config import GenerationParams
 from evalproof.providers.agent_cli import (
     AUTH_TIMEOUT_S,
@@ -52,6 +53,82 @@ from evalproof.providers.base import ChatResponse, Message, ProviderError, split
 # below it. The same bound caps the OpenCode config, which travels in one environment variable.
 ARGV_PROMPT_LIMIT = 100_000
 
+# Windows has other limits, counted in UTF-16 characters, not bytes: ``CreateProcess`` takes a
+# command line of at most 32,767 characters in all (binary, flags and prompt together), and
+# ``cmd.exe``, which runs a ``.cmd`` or ``.bat`` shim such as the ones npm writes, takes 8,191. One
+# environment variable is also capped at 32,767. ``WINDOWS_RESERVE`` is left for what the prompt
+# shares the line (or the variable's name) with: the binary's path, the flags, the model id and the
+# workspace path.
+WINDOWS_CMDLINE_LIMIT = 32_767
+WINDOWS_CMD_SHELL_LIMIT = 8_191
+WINDOWS_ENV_VALUE_LIMIT = 32_767
+WINDOWS_RESERVE = 1_500
+WINDOWS_ENV_RESERVE = 100
+
+
+class ArgvLimit(NamedTuple):
+    """The size a prompt (or an environment value) may reach: ``limit`` counted in ``unit``,
+    and ``reason`` naming which OS limit that is, for an error message."""
+
+    limit: int
+    unit: str
+    reason: str
+
+
+def argv_limit(binary: str = "") -> ArgvLimit:
+    """The longest prompt a CLI named ``binary`` can be given as one argument. Windows counts
+    characters and its limit depends on what the binary is: an ``.exe`` is started directly, a
+    ``.cmd`` or ``.bat`` shim goes through ``cmd.exe``, which allows far less."""
+    if sys.platform == "win32":
+        if binary.lower().endswith((".cmd", ".bat")):
+            return ArgvLimit(
+                WINDOWS_CMD_SHELL_LIMIT - WINDOWS_RESERVE,
+                "characters",
+                f"cmd.exe, which runs a .cmd shim, allows a command line of "
+                f"{WINDOWS_CMD_SHELL_LIMIT} characters",
+            )
+        return ArgvLimit(
+            WINDOWS_CMDLINE_LIMIT - WINDOWS_RESERVE,
+            "characters",
+            f"Windows allows a command line of {WINDOWS_CMDLINE_LIMIT} characters",
+        )
+    return ArgvLimit(ARGV_PROMPT_LIMIT, "bytes", "Linux and macOS cap one argument at 128 KiB")
+
+
+def env_limit() -> ArgvLimit:
+    """The longest value one environment variable (the OpenCode config) may have."""
+    if sys.platform == "win32":
+        return ArgvLimit(
+            WINDOWS_ENV_VALUE_LIMIT - WINDOWS_ENV_RESERVE,
+            "characters",
+            f"Windows allows {WINDOWS_ENV_VALUE_LIMIT} characters in one environment variable",
+        )
+    return ArgvLimit(
+        ARGV_PROMPT_LIMIT, "bytes", "Linux and macOS cap one environment string at 128 KiB"
+    )
+
+
+def argv_size(prompt: str) -> int:
+    """How much of ``argv_limit`` the prompt uses as one argument: bytes on POSIX; on Windows
+    UTF-16 characters of the argument as it is quoted into the command line (every ``"`` costs
+    two)."""
+    if sys.platform == "win32":
+        return _utf16_units(subprocess.list2cmdline([prompt]))
+    return len(prompt.encode("utf-8"))
+
+
+def env_size(value: str) -> int:
+    """How much of ``env_limit`` an environment value uses: bytes on POSIX, UTF-16 characters on
+    Windows."""
+    if sys.platform == "win32":
+        return _utf16_units(value)
+    return len(value.encode("utf-8"))
+
+
+def _utf16_units(text: str) -> int:
+    return len(text.encode("utf-16-le", "surrogatepass")) // 2
+
+
 # One temp root per call with two empty sibling directories: the working directory the CLI sees
 # and a spare one for what a provider needs outside it (a config dir, a usage file). A provider
 # that gets only the working directory finds the spare one with ``aux_dir_of``.
@@ -62,6 +139,13 @@ AUX_NAME = "aux"
 def aux_dir_of(workdir: str) -> str:
     """The spare directory that sits next to ``workdir`` under the call's temp root."""
     return str(Path(workdir).parent / AUX_NAME)
+
+
+def display_workdir(system_file: str) -> str:
+    """The working directory ``command`` shows for a system file: ``<root>/cwd``, laid out like a
+    real call. Only ``evalproof doctor`` and tests ask, with a ``<tmp>/system.txt`` placeholder,
+    so it is joined with ``/`` on every OS and the printed flags do not depend on the platform."""
+    return posixpath.join(posixpath.dirname(system_file), CWD_NAME)
 
 
 _warned: set[str] = set()
@@ -136,8 +220,7 @@ class ExperimentalCLIProvider(AgentCLIProvider):
         # The base class and ``evalproof doctor`` ask for the command with a system file; none of
         # these CLIs reads one, so only the directory it would be in is used, laid out like a
         # real call: ``<root>/cwd`` for the CLI, ``<root>/aux`` next to it.
-        root = os.path.dirname(system_file)
-        return self.build_command(binary, os.path.join(root, CWD_NAME), params)
+        return self.build_command(binary, display_workdir(system_file), params)
 
     def _once(self, messages: list[Message], params: GenerationParams) -> ChatResponse:
         warn_experimental(self.name)
@@ -147,11 +230,13 @@ class ExperimentalCLIProvider(AgentCLIProvider):
         prompt = render_prompt(rest)
         if self.system_in_prompt:
             prompt = frame_prompt(system, prompt)
-        if self.prompt_in_argv and len(prompt.encode("utf-8")) > ARGV_PROMPT_LIMIT:
-            raise self.fail(
-                f"the prompt is over {ARGV_PROMPT_LIMIT} bytes and {self.binary} takes it as an "
-                "argument; shorten the system prompt or the input"
-            )
+        if self.prompt_in_argv:
+            limit = argv_limit(binary)
+            if argv_size(prompt) > limit.limit:
+                raise self.fail(
+                    f"the prompt is over {limit.limit} {limit.unit} and {self.binary} takes it as "
+                    f"an argument ({limit.reason}); shorten the system prompt or the input"
+                )
         env = self.child_env()
         # One temp root, two empty directories: the working directory the CLI sees, and a spare
         # one for config. Removed afterwards, also when the call fails.
@@ -181,7 +266,7 @@ class ExperimentalCLIProvider(AgentCLIProvider):
             latency_ms = (time.perf_counter() - start) * 1000
             return self.parse_call(code, out, err, latency_ms, aux)
         finally:
-            shutil.rmtree(root, ignore_errors=True)
+            rmtree_retry(root)
 
 
 class OpenCodeProvider(ExperimentalCLIProvider):
@@ -245,10 +330,11 @@ class OpenCodeProvider(ExperimentalCLIProvider):
             }
         }
         content = json.dumps(config, ensure_ascii=False)
-        if len(content.encode("utf-8")) > ARGV_PROMPT_LIMIT:
+        limit = env_limit()
+        if env_size(content) > limit.limit:
             raise self.fail(
-                f"the system prompt is over {ARGV_PROMPT_LIMIT} bytes and opencode takes it in an "
-                "environment variable; shorten it"
+                f"the system prompt is over {limit.limit} {limit.unit} and opencode takes it in an "
+                f"environment variable ({limit.reason}); shorten it"
             )
         # OPENCODE_CONFIG_DIR is an empty directory, as in the verified recipe. A canary
         # AGENTS.md in a global config dir (XDG_CONFIG_HOME) was read by default and not read
@@ -382,8 +468,23 @@ def sbpl_string(value: str) -> str:
 def cursor_sandbox_profile(home: str) -> str:
     """The sandbox profile that denies reading ``CURSOR_SANDBOX_DENY`` under ``home``; everything
     else stays allowed, so the login (a keychain lookup, not a file read) keeps working."""
-    paths = " ".join(f"(subpath {sbpl_string(os.path.join(home, p))})" for p in CURSOR_SANDBOX_DENY)
+    # The profile is macOS sandbox syntax and ``home`` a macOS path, so it is joined with ``/``
+    # whatever OS this runs on.
+    paths = " ".join(
+        f"(subpath {sbpl_string(posixpath.join(home, p))})" for p in CURSOR_SANDBOX_DENY
+    )
     return f"(version 1)(allow default)(deny file-read* {paths})"
+
+
+def escapes_workspace(relative: str) -> bool:
+    """True when ``relative`` is not a plain path inside the workspace: it is absolute, has a
+    root or a drive, or climbs with ``..``. Read as POSIX and as Windows whichever OS this runs
+    on, so ``/etc/x`` (no drive: not absolute on Windows) and ``C:\\x`` (not absolute on POSIX)
+    are both refused."""
+    for pure in (PurePosixPath(relative), PureWindowsPath(relative)):
+        if pure.is_absolute() or pure.anchor or ".." in pure.parts:
+            return True
+    return False
 
 
 def cursor_home() -> str:
@@ -476,7 +577,7 @@ class CursorProvider(ExperimentalCLIProvider):
         (aux / self.DATA_DIR).mkdir(exist_ok=True)
         for relative, text in self.extra_workspace_files.items():
             path = Path(relative)
-            if path.is_absolute() or ".." in path.parts:
+            if escapes_workspace(relative):
                 raise self.fail(f"extra workspace file {relative!r} must be inside the workspace")
             (cwd / path).parent.mkdir(parents=True, exist_ok=True)
             (cwd / path).write_text(text, encoding="utf-8")
@@ -490,8 +591,7 @@ class CursorProvider(ExperimentalCLIProvider):
     def command(self, binary: str, system_file: str, params: GenerationParams) -> list[str]:
         # ``evalproof doctor`` prints these flags: without the sandbox wrapper, whose profile is a
         # long string with the home directory in it. Doctor says whether the sandbox applies.
-        root = os.path.dirname(system_file)
-        return self.agent_command(binary, os.path.join(root, CWD_NAME), params)
+        return self.agent_command(binary, display_workdir(system_file), params)
 
     def build_command(self, binary: str, workdir: str, params: GenerationParams) -> list[str]:
         command = self.agent_command(binary, workdir, params)

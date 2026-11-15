@@ -6,6 +6,8 @@ import io
 import json
 import os
 import re
+import shutil
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -30,8 +32,9 @@ from evalproof.providers import (
 )
 from evalproof.providers.agent_cli import NEUTRAL_SYSTEM, cli_facts
 from evalproof.providers.agent_cli_experimental import (
-    ARGV_PROMPT_LIMIT,
     ExperimentalCLIProvider,
+    argv_limit,
+    env_limit,
     frame_prompt,
 )
 from evalproof.providers.base import TransientError
@@ -414,11 +417,12 @@ def test_frame_prompt_never_starts_with_a_dash() -> None:
 
 
 def test_a_prompt_too_long_for_argv_is_refused_not_sent(cursor: Case) -> None:
-    big = [Message(role="user", content="x" * (ARGV_PROMPT_LIMIT + 1))]
-    with pytest.raises(ProviderError, match=f"over {ARGV_PROMPT_LIMIT} bytes"):
+    limit = argv_limit(shutil.which(cursor.cls.binary) or "")  # this OS's limit, for this binary
+    big = [Message(role="user", content="x" * (limit.limit + 1))]
+    with pytest.raises(ProviderError, match=f"over {limit.limit} {limit.unit}"):
         cursor.provider().chat(big, PARAMS)
     assert cursor.fake.calls() == []  # refused up front, and not retried
-    just_under = [Message(role="user", content="x" * (ARGV_PROMPT_LIMIT - 1000))]
+    just_under = [Message(role="user", content="x" * (limit.limit - 1000))]
     assert cursor.provider().chat(just_under, PARAMS).text == "OK"
 
 
@@ -432,9 +436,10 @@ def test_opencode_takes_a_long_prompt_on_stdin_but_not_a_huge_system_text(openco
     long_input = [Message(role="user", content="y" * 300_000)]
     assert opencode.provider().chat(long_input, PARAMS).text == "OK"
     assert len(opencode.fake.last()["stdin"]) == 300_000
-    modest = Message(role="system", content="s" * 90_000)
+    limit = env_limit().limit  # the config travels in one environment variable
+    modest = Message(role="system", content="s" * (limit - 10_000))
     assert opencode.provider().chat([modest, *USER], PARAMS).text == "OK"
-    huge = Message(role="system", content="s" * (ARGV_PROMPT_LIMIT + 1))
+    huge = Message(role="system", content="s" * (limit + 1))
     opencode.set_replies(opencode_ok())
     with pytest.raises(ProviderError, match="system prompt is over"):
         opencode.provider().chat([huge, *USER], PARAMS)
@@ -1055,7 +1060,9 @@ def test_doctor_lists_copilot_with_auth_not_checked(
     assert "auth: not checked" in block and "isolation: copilot/2" in block
     assert "--available-tools=evalproof-no-tools" in block and "--no-ask-user" in block
     assert "--no-custom-instructions" in block and "--disable-builtin-mcps" in block
-    assert "--usage-output-file '<tmp>/aux/usage.json'" in block  # shell-quoted, as printed
+    # Quoted for the OS's own shell, as printed: POSIX quotes the angle bracket, Windows does not.
+    shown = "<tmp>/aux/usage.json" if sys.platform == "win32" else "'<tmp>/aux/usage.json'"
+    assert f"--usage-output-file {shown}" in block
     assert "opencode" not in text and "cursor" not in text
     assert copilot.fake.calls() == []
 

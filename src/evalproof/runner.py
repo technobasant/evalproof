@@ -325,6 +325,6 @@ def load_run(path: str | Path) -> Run:
     """Read a run file. A file written by a newer evalproof (a higher ``format_version``) raises
     ``RunFileError`` rather than loading as a run it may misread."""
     path = Path(path)
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8-sig")  # tolerates the BOM Notepad and PowerShell 5.1 add
     _check_format_version(text, path)
     return Run.model_validate_json(text)

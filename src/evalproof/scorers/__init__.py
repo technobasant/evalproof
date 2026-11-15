@@ -174,7 +174,7 @@ def make_scorer(
         rubric = params.pop("rubric", None)
         rubric_file = params.pop("rubric_file", None)
         if rubric_file:
-            rubric = suite.resolve(rubric_file).read_text(encoding="utf-8")
+            rubric = suite.resolve(rubric_file).read_text(encoding="utf-8-sig")
         max_retries = int(params.pop("max_retries", 1))
         if params:
             raise ConfigError(f"scorer {cfg.name!r}: unknown params {sorted(params)}")

@@ -18,6 +18,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from evalproof._fsutil import safe_filename
 from evalproof._version import __version__
 from evalproof.cache import CachedProvider, ResponseCache, case_scope
 from evalproof.calibration import calibrate
@@ -80,7 +81,8 @@ def _emit(markdown: str, path: str | None, *, quiet: bool = False) -> None:
         sys.stdout.write(markdown)
     if path:
         # Append, so it can target $GITHUB_STEP_SUMMARY alongside other steps.
-        with Path(path).open("a", encoding="utf-8") as fh:
+        # ``newline="\n"``: the file is LF on Windows too, like the one a Linux runner writes.
+        with Path(path).open("a", encoding="utf-8", newline="\n") as fh:
             fh.write(markdown + "\n")
 
 
@@ -168,7 +170,7 @@ def _run_variant(
         if args.label:
             override.label = args.label
         if args.system_prompt_file:
-            override.system_prompt = Path(args.system_prompt_file).read_text(encoding="utf-8")
+            override.system_prompt = Path(args.system_prompt_file).read_text(encoding="utf-8-sig")
             if not args.label:  # so two runs with different prompt files are told apart
                 base = override.label or override.target
                 override.label = f"{base} + {Path(args.system_prompt_file).name}"
@@ -198,7 +200,9 @@ def _run_variant(
         trials=args.trials,
         on_plan=plan,
     )
-    out = out_path or f"runs/{cfg.name}-{run.info.started_at.replace(':', '')}.json"
+    # The suite's name goes into a file name, so it is cleaned for every OS; a ``--out`` is not.
+    stamp = run.info.started_at.replace(":", "")
+    out = out_path or f"runs/{safe_filename(cfg.name)}-{stamp}.json"
     save_run(run, out)
     sys.stderr.write(f"wrote {out}\n")
     if args.junit and junit_runs is not None:
@@ -311,7 +315,7 @@ def _refused(
     )
     if args.json:
         payload = {"gate": json.loads(to_json(decision))}
-        Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8", newline="\n")
     if gate is not None:
         _write_gate_junit(
             args, baseline, [(run_label(candidate), candidate, decision)], gate, EXIT_CANNOT_GATE
@@ -381,7 +385,7 @@ def _compare_matrix(
                 for e in entries
             ],
         }
-        Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8", newline="\n")
     code = _worst([e.decision.exit_code for e in entries if e.decision is not None])
     if gate is not None and args.gate:
         _write_gate_junit(
@@ -443,7 +447,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
         payload = {"comparison": json.loads(to_json(cmp))}
         if decision:
             payload["gate"] = json.loads(to_json(decision))
-        Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8", newline="\n")
     if args.gate and decision is not None:
         if gate is not None:
             _write_gate_junit(
@@ -562,7 +566,7 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
     if args.labels:
         labels = {}
         for lineno, line in enumerate(
-            Path(args.labels).read_text(encoding="utf-8").splitlines(), start=1
+            Path(args.labels).read_text(encoding="utf-8-sig").splitlines(), start=1
         ):
             if not line.strip():
                 continue
@@ -585,7 +589,7 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
     )
     _emit(calibration_markdown(rep), args.markdown)
     if args.json:
-        Path(args.json).write_text(to_json(rep), encoding="utf-8")
+        Path(args.json).write_text(to_json(rep), encoding="utf-8", newline="\n")
     return EXIT_PASS
 
 
@@ -642,7 +646,7 @@ def cmd_pairwise(args: argparse.Namespace) -> int:
             )
         _emit("\n".join(md) + "\n", args.markdown)
         if args.json:
-            Path(args.json).write_text(json.dumps(rows, indent=2), encoding="utf-8")
+            Path(args.json).write_text(json.dumps(rows, indent=2), encoding="utf-8", newline="\n")
         return EXIT_PASS
 
 

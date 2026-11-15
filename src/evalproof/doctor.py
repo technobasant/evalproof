@@ -17,6 +17,7 @@ import os
 import re
 import shlex
 import shutil
+import subprocess
 import sys
 from typing import TextIO
 
@@ -48,6 +49,14 @@ from evalproof.systems import resolve_program
 
 # What to check when no suite is given: one target per CLI, so the model is only a placeholder.
 DEFAULT_TARGETS = ("claude-code:<model>", "codex:<model>")
+
+
+def format_flags(args: list[str]) -> str:
+    """``args`` as one line a person can paste into the OS's own shell: quoted the POSIX way, or
+    the Windows way (``list2cmdline``) on Windows. The ``<tmp>`` placeholder paths are shown with
+    ``/`` on every OS, so the output is the same wherever doctor runs."""
+    shown = [a.replace("\\", "/") if a.startswith("<tmp>") else a for a in args]
+    return subprocess.list2cmdline(shown) if sys.platform == "win32" else shlex.join(shown)
 
 
 def installed_experimental() -> list[str]:
@@ -222,7 +231,7 @@ def check_target(
     ok = ok and (auth.ok or key_in_use)
     command = provider.command(provider.binary, "<tmp>/system.txt", GenerationParams())
     out.write(f"  isolation: {provider.isolation}\n")
-    out.write(f"  flags: {shlex.join(command[1:])}\n")
+    out.write(f"  flags: {format_flags(command[1:])}\n")
     source = f"from {AUTH_ENV}" if os.environ.get(AUTH_ENV, "").strip() else f"{AUTH_ENV} not set"
     out.write(f"  auth mode: {provider.auth_mode} ({source})\n")
     if kind in EXPERIMENTAL_PROVIDERS:
