@@ -41,6 +41,10 @@ JUDGE_WARN_KEYS = ("judge_cli_version",)
 SYSTEM_KEYS = ("system_target", "system_cli", "system_cli_version", "system_isolation")
 
 
+# ``MetricComparison.test`` of a binary metric that is compared with the exact McNemar test.
+MCNEMAR_TEST = "exact McNemar"
+
+
 @dataclass
 class MetricComparison:
     name: str
@@ -223,7 +227,7 @@ def _compare_single(
             ci_low=boot.ci_low,
             ci_high=boot.ci_high,
             p_value=mcnemar_exact(len(regressed), len(improved)),
-            test="exact McNemar",
+            test=MCNEMAR_TEST,
             regressed=regressed,
             improved=improved,
             undecided=undecided,
@@ -359,7 +363,7 @@ def _compare_repeated(
         return MetricComparison(
             kind="binary",
             p_value=mcnemar_exact(len(regressed), len(improved)),
-            test="exact McNemar",
+            test=MCNEMAR_TEST,
             regressed=regressed,
             improved=improved,
             baseline_ci=wilson(int(sum(a)), n, alpha),

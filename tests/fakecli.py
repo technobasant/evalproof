@@ -128,6 +128,8 @@ def install(
     auth_exit: int = 0,
 ) -> FakeCLI:
     """Write the fake ``name`` binary and put its directory first on PATH."""
+    if sys.platform == "win32":
+        pytest.skip("the fake coding-agent CLIs are shebang scripts, which Windows does not run")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir(exist_ok=True)
     path = bin_dir / name

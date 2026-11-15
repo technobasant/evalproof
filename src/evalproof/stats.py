@@ -139,6 +139,21 @@ def mcnemar_exact(b: int, c: int) -> float:
     return min(1.0, 2 * binom_cdf(min(b, c), n))
 
 
+def min_significant_discordant(alpha: float) -> int:
+    """The fewest discordant pairs, all in one direction, that the exact McNemar test calls
+    significant: the smallest ``k >= 1`` with ``mcnemar_exact(k, 0) < alpha``.
+
+    It does not depend on the number of cases. It is the floor under the smallest drop the exact
+    test can ever detect: a suite of ``n`` cases cannot call a drop below ``k / n`` significant.
+    The comparison is strict (``<``) because the gate's is (``p < alpha``)."""
+    if not 0 < alpha < 1:
+        raise ValueError("alpha must be in (0, 1)")
+    k = 1
+    while not mcnemar_exact(k, 0) < alpha:
+        k += 1
+    return k
+
+
 PERMUTATION_DRAWS = 20_000  # sign draws of the Monte Carlo test
 EXACT_ENUMERATION_MAX = 16  # most nonzero differences that are enumerated (2**16 sign patterns)
 # |S*| >= |S| - tolerance counts as extreme, so ties are not lost to rounding

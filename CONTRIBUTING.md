@@ -27,8 +27,10 @@ evalproof supports Python 3.11 to 3.14, and CI tests all four.
 * Provider code is tested against `httpx.MockTransport`; tests never call a real model.
 * A change to the gate's behaviour needs an ADR in `docs/adr/` and a case in the offline
   example that shows it.
-* A change to a name in `evalproof.__all__` is a change to the public API: note it in
-  `CHANGELOG.md`, and before 1.0 expect it to need a minor version.
+* A change to the public surface (names in `evalproof.__all__`, commands, flags, exit codes,
+  `--json` fields, suite keys, the run file format) follows the
+  [versioning policy](docs/about/versioning.md): additions go in a minor release, and an
+  incompatible change needs a deprecation first and a major release. Note it in `CHANGELOG.md`.
 * Measurements in `MEASUREMENTS.md` come from real runs only, with the command, the
   machine and the model digests recorded next to them.
 

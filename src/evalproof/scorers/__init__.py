@@ -126,13 +126,16 @@ def is_deterministic(cfg: ScorerConfig) -> bool:
 def validate_scorer_params(scorer_type: str, params: dict[str, Any]) -> None:
     """Check the params of a scorer type that has a fixed vocabulary (``checks``, ``python`` and
     ``llm_judge``) without building the scorer or importing anything. Raises ``ValueError`` naming
-    the path."""
+    the path. Of a ``regex`` scorer only ``fold_quotes`` is checked here, so a suite that sets it
+    to something other than true or false stops at load."""
     if scorer_type == "checks":
         validate_checks_params(params)
     elif scorer_type == "python":
         validate_python_params(params)
     elif scorer_type == "llm_judge":
         validate_judge_params(params)
+    elif scorer_type == "regex" and not isinstance(params.get("fold_quotes", False), bool):
+        raise ValueError(f"fold_quotes must be true or false, got {params['fold_quotes']!r}")
 
 
 def make_scorer(

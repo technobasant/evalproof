@@ -150,6 +150,9 @@ def load_model(key: str) -> ModelRuns:
             env.get("system_model_resolved") == m.model_id,
             f"{key}: the resolved model differs from the target",
         )
+        # As Setup says: no temperature or seed reached the model; the files hold cached replies.
+        require(env.get("system_sampling") == "cli-default", f"{key}: sampling is not the default")
+        require(env.get("cache_only") == "true", f"{key}: a run was not rebuilt from the cache")
         require(
             all(r.output.error is None for r in run.results), f"{key}: a run holds an errored row"
         )
@@ -240,6 +243,10 @@ def setup(models: list[ModelRuns], support: Study, verdicts: tuple[int, int]) ->
     out += [
         "",
         "Sampling is the provider default; no temperature or seed control.",
+        "",
+        "The run files were rebuilt from the response cache with the evalproof version shown, and "
+        "each records `cache_only`: the answers are the ones the models gave when the study ran, "
+        "and no model was called again.",
         "",
         f"All {n_support + n_router} stored verdicts were re-scored from the current answer key "
         f"and matched ({n_support} support Q&A verdicts: two keys over every answer of the "

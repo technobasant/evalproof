@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from evalproof.config import GenerationParams, Pricing, trial_params
 from evalproof.models import Case, Score, SystemOutput
-from evalproof.providers import Message, Provider, ProviderError, response_cost
+from evalproof.providers import CacheMiss, Message, Provider, ProviderError, response_cost
 from evalproof.scorers.deterministic import extract_json
 
 DEFAULT_RUBRIC = (
@@ -109,6 +109,8 @@ class LLMJudge:
         for _attempt in range(self.max_retries + 1):
             try:
                 resp = self.provider.chat(messages, self.params)
+            except CacheMiss:
+                raise  # a cache-only run stops; it is not a judge error to score around
             except ProviderError as exc:
                 return Score(
                     value=None,
@@ -453,6 +455,8 @@ class RubricSetJudge:
         for _attempt in range(self.max_retries + 1):
             try:
                 resp = self.provider.chat(messages, params)
+            except CacheMiss:
+                raise
             except ProviderError as exc:
                 return f"judge error: {exc}", tokens, cost
             tokens += resp.tokens_in + resp.tokens_out

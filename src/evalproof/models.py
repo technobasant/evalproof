@@ -9,6 +9,11 @@ from pydantic import BaseModel, Field, field_validator
 
 _CASE_INPUT: Any = object()  # "render the case's own input", as opposed to a later turn
 
+# The layout of a run file, as ``Run.format_version``. It rises only when a change would make an
+# older evalproof misread a file; a new optional field does not raise it. Files from before 1.0
+# have no such field and are format 1.
+RUN_FORMAT_VERSION = 1
+
 
 class Case(BaseModel):
     """One golden-set item. Extra fields (answer keys, relevant ids) stay on the case."""
@@ -183,6 +188,9 @@ class RunInfo(BaseModel):
 class Run(BaseModel):
     """A complete, self-describing run artifact. Compare two of these to gate a change."""
 
+    # Which layout the file has. Missing in files written before evalproof 1.0, which are
+    # format 1; ``load_run`` refuses a file whose value is above ``RUN_FORMAT_VERSION``.
+    format_version: int = RUN_FORMAT_VERSION
     info: RunInfo
     results: list[CaseResult]
 

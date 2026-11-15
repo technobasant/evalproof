@@ -1,0 +1,3 @@
+# Text files are LF in the working tree on every platform, Windows included: the tests compare
+# generated text and committed run files with files read back from the checkout.
+* text=auto eol=lf

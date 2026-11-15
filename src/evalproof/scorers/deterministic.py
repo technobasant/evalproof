@@ -81,8 +81,31 @@ class Contains:
         return _binary(ok, reason)
 
 
+# Typographic quotes a model writes where an answer key has the ASCII ones. Written as escapes so
+# the table cannot be mangled by an editor: U+2018 U+2019 U+201B U+2032 U+FF07 become ``'`` and
+# U+201C U+201D U+201F U+2033 U+FF02 become ``"``.
+QUOTE_FOLD = str.maketrans(
+    {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201b": "'",
+        "\u2032": "'",
+        "\uff07": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u201f": '"',
+        "\u2033": '"',
+        "\uff02": '"',
+    }
+)
+
+
 class Regex:
-    """``pattern``/``any_of_field`` must match; ``none_of``/``none_of_field`` must not."""
+    """``pattern``/``any_of_field`` must match; ``none_of``/``none_of_field`` must not.
+
+    With ``fold_quotes`` the typographic (curly) quotes in the output, and their primes and
+    fullwidth lookalikes, are matched as the ASCII ``'`` and ``"``; the patterns are used as
+    written. It is off by default, so a suite and its run files score as they always did."""
 
     def __init__(
         self,
@@ -92,12 +115,16 @@ class Regex:
         none_of: list[str] | None = None,
         none_of_field: str | None = None,
         flags: str = "i",
+        fold_quotes: bool = False,
     ) -> None:
+        if not isinstance(fold_quotes, bool):
+            raise TypeError(f"fold_quotes must be true or false, got {fold_quotes!r}")
         self.name = name
         self.patterns = [pattern] if pattern else []
         self.any_of_field = any_of_field
         self.none_of = none_of or []
         self.none_of_field = none_of_field
+        self.fold_quotes = fold_quotes
         self.flags = (re.IGNORECASE if "i" in flags else 0) | (re.MULTILINE if "m" in flags else 0)
         self.flags |= re.DOTALL if "s" in flags else 0
 
@@ -106,8 +133,9 @@ class Regex:
         reject = self.none_of + _case_list(case, self.none_of_field)
         if not accept:
             return Score(value=None, reason="no accept pattern")
-        hit = next((p for p in accept if re.search(p, out.output, self.flags)), None)
-        bad = next((p for p in reject if re.search(p, out.output, self.flags)), None)
+        text = out.output.translate(QUOTE_FOLD) if self.fold_quotes else out.output
+        hit = next((p for p in accept if re.search(p, text, self.flags)), None)
+        bad = next((p for p in reject if re.search(p, text, self.flags)), None)
         ok = hit is not None and bad is None
         reason = None if ok else f"rejected by {bad!r}" if bad else "no accept pattern matched"
         return _binary(ok, reason)

@@ -18,7 +18,7 @@ from contextvars import ContextVar
 from pathlib import Path
 
 from evalproof.config import GenerationParams
-from evalproof.providers.base import ChatResponse, Message, Provider
+from evalproof.providers.base import CacheMiss, ChatResponse, Message, Provider, close_resource
 
 
 def cache_key(
@@ -63,6 +63,21 @@ def trial_scope(trial: int) -> Iterator[None]:
         _TRIAL.reset(token)
 
 
+# The case (and trial) a call is made for, so a ``--cache-only`` miss can name it. ``score_case``
+# sets it around the system's call and the scoring; unlike the trial it does not change a key.
+_CASE: ContextVar[tuple[str, int] | None] = ContextVar("evalproof_case", default=None)
+
+
+@contextmanager
+def case_scope(case_id: str, trial: int = 0) -> Iterator[None]:
+    """Inside the block, a ``CachedProvider`` miss in cache-only mode names this case and trial."""
+    token = _CASE.set((case_id, trial))
+    try:
+        yield
+    finally:
+        _CASE.reset(token)
+
+
 class ResponseCache:
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root)
@@ -93,16 +108,33 @@ class ResponseCache:
 
 
 class CachedProvider:
-    """Wraps any provider; transparent on a miss, free on a hit."""
+    """Wraps any provider; transparent on a miss, free on a hit.
 
-    def __init__(self, inner: Provider, cache: ResponseCache, base_url: str | None = None) -> None:
+    With ``cache_only`` a miss raises ``CacheMiss`` instead of calling the inner provider, so
+    the wrapper can answer from the cache alone and never reach a model. ``role`` (``system`` or
+    ``judge``) is only used to word that error."""
+
+    def __init__(
+        self,
+        inner: Provider,
+        cache: ResponseCache,
+        base_url: str | None = None,
+        *,
+        cache_only: bool = False,
+        role: str = "model",
+    ) -> None:
         self.inner = inner
         self.cache = cache
         self.name = inner.name
         self.model = inner.model
         self.base_url = base_url
+        self.cache_only = cache_only
+        self.role = role
         self.hits = 0
         self.misses = 0
+
+    def close(self) -> None:
+        close_resource(self.inner)
 
     def chat(self, messages: list[Message], params: GenerationParams) -> ChatResponse:
         salt = getattr(self.inner, "cache_salt", None)
@@ -115,7 +147,18 @@ class CachedProvider:
         if hit is not None:
             self.hits += 1
             return hit
+        if self.cache_only:
+            raise self._miss()
         self.misses += 1
         resp = self.inner.chat(messages, params)
         self.cache.put(key, resp)
         return resp
+
+    def _miss(self) -> CacheMiss:
+        case = _CASE.get()
+        where = f" for case {case[0]!r} (trial {case[1]})" if case else ""
+        return CacheMiss(
+            f"--cache-only: no cached reply{where} from the {self.role} "
+            f"({self.name}:{self.model}); no model was called. "
+            "Run without --cache-only to make the call."
+        )

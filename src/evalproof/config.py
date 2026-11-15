@@ -125,7 +125,7 @@ class ScorerConfig(BaseModel):
     @model_validator(mode="after")
     def _check_params(self) -> ScorerConfig:
         # The scorers with a fixed vocabulary are checked when the suite loads, not mid-run.
-        if self.type in ("checks", "python", "llm_judge"):
+        if self.type in ("checks", "python", "llm_judge", "regex"):
             from evalproof.scorers import validate_scorer_params  # imports this module
 
             validate_scorer_params(self.type, self.params)

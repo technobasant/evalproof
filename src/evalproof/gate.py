@@ -310,8 +310,12 @@ def decide(
         warnings.append(note)
 
     # The estimate shares alpha among the gated metrics, and among the candidates of a matrix.
+    # The exact floor uses the whole alpha: Holm can pass a metric at a raw p up to alpha itself.
     alpha_used = gate.alpha / (candidates * len(names))
-    power = {name: estimate_power(cmp.metrics[name], gate.max_drop, alpha_used) for name in names}
+    power = {
+        name: estimate_power(cmp.metrics[name], gate.max_drop, alpha_used, floor_alpha=gate.alpha)
+        for name in names
+    }
     status = "fail" if exit_code else ("warn" if warnings else "pass")
     return GateDecision(
         status,

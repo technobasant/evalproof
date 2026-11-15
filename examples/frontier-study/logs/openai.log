@@ -45,7 +45,7 @@ variant openai-baseline
 wrote examples/frontier-study/runs/support-qa-openai-baseline-t0.json
 ## support-qa-frontier — `OpenAI GPT-6 Astra (medium effort) + grounded prompt` · variant `openai-baseline`
 
-42 cases · wall 0.0 s · dataset `03e03610fbf641ca`
+42 cases · wall 0.1 s · dataset `03e03610fbf641ca`
 
 | Scorer | Decided | Pass rate (95% CI) | Mean |
 |---|---:|---:|---:|

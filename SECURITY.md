@@ -2,13 +2,13 @@
 
 ## Supported versions
 
-Security fixes go into the latest minor release. While evalproof is below 1.0, that is the
-only supported line.
+Security fixes go into the latest minor release, and into the previous minor release for 90
+days after a new minor is published.
 
 | Version | Supported |
 |---|---|
-| 0.8.x | yes |
-| < 0.8 | no |
+| 1.0.x | yes |
+| < 1.0 | no |
 
 ## Reporting a vulnerability
 

@@ -8,29 +8,51 @@ How evalproof is versioned, which versions are supported, and how a release reac
 
 ## Version numbers
 
-The project follows [Semantic Versioning](https://semver.org/), as the [changelog](changelog.md) states. It is below 1.0, so the public surface is not frozen.
+The project follows [Semantic Versioning](https://semver.org/), as the [changelog](changelog.md) states. Since 1.0 the public surface below is stable: it changes incompatibly only in a major release.
 
-| Release | What to expect | Example |
-|---|---|---|
-| Minor (0.x.0) | new features, and sometimes breaking changes, listed under "Breaking" in the changelog | 0.5.0 and 0.6.0 each list breaking changes |
-| Patch (0.x.y) | fixes and documentation, and small additions that keep earlier run files working | 0.5.1 added `rehash`; 0.5.2 changed no behaviour |
+| Release | What to expect |
+|---|---|
+| Major (x.0.0) | removal of something deprecated, or another incompatible change to the public surface, listed under "Breaking" in the changelog |
+| Minor (1.x.0) | new features, and deprecations; anything that worked keeps working |
+| Patch (1.x.y) | fixes and documentation |
 
-Pin the version in CI, and read [Upgrading](upgrading.md) before moving to a new minor release. `evalproof init` pins the current version in the workflows it writes.
+Pin the version in CI, and read [Upgrading](upgrading.md) before moving to a new major release. `evalproof init` pins the current version in the workflows it writes.
+
+## The public surface
+
+These are covered by the guarantee:
+
+* **Python names** in `evalproof.__all__` and `evalproof.adapters.__all__`, as the [API reference](../reference/api.md) documents them. Any other module or name is internal and can change in any release.
+* **Commands**: every `evalproof` command, its flags and its [exit codes](../reference/exit-codes.md), and the fields of every `--json` output.
+* **Suite files**: every [configuration](../reference/configuration.md) key and what it means.
+* **Run files**: the [run file format](../reference/run-file.md). Each run file records its `format_version`; a release that writes a new format still reads the older ones.
+* **Datasets**: the case fields evalproof reads.
+
+These are not:
+
+* **Anything marked experimental**: the `opencode:`, `cursor:` and `copilot:` providers, the Cursor sandbox, the `adk` and `claude-plugin-eval` importers and the OpenTelemetry adapter. They warn when used, and can change in a minor release until they are declared stable.
+* **Human-readable output**: the terminal and Markdown reports can be reworded or rearranged in any release. Read `--json` output or run files from scripts.
+* **The response cache**: a release may change how a cache key is built, which makes cached replies miss once; the changelog says when.
+* **Numbers that come from fixing a statistical bug**: a fix that changes a verdict on the same run files goes into a minor release, listed under "Changed", never a patch.
+
+## Deprecation
+
+Before something on the public surface is removed or changed incompatibly, it is deprecated: it keeps working for at least one minor release, it warns when used (a `DeprecationWarning` from Python, a line on stderr from a command or a suite key), and the changelog lists it under "Deprecated" with what replaces it. Removal happens only in the next major release.
 
 ## Supported versions
 
-Security fixes go into the latest minor release. While evalproof is below 1.0, that is the only supported line.
+Fixes go into the latest minor release. Security fixes also go into the previous minor release for 90 days after a new minor is published.
 
 | Version | Supported |
 |---|---|
-| 0.8.x | yes |
-| < 0.8 | no |
+| 1.0.x | yes |
+| < 1.0 | no |
 
 Report a vulnerability privately, as the [security policy](https://github.com/technobasant/evalproof/blob/main/SECURITY.md) describes. [Security and data handling](security.md) covers what evalproof stores and sends.
 
 ## Supported Python versions
 
-evalproof requires Python 3.11 or newer. The package declares support for 3.11, 3.12, 3.13 and 3.14, and its development status is Beta.
+evalproof requires Python 3.11 or newer. The package declares support for 3.11, 3.12, 3.13 and 3.14 on Linux, macOS and Windows; CI runs the test suite on all three. Its development status is Production/Stable. Support for a Python version is dropped only in a minor release, after the version reaches its end of life, and the changelog says so.
 
 It has four runtime dependencies, each with a minimum version:
 
@@ -43,7 +65,7 @@ It has four runtime dependencies, each with a minimum version:
 
 ## What stays compatible
 
-* **Run files.** Every field added after 0.1 has a default, so an older run file still loads. A newer evalproof reads older files; what an old file lacks (per-case hashes, a suite hash, trials) limits what you can do with it, as [Upgrading](upgrading.md#run-files-from-older-versions) lists. The [run file format](../reference/run-file.md) page gives every field.
+* **Run files.** Every field added after 0.1 has a default, so an older run file still loads. Since 1.0 a run file records its `format_version`. From 1.0 on, an evalproof that meets a file with a newer format than it reads refuses it with an error asking for an upgrade, rather than dropping the fields it does not know; releases before 1.0 do not check. A newer evalproof reads older files; what an old file lacks (per-case hashes, a suite hash, trials) limits what you can do with it, as [Upgrading](upgrading.md#run-files-from-older-versions) lists. The [run file format](../reference/run-file.md) page gives every field.
 * **The response cache.** Cache keys come from the provider, model, endpoint, messages and generation parameters. When a release changes how a key is built, the changelog says so: 0.5.0 changed the keys of agent CLI calls once, so cached replies from 0.4.x are not reused. Trial 0 of a repeated run keeps the key it always had.
 * **Suites.** Since 0.5, an unknown key in a suite is an error, so a misspelt or removed key fails loudly rather than being ignored.
 

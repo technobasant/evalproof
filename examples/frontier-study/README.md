@@ -35,13 +35,14 @@ exact label match.
 * `runs/`: one run file per model and suite. `support-qa-*-baseline-t0.json` is the first run of
   the grounded prompt on its own, rebuilt from the cache, so the one-run friendly prompt can be
   gated against it.
-* `logs/`: the output of the last rebuild of `runs/`, made from the cache with no model
-  reachable, so every row in it reads `(cached)`.
+* `logs/`: the output of the last rebuild of `runs/` (`run-study.sh --rebuild`), made from the
+  cache with no model called, so every row in it reads `(cached)`. Each rebuilt run file records
+  `cache_only` in its environment.
 * `measure.py`: recomputes every table in section 10 from `runs/`, without a model, and
   re-scores every stored answer against the current dataset to check the verdicts in the run
   files: `uv run python examples/frontier-study/measure.py`.
 * `run-study.sh`: makes the runs. Finished calls are answered from the cache, so a rerun is free
-  and an interrupted study resumes.
+  and an interrupted study resumes; `--rebuild` only reads the cache and never calls a model.
 
 ## Answer key review
 

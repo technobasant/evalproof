@@ -23,7 +23,7 @@ from evalproof.providers.agent_cli import CLAUDE_OAUTH_ENV
 
 # The tag of the composite action (``action.yml``) the generated workflows use. The
 # ``evalproof`` version that ``run`` is pinned to in the api-key variant is the same release.
-ACTION_REF = "v0.8.0"
+ACTION_REF = "v1.0.0"
 
 CI_MODES = ("keyless", "api-key", "none")
 
@@ -79,6 +79,8 @@ def _capture(argv: list[str], timeout: float = 20.0) -> str | None:
             argv,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
             stdin=subprocess.DEVNULL,
             check=False,

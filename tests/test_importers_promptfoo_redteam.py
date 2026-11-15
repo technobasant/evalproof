@@ -27,7 +27,7 @@ def _quiet(_: str) -> None:
 
 
 def _data() -> dict[str, Any]:
-    loaded: dict[str, Any] = json.loads(REDTEAM.read_text())
+    loaded: dict[str, Any] = json.loads(REDTEAM.read_text(encoding="utf-8"))
     return loaded
 
 
@@ -38,7 +38,7 @@ def _rows(data: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _write(tmp_path: Path, data: Any) -> Path:
     path = tmp_path / "output.json"
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data), encoding="utf-8")
     return path
 
 

@@ -19,12 +19,19 @@ RETRY_STATUS = {408, 409, 425, 429, 500, 502, 503, 504, 529}
 
 
 class ProviderError(RuntimeError):
-    pass
+    """A model call failed. Inside a run it is recorded on the case as an error and the run
+    goes on; ``CacheMiss`` is the exception that stops the run instead."""
 
 
 class TransientError(ProviderError):
     """A failure the provider knows is temporary (a CLI reporting a rate limit), so
     ``with_retries`` tries again. Anything else a provider raises is final."""
+
+
+class CacheMiss(ProviderError):
+    """``--cache-only`` found no cached reply for a call. It is final (never retried) and it
+    stops the run instead of being recorded on the case: a run that was to make no model call
+    must not come back half-answered."""
 
 
 class Message(BaseModel):
@@ -59,6 +66,15 @@ class Provider(Protocol):
     model: str
 
     def chat(self, messages: list[Message], params: GenerationParams) -> ChatResponse: ...
+
+
+def close_resource(obj: object) -> None:
+    """Close what a provider, system or wrapper holds open, if it has a ``close()``. A provider
+    closes only an HTTP client it created itself, never one that was passed in; the coding-agent
+    CLI providers hold nothing, so they have no ``close()`` and this does nothing for them."""
+    close = getattr(obj, "close", None)
+    if callable(close):
+        close()
 
 
 def with_retries(

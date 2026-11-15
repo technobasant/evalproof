@@ -152,4 +152,4 @@ A 42-case sample of the same support questions and 30 ticket-router cases on `cl
 | Did the answer key hold? | No: it failed 12 answers, all correct on reading, and alone showed a −7.1 pt drop from the "friendly" prompt on all three models. With the key reviewed, no regression was detected (42 cases) |
 | Do the answers repeat? | The wording changed between two runs in 17 to 29 of 42 support cases; the router gave the same label in all 90 case pairs |
 
-Documented version: **0.8.x**. This site tracks the latest release.
+Documented version: **1.0.x**. This site tracks the latest release.

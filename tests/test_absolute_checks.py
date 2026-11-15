@@ -259,7 +259,8 @@ import os
 def ask(x):
     marker = os.environ.get("EP_MARKER")
     if marker:
-        open(marker, "a").write("x")
+        with open(marker, "a", encoding="utf-8") as fh:
+            fh.write("x")
     if os.environ.get("EP_FAIL") == "all":
         raise RuntimeError("the model is down")
     if os.environ.get("EP_FAIL") == "some" and x["q"] in ("q0", "q1"):

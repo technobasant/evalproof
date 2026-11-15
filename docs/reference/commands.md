@@ -63,6 +63,7 @@ evalproof run SUITE [options]
 | `--out` | string | none | where to write the run (with `--variant`, only when exactly one variant runs) |
 | `--limit` | int | none | run only the first N cases of the dataset |
 | `--no-cache` | flag | off | do not read or write the response cache |
+| `--cache-only` | flag | off | re-score or rebuild a run from the cache: every model call, the judge's included, is answered from the response cache, and a miss is an error (exit 2), never a model call, which stops the run (with several variants, the runs finished before the miss are written); the run records `cache_only: "true"` in its `environment`; not with `--no-cache`, and a `python` or `http` system is refused because it is not cached |
 | `--trials` | int, 1 to 100 | none | run each case K times (1 to 100), overriding the suite's trials |
 | `--system` | string | none | override the system target |
 | `--system-prompt-file` | string | none | override the system prompt |
@@ -344,6 +345,7 @@ evalproof pairwise BASELINE CANDIDATE --suite SUITE [options]
 | `--limit` | int | none | compare only the first N shared cases, in case-id order |
 | `--no-swap` | flag | off | judge each pair in one order only (by default each pair is judged in both orders) |
 | `--no-cache` | flag | off | do not read or write the response cache |
+| `--cache-only` | flag | off | answer every judge call from the response cache; a miss is an error (exit 2), never a model call; not with `--no-cache` |
 | `--markdown` | string | none | also append the report to this file |
 | `--json` | string | none | write one row per case as JSON to this file |
 
