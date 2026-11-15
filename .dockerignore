@@ -1,0 +1,19 @@
+# The build context is a whitelist: nothing goes to the builder unless it is listed here.
+# That keeps .git, .venv, site, caches and the examples' .evalproof cache directories out.
+# A file the Dockerfile COPYs must be listed below.
+*
+
+# Inputs of `pip wheel`
+!pyproject.toml
+!README.md
+!LICENSE
+!NOTICE
+!src
+
+# A prebuilt wheel (WHEEL_SOURCE=prebuilt); not the sdist
+!dist/*.whl
+
+# Whatever the whitelist let in from the directories above
+**/__pycache__
+**/*.pyc
+**/.evalproof

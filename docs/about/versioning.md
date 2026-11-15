@@ -71,11 +71,14 @@ It has four runtime dependencies, each with a minimum version:
 
 ## How a release is built and published
 
-A release starts when a GitHub release is published. The `release` workflow then runs three jobs in order:
+A release starts when a GitHub release is published. The `release` workflow then runs four jobs:
 
 1. **Build and check.** It confirms the release tag matches the package version, runs the test suite, builds the distributions once, runs `twine check --strict` on them, and installs the wheel into a clean environment to confirm that `evalproof --version` prints the tagged version.
 2. **Publish to PyPI.** It uploads the files that were built, using [trusted publishing](https://docs.pypi.org/trusted-publishers/): the job holds a short-lived identity token and no stored PyPI token exists. PyPI attaches [PEP 740](https://peps.python.org/pep-0740/) attestations to each file.
 3. **Attach to the GitHub release.** It adds a build-provenance attestation for the same files and uploads them to the release.
+4. **Publish the container image.** It starts only after the PyPI upload succeeded, builds an image for `linux/amd64` and `linux/arm64` that installs the wheel from the first job (the file that is on PyPI, not a second build), and pushes it to `ghcr.io/technobasant/evalproof` with the tags `<version>`, `<major>.<minor>` and `latest`. A pre-release gets only its exact version tag. The job then attaches a build-provenance attestation to the pushed image, stored with it in the registry. See [Docker](../getting-started/install.md#docker).
+
+Jobs 3 and 4 run side by side once the files are on PyPI.
 
 The documentation site is rebuilt and published to GitHub Pages on each published release, so it matches the latest release.
 

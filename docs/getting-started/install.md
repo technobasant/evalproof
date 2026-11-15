@@ -1,5 +1,5 @@
 ---
-description: Install evalproof with uvx, uv tool, pipx or pip; supported Python versions and how to upgrade.
+description: Install evalproof with uvx, uv tool, pipx, pip or Docker; supported Python versions and how to upgrade.
 ---
 
 # Install
@@ -63,6 +63,47 @@ Run files from older versions keep working; see the [changelog](../about/changel
 
 No install step is needed: the composite action
 `technobasant/evalproof@v1.0.0` runs the evalproof of the tag you pin ([In CI](../guides/ci.md#in-ci)).
+
+## Docker
+
+A container image holds evalproof and its four dependencies on Python 3.13, for `linux/amd64` and `linux/arm64`. It is published to the GitHub container registry with each release after 1.0.0, and it installs the same wheel that went to PyPI. Use it where you would rather not install Python packages, or in a CI system that runs containers.
+
+```bash title="Terminal"
+docker pull ghcr.io/technobasant/evalproof:latest
+docker run --rm ghcr.io/technobasant/evalproof:latest --version
+```
+
+The entry point is `evalproof`, so what follows the image name is the command. The working directory is `/work`: mount your suite directory there and give paths relative to it.
+
+```bash title="Terminal"
+docker run --rm -v "$PWD:/work" ghcr.io/technobasant/evalproof:latest \
+  run evals/suite.yaml --out evals/runs/latest.json
+docker run --rm -v "$PWD:/work" ghcr.io/technobasant/evalproof:latest \
+  verify evals/runs/latest.json evals/suite.yaml
+```
+
+Pass a provider key with `-e` and no value. Docker then copies it from your environment, so the key is not in the command line or your shell history:
+
+```bash title="Terminal"
+docker run --rm -e ANTHROPIC_API_KEY -v "$PWD:/work" \
+  ghcr.io/technobasant/evalproof:latest run evals/suite.yaml --out evals/runs/latest.json
+```
+
+**Pin a version** in CI, as you would with any other installer. Each release has three tags: `1.1.0` (this release only), `1.1` (the newest patch of that minor release) and `latest` (the newest stable release). A pre-release gets only its exact tag.
+
+What the image does not have:
+
+* **No coding-agent CLI.** `claude`, `codex` and the other agent CLIs are not in the image, so a suite whose system or judge is `claude-code:`, `codex:` or another CLI provider fails: every case errors with "`claude` was not found on PATH", and the command exits 2. It makes no model call. Run those suites with an installed evalproof, on a machine where the CLI is logged in.
+* **No packages beyond evalproof's own.** A `python:` system that imports anything else needs an image of its own, built on this one:
+
+    ```dockerfile title="Dockerfile"
+    FROM ghcr.io/technobasant/evalproof:1.1.0
+    RUN pip install --no-cache-dir --user your-package
+    ```
+
+* **No model server.** Inside the container, `127.0.0.1` is the container. To reach Ollama on your own machine, set `base_url: http://host.docker.internal:11434` in the suite. On Linux, add `--add-host=host.docker.internal:host-gateway` to `docker run`.
+
+The process runs as an unprivileged user (uid 10001). Docker Desktop on macOS and Windows lets it write to the mounted directory. On Linux, run it as yourself so the run files and the `.evalproof/` cache belong to you: add `--user "$(id -u):$(id -g)"`.
 
 ## What else you need
 

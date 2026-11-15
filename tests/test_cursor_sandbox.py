@@ -92,6 +92,23 @@ def provider(**kwargs: Any) -> CursorProvider:
     return CursorProvider("auto", sleep=no_sleep, **kwargs)
 
 
+def sandbox_exec_stand_in(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A stand-in for /usr/bin/sandbox-exec, which only macOS has.
+
+    It records its arguments (NUL-separated, the prompt has newlines) in ``<stand-in>.argv``,
+    drops ``-p PROFILE`` and runs the rest, as the real one does once the profile is applied.
+    A test that makes a sandboxed call needs it, or the call runs the real binary on macOS and
+    finds no binary on Linux.
+    """
+    stand_in = tmp_path / "fake-sandbox-exec"
+    stand_in.write_text(
+        '#!/bin/sh\nprintf \'%s\\0\' "$@" > "$0.argv"\nshift 2\nexec "$@"\n', encoding="utf-8"
+    )
+    stand_in.chmod(stand_in.stat().st_mode | stat.S_IXUSR)
+    monkeypatch.setattr(experimental, "SANDBOX_EXEC", str(stand_in))
+    return stand_in
+
+
 # -- the profile -----------------------------------------------------------------------------------
 
 
@@ -255,6 +272,7 @@ def test_the_cache_key_differs_between_sandboxed_and_not(
     fake: FakeCLI, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     sandbox_available(monkeypatch, True)
+    sandbox_exec_stand_in(tmp_path, monkeypatch)  # the sandboxed call below runs it
     sandboxed = provider().cache_salt(PARAMS)
     monkeypatch.setenv("EVALPROOF_CURSOR_SANDBOX", "off")
     plain = provider().cache_salt(PARAMS)
@@ -271,15 +289,7 @@ def test_the_cache_key_differs_between_sandboxed_and_not(
 def test_a_call_runs_the_cli_behind_sandbox_exec(
     fake: FakeCLI, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # A stand-in for /usr/bin/sandbox-exec: it records its arguments (NUL-separated, the prompt
-    # has newlines), drops ``-p PROFILE`` and runs the rest, as the real one does once the
-    # profile is applied.
-    stand_in = tmp_path / "fake-sandbox-exec"
-    stand_in.write_text(
-        '#!/bin/sh\nprintf \'%s\\0\' "$@" > "$0.argv"\nshift 2\nexec "$@"\n', encoding="utf-8"
-    )
-    stand_in.chmod(stand_in.stat().st_mode | stat.S_IXUSR)
-    monkeypatch.setattr(experimental, "SANDBOX_EXEC", str(stand_in))
+    stand_in = sandbox_exec_stand_in(tmp_path, monkeypatch)
     sandbox_available(monkeypatch, True)
     assert provider().chat(USER, PARAMS).text == "OK"
     seen = Path(f"{stand_in}.argv").read_bytes().decode().split("\0")[:-1]

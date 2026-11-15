@@ -20,6 +20,33 @@ uv run pytest --cov
 
 evalproof supports Python 3.11 to 3.14, and CI tests all four.
 
+## Testing on Linux in Docker
+
+If you work on macOS, `scripts/test-in-docker.sh` runs the whole test suite in Linux containers
+before CI does. It needs Docker and a network connection.
+
+```bash
+scripts/test-in-docker.sh                       # all six targets, one after another
+scripts/test-in-docker.sh --only py313,alpine313
+scripts/test-in-docker.sh --list
+```
+
+The targets are Python 3.11, 3.12, 3.13 and 3.14 on Debian, Python 3.13 on Alpine (musl libc
+instead of glibc), and Python 3.13 on `linux/amd64`, which runs under emulation on an Apple
+silicon Mac and is slow. Each container gets a read-only snapshot of your working tree: the
+files git tracks, with your uncommitted edits. Run `git add` on a new file for it to be tested;
+untracked files, `.git` and `.venv` are left out. In the container, root installs git and uv, then
+drops to an unprivileged user that runs `uv sync --frozen` and the tests, because root skips
+permission checks.
+
+The script prints the directory with each target's full log, then a table of the Python
+version, the result, the passed, failed and skipped counts and the time per target. It exits 1 if
+any target failed. Delete the log directory when you are done. `--target 'NAME IMAGE [PLATFORM]'`
+adds your own target in place of the defaults, for example another Python image.
+
+To build the release image from your working tree, run `docker build -t evalproof .`. The
+comments at the top of the `Dockerfile` explain how it takes its wheel.
+
 ## What a change needs
 
 * Statistical code needs a known-value test: work the expected number out by hand and put
@@ -41,5 +68,7 @@ evalproof supports Python 3.11 to 3.14, and CI tests all four.
 2. Commit, push to `main`, and wait for CI.
 3. Tag `vX.Y.Z` on that commit and publish a GitHub release whose notes are the changelog
    section. The `release` workflow checks the tag against the version, runs the tests,
-   builds once, publishes to PyPI with trusted publishing, and attaches the files and their
-   build-provenance attestation to the release.
+   builds once, publishes to PyPI with trusted publishing, attaches the files and their
+   build-provenance attestation to the release, and publishes the container image to
+   `ghcr.io/technobasant/evalproof`. After the first image is pushed, check in the package
+   settings on GitHub that the package is public, or `docker pull` asks for a login.

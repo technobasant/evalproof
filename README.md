@@ -79,6 +79,10 @@ uv run evalproof --version
 [Upgrading](https://basantbhattarai.com.np/evalproof/about/upgrading/) for what to change and the [changelog](CHANGELOG.md) for everything
 that changed.
 
+**In a container**: `docker run --rm -v "$PWD:/work" ghcr.io/technobasant/evalproof:latest --version`
+(Python 3.13, `linux/amd64` and `linux/arm64`; no coding-agent CLIs in it, see
+[Docker](https://basantbhattarai.com.np/evalproof/getting-started/install/#docker)).
+
 **In GitHub Actions**, no install step is needed: the composite action
 `technobasant/evalproof@v1.0.0` runs the evalproof of the tag you pin
 ([In CI](https://basantbhattarai.com.np/evalproof/guides/ci/)).
