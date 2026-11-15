@@ -45,7 +45,7 @@ from evalproof.gate import (
     decide,
     refusal,
 )
-from evalproof.importers import DATASET_FORMATS, EPOCHS, FORMATS, import_dataset, import_run
+from evalproof.importers import DATASET_FORMATS, EPOCHS, FORMATS, import_cases, import_run
 from evalproof.junit import gate_testsuite, run_testsuite, testsuites, write_junit
 from evalproof.models import CaseResult, Run
 from evalproof.providers import ProviderError, make_provider
@@ -67,7 +67,14 @@ from evalproof.report import (
     to_json,
 )
 from evalproof.runner import load_run, run_suite, save_run
-from evalproof.scaffold import CI_MODES, CLI_AUTHS, PLATFORMS, init_project
+from evalproof.scaffold import (
+    CI_MODES,
+    CLI_AUTHS,
+    PLATFORMS,
+    choose_judge,
+    init_project,
+    render_import_suite,
+)
 from evalproof.scorers import pairwise
 from evalproof.stats import holm
 from evalproof.verify import verify_markdown, verify_run
@@ -523,6 +530,8 @@ def cmd_init(args: argparse.Namespace) -> int:
         platform=args.platform,
         agents_md=not args.no_agents_md,
         agent_files_only=args.agent_files_only,
+        from_file=Path(args.from_file) if args.from_file else None,
+        from_format=args.from_format,
         emit=_say,
     )
 
@@ -553,13 +562,55 @@ def cmd_import(args: argparse.Namespace) -> int:
     return EXIT_PASS
 
 
+def _dataset_ref(dataset: Path, suite: Path) -> str:
+    """How a suite written at ``suite`` names the dataset at ``dataset`` (relative to the suite)."""
+    try:
+        return Path(os.path.relpath(dataset.resolve(), suite.resolve().parent)).as_posix()
+    except ValueError:  # another drive on Windows: there is no relative path
+        return dataset.resolve().as_posix()
+
+
 def cmd_import_dataset(args: argparse.Namespace) -> int:
     def warn(message: str) -> None:
         sys.stderr.write(f"evalproof: warning: {message}\n")
 
-    cases = import_dataset(args.format, args.file, warn=warn)
-    write_dataset(cases, args.out)
-    sys.stderr.write(f"wrote {len(cases)} case(s) to {args.out}\n")
+    suite_out = Path(args.suite_out) if args.suite_out else None
+    if suite_out is not None:
+        if suite_out.exists() and not args.force:
+            raise ConfigError(f"{suite_out} exists; pass --force to overwrite it")
+        _check_writable(suite_out, "the suite")
+    input_fields = tuple(
+        name.strip()
+        for value in args.input_field or []
+        for name in value.split(",")
+        if name.strip()
+    )
+    imported = import_cases(
+        args.format,
+        args.file,
+        warn=warn,
+        id_field=args.id_field,
+        input_fields=input_fields,
+        reference_field=args.reference_field,
+        tags_field=args.tags_field,
+    )
+    suite_text = None
+    if suite_out is not None:  # rendered before anything is written: it can refuse
+        suite_text = render_import_suite(
+            imported,
+            choose_judge(None),
+            source=Path(args.file).name,
+            dataset_path=_dataset_ref(Path(args.out), suite_out),
+        )
+    write_dataset(imported.cases, args.out)
+    if imported.detected:
+        sys.stderr.write(f"evalproof: detected format: {imported.format}\n")
+    for note in imported.notes:
+        sys.stderr.write(f"evalproof: note: {note}\n")
+    sys.stderr.write(f"wrote {len(imported.cases)} case(s) to {args.out}\n")
+    if suite_out is not None and suite_text is not None:
+        suite_out.write_text(suite_text, encoding="utf-8", newline="\n")
+        sys.stderr.write(f"wrote suite to {suite_out}\n")
     return EXIT_PASS
 
 
@@ -684,6 +735,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="with --ci api-key and a coding-agent CLI judge, what the workflow passes the CLI: "
         "its API key (default), or oauth-token: CLAUDE_CODE_OAUTH_TOKEN from `claude "
         "setup-token`, for claude-code in your own repository and CI only",
+    )
+    ini.add_argument(
+        "--from",
+        dest="from_file",
+        metavar="FILE",
+        help="start from test cases you already have (a promptfoo config, a DeepEval, Ragas, "
+        "LangSmith or Inspect dataset, ...): evals/cases.jsonl is those cases and the suite has "
+        "the scorers they need, instead of the sample cases; see `import-dataset`",
+    )
+    ini.add_argument(
+        "--from-format",
+        choices=DATASET_FORMATS,
+        default="auto",
+        help="the tool the --from file is from (default: auto, read off the file)",
     )
     ini.add_argument("--no-skill", action="store_true", help="do not write the agent skill")
     ini.add_argument(
@@ -814,11 +879,39 @@ def build_parser() -> argparse.ArgumentParser:
     imd.add_argument(
         "format",
         choices=DATASET_FORMATS,
-        help="the tool the cases are from (adk: an *.evalset.json or a flat *.test.json list)",
+        help="the tool the cases are from; auto reads it off the file and says which it chose "
+        "(adk: an *.evalset.json or a flat *.test.json list; jsonl and csv: any table, with "
+        "--input-field)",
     )
     imd.add_argument("file")
     imd.add_argument(
         "--out", required=True, help="where to write the dataset (an existing file is replaced)"
+    )
+    imd.add_argument(
+        "--suite-out",
+        help="also write a suite with the scorers these cases need (a judge block only when one "
+        "of them is a judge); an existing file is kept unless --force",
+    )
+    imd.add_argument(
+        "--force", action="store_true", help="overwrite --suite-out when it already exists"
+    )
+    imd.add_argument(
+        "--id-field", help="jsonl and csv only: the column that holds the case id (default: a hash)"
+    )
+    imd.add_argument(
+        "--input-field",
+        action="append",
+        metavar="FIELD",
+        help="jsonl and csv only: the column that holds the input (default: input). Repeat it or "
+        "separate names with commas to make the input an object of those columns",
+    )
+    imd.add_argument(
+        "--reference-field",
+        help="jsonl and csv only: the column that holds the expected answer (checked by a judge)",
+    )
+    imd.add_argument(
+        "--tags-field",
+        help="jsonl and csv only: the column that holds the tags (a list, or comma-separated)",
     )
     imd.set_defaults(func=cmd_import_dataset)
 

@@ -1,0 +1,56 @@
+# evalproof suite, written from test cases imported from @@SOURCE@@ (@@FORMAT@@).
+# The scorers are the ones those cases need and nothing else. Run it with:
+#   uvx evalproof run <this file> --out runs/latest.json
+@@NOTES@@
+name: @@NAME@@
+dataset: @@DATASET@@
+seed: 0
+concurrency: @@CONCURRENCY@@
+
+# The system under test: the thing you change and measure again. This asks a model each case's
+# input under a placeholder system prompt, so the suite runs as soon as it is written. Replace
+# the prompt with your own, or point the system at your code. The suite's own folder is on the
+# import path, so a small wrapper next to this file is the simplest way:
+#
+#   system:
+#     target: python:answer:ask       # answer.py, def ask(input) -> str
+#
+# or at an HTTP endpoint (POST {"id", "input"}, reply text or {"output": "..."}):
+#
+#   system:
+#     target: http://localhost:8000/answer
+system:
+@@TARGET_NOTE@@
+  target: @@TARGET@@
+@@API_KEY_LINE@@
+  label: imported cases
+  system_prompt: "Answer the user's request."
+@@TEMPLATE_LINE@@
+  params: {max_tokens: 400}
+
+#@@IF judge
+# The judge grades each answer against the case's reference or rubrics. Where you can, use a
+# different or stronger model than the system's: a model grading its own answers tends to be
+# lenient.
+judge:
+@@TARGET_NOTE@@
+  target: @@TARGET@@
+@@API_KEY_LINE@@
+  params: {max_tokens: 256}
+
+#@@END
+scorers:
+@@SCORERS@@
+
+# Fail CI only when the score drops by more than 3 points AND the drop is unlikely to be chance.
+# The gate needs 20 paired cases before it will decide; with fewer it exits 4 ("cannot gate")
+# instead of passing.
+gate:
+  metric: @@METRIC@@
+  max_drop: 0.03
+  alpha: 0.05
+  min_cases: 20
+  # More checks, off until you set them:
+  # max_new_failures: 0     # fail when more than this many cases pass before and fail now
+  # min_pass_rate: 0.8      # a floor on the candidate alone (or per scorer: {name: 0.8})
+  # must_pass: [critical]   # every case tagged `critical` must pass
