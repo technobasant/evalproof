@@ -138,6 +138,7 @@ questions, one Apple M5. Full method and every table in [Measurements](about/mea
 | Was the gold trustworthy? | No: of 13 judge–key disagreements the key was wrong 7 times, the judge 4. Most of the "bias" corrected was the gold's |
 | Is pairwise judging safer? | No: 42% of verdicts flipped with the order of the two answers, and the judge preferred the candidate 42 to 6 — mostly where both answers were right and the candidate's was five times longer |
 | Is it reproducible? | 20/20 identical outputs and verdicts with the cache off; a warm-cache re-run took 0.05 s instead of 363 s; a re-judge three days later matched 83/83 |
+| Does it hold on frontier models? | On `claude-sonnet-5-5`, `gpt-6-astra` and `gemini-4-argon-medium` (42-case sample) the answer key failed 12 correct answers and alone showed the same −7.1 pt regression on all three; read and corrected, there was none. Answers were reworded between runs in up to 29 of 42 cases; the corrected verdicts never changed |
 
 The other findings (correcting the judge's rate, reviewed labels, a reasoning judge) are in [Measurements](about/measurements.md).
 

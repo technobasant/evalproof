@@ -20,6 +20,11 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
   whether the canary was seen, any other skill (a leak) and how many user rules were named
   (a count only: neither titles nor contents are printed). The answer is the model's own account, so it is best effort. Exit 0 when the canary
   was seen and nothing leaked, 1 otherwise, 4 when the call failed.
+- [MEASUREMENTS.md section 10](https://github.com/technobasant/evalproof/blob/main/MEASUREMENTS.md#10-frontier-models-on-a-sample): the support Q&A
+  and ticket-router cases on three hosted frontier models (`claude-sonnet-5-5`, `gpt-6-astra`,
+  `gemini-4-argon-medium`), a 42- and 30-case sample, 558 calls. The regex answer key failed 12
+  correct answers and alone reported the same 7.1-point regression on every model; a reviewed
+  key removes it. Run files, the reviewed key and `measure_cli.py` are in `examples/cli-study/`.
 
 ### Changed
 
