@@ -17,6 +17,14 @@ Since 1.0 the public surface changes incompatibly only in a major release, after
 
 Steps 2 and 3 matter most when you move from 0.4 or earlier, because older run files lack the hashes that `compare` and `verify` read.
 
+## 1.3
+
+Nothing is removed or renamed, and a suite, dataset or run file that worked under 1.2 works under 1.3. A run file gains an optional `tag_filter` field; `format_version` is unchanged.
+
+**Added, with nothing to change:** `evalproof scan` and `evalproof draft` find the LLM code no suite tests and draft inputs for it ([Find what is not tested](../guides/find-gaps.md)); `init --platform bitbucket`; `evalproof hook install` for a pre-push `verify`; `run --tags` and `--exclude-tags` ([CI](../guides/ci.md)).
+
+**One new refusal:** `compare --gate` exits 4 when the two runs were made with different tag filters. Runs made without `--tags` are not affected.
+
 ## 1.2
 
 Nothing is removed or renamed, and a suite, dataset or run file that worked under 1.1 works under 1.2.

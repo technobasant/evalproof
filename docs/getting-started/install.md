@@ -15,7 +15,7 @@ evalproof is a command-line tool and a Python library, published on
 
     ```bash title="Terminal"
     uvx evalproof --version
-    uvx evalproof@1.2.0 init          # pin a version
+    uvx evalproof@1.3.0 init          # pin a version
     ```
 
 === "uv tool"
@@ -24,7 +24,7 @@ evalproof is a command-line tool and a Python library, published on
 
     ```bash title="Terminal"
     uv tool install evalproof
-    evalproof --version               # evalproof 1.2.0
+    evalproof --version               # evalproof 1.3.0
     ```
 
 === "pipx"
@@ -33,7 +33,7 @@ evalproof is a command-line tool and a Python library, published on
 
     ```bash title="Terminal"
     pipx install evalproof
-    evalproof --version               # evalproof 1.2.0
+    evalproof --version               # evalproof 1.3.0
     ```
 
 === "pip or a project"
@@ -75,7 +75,7 @@ Run files from older versions keep working; see the [changelog](../about/changel
 ## In GitHub Actions
 
 No install step is needed: the composite action
-`technobasant/evalproof@v1.2.0` runs the evalproof of the tag you pin ([In CI](../guides/ci.md#in-ci)).
+`technobasant/evalproof@v1.3.0` runs the evalproof of the tag you pin ([In CI](../guides/ci.md#in-ci)).
 
 ## Docker
 
@@ -102,7 +102,7 @@ docker run --rm -e ANTHROPIC_API_KEY -v "$PWD:/work" \
   ghcr.io/technobasant/evalproof:latest run evals/suite.yaml --out evals/runs/latest.json
 ```
 
-**Pin a version** in CI, as you would with any other installer. Each release has three tags: `1.2.0` (this release only), `1.2` (the newest patch of that minor release) and `latest` (the newest stable release). A pre-release gets only its exact tag.
+**Pin a version** in CI, as you would with any other installer. Each release has three tags: `1.3.0` (this release only), `1.3` (the newest patch of that minor release) and `latest` (the newest stable release). A pre-release gets only its exact tag.
 
 What the image does not have:
 
@@ -110,7 +110,7 @@ What the image does not have:
 * **No packages beyond evalproof's own.** A `python:` system that imports anything else needs an image of its own, built on this one:
 
     ```dockerfile title="Dockerfile"
-    FROM ghcr.io/technobasant/evalproof:1.2.0
+    FROM ghcr.io/technobasant/evalproof:1.3.0
     RUN pip install --no-cache-dir --user your-package
     ```
 

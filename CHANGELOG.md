@@ -4,6 +4,45 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-11-15
+
+### Added
+
+- `evalproof scan [PATH]` reads a repository without running it or calling a model (`ast` for
+  Python, patterns for TypeScript and JavaScript) and reports its model calls, agents, tools,
+  prompts, multi-turn use, test-case files and evalproof suites. It then lists the gaps: no
+  suite, code no suite's target reaches (followed through the repository's own imports from a
+  `python:` target), tools no check names, no multi-turn case, pytest files that are not
+  evalproof cases yet, and suites with fewer cases than their gate needs. Each gap comes with
+  the command that drafts for it. `--json` and `--out` write the report as JSON. It always
+  exits 0: gaps are advice, not a gate.
+- `evalproof draft --scan scan.json --out evals/drafts.jsonl` turns those gaps into a separate
+  JSONL of draft cases, never a suite's dataset. Cases from pytest files keep the assertion
+  their test already made (`==`, `in`, `re.search`) and call no model. For the other gaps a
+  model writes inputs only, tagged `draft`, `gap:<kind>` and `from:model`, with `draft_for`
+  and `drafted_by`: never an expected answer or a check. A person adds those before a draft
+  goes into a dataset.
+- A guide, [Find what is not tested](https://basantbhattarai.com.np/evalproof/guides/find-gaps/).
+- `evalproof init --platform bitbucket` writes a Bitbucket Pipelines file with a pull-request
+  step that runs and gates (`--ci api-key`) or verifies and gates the committed run
+  (`--ci keyless`). An existing `bitbucket-pipelines.yml` that init did not write is never
+  edited: init writes `evals/bitbucket-pipelines.snippet.yml` to merge by hand.
+- `evalproof hook install` writes a git pre-push hook that runs `evalproof verify` on the
+  committed run file, with no model call; `evalproof hook uninstall` removes it. It follows
+  `core.hooksPath` and never replaces a hook it did not write without `--force`.
+- `evalproof run --tags` and `--exclude-tags` (also on `pairwise`) run only the cases with
+  those tags. The filter is recorded in the run file (`tag_filter`), and `verify` checks the run
+  against the cases the same filter selects now.
+
+`scan`, `draft` and `init --platform bitbucket` are experimental: they can change in a minor
+release.
+
+### Changed
+
+- `compare --gate` refuses (exit 4) two runs made with different tag filters, because a filter
+  does not show in a pull request's diff and the gate would decide on a subset of the cases.
+  Without `--gate`, `compare` reports the shared cases with a warning.
+
 ## [1.2.0] — 2026-11-15
 
 ### Added
@@ -851,7 +890,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/technobasant/evalproof/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/technobasant/evalproof/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/technobasant/evalproof/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/technobasant/evalproof/compare/v0.8.0...v1.0.0
