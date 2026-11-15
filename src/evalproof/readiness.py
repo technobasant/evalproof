@@ -160,7 +160,10 @@ def _quality(cfg: SuiteConfig) -> tuple[str, str]:
     if not judges:
         return MISSING, "no llm_judge scorer"
     calibration = cfg.calibration
-    calibrated = [s for s in judges if calibration and s.name == calibration.judge_scorer]
+    # A rubric set's per-rubric metric ``<scorer>/<id>`` is calibrated through its scorer.
+    calibrated = [
+        s for s in judges if calibration and calibration.judge_scorer.split("/", 1)[0] == s.name
+    ]
     if calibrated:
         assert calibration is not None
         source = (

@@ -93,6 +93,10 @@ from evalproof.models import ModelUsage, ToolCall, Trace
 REDACTED = "__REDACTED__"
 NOT_SPECIFIED = "<not specified>"  # what ADK writes for a tool call id it does not have
 EXECUTE_TOOL = "execute_tool"
+# ADK adds one more execute_tool span when tools ran in parallel, named "execute_tool (merged)"
+# with this tool name (telemetry/tracing.py trace_merged_tool_calls). Each call has its own span
+# too, so this one is not a call.
+ADK_MERGED_TOOLS = "(merged tools)"
 INFERENCE_OPERATIONS = frozenset({"chat", "generate_content", "text_completion"})
 _VERCEL_INFERENCE = re.compile(r"^ai\.[A-Za-z]+\.do(?:Generate|Stream)$")
 _OI_CONTENT = re.compile(r"^llm\.output_messages\.(\d+)\.message\.content$")
@@ -433,6 +437,8 @@ def _tool_of(span: _Span) -> _Tool | None:
             hidden,
         )
     if a.get("gen_ai.operation.name") == EXECUTE_TOOL:
+        if a.get("gen_ai.tool.name") == ADK_MERGED_TOOLS:
+            return None
         # ADK schema 1 sets both gcp.vertex.agent attributes on every tool span; schema 2 sets
         # neither (it shares gcp.vertex.agent.event_id, so that one says nothing).
         legacy = "gcp.vertex.agent.tool_call_args" in a or "gcp.vertex.agent.tool_response" in a

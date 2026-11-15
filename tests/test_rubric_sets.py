@@ -432,6 +432,7 @@ def load(tmp_path: Path, text: str):
         ("{rubrics: [{text: a, wieght: 2}]}", "params.rubrics\\[0\\] has unknown key 'wieght'"),
         ("{mode: per_rubric}", "need rubric-set mode"),
         ("{num_samples: 3}", "need rubric-set mode"),
+        ("{rubrics: [], mode: per_rubric}", "params.rubrics is empty"),
         ("{rubrics: [a], rubric: be nice}", "cannot be combined"),
         ("{case_rubrics: true, rubric_file: r.md}", "cannot be combined"),
         ("{case_rubrics: true, per_rubric_metrics: true}", "needs base 'rubrics'"),

@@ -244,6 +244,9 @@ them (experimental, see the OpenTelemetry tab below).
     | OpenInference | `openinference.span.kind` is `TOOL` | `tool.name`, `input.value`, `output.value`, `tool.id` |
     | Vercel `LegacyOpenTelemetry` | `ai.toolCall` | `ai.toolCall.name`, `ai.toolCall.args`, `ai.toolCall.result`, `ai.toolCall.id` |
 
+    When tools run in parallel, ADK writes one more `execute_tool (merged)` span with the tool
+    name `(merged tools)` beside the span of each call. It is not a call and is skipped.
+
     An `error.type` attribute or an ERROR status makes the call fail (`ok: false`, with the type
     and the status message as the error). Arguments that are not a JSON object are kept as
     `{"input": ...}`, and a result that is JSON text is decoded. `rounds` counts the model-call

@@ -37,7 +37,8 @@ grade with rubric sets and the `facts` scorer.
 - `evalproof.adapters.otel.from_spans` (experimental) builds an agent's trace from OpenTelemetry
   spans, as OTLP/JSON, the collector's file exporter output, the Python SDK's `span.to_json()`
   objects or a list of spans, for the GenAI semantic conventions (also Google ADK and the Vercel
-  AI SDK), OpenInference and the Vercel legacy `ai.toolCall` spans. When the spans were exported
+  AI SDK; ADK's extra `execute_tool (merged)` span for parallel calls is not a call), OpenInference
+  and the Vercel legacy `ai.toolCall` spans. When the spans were exported
   with content capture off it warns, names the setting to turn on, and sets
   `trace.meta["content_captured"] = False`. See the OpenTelemetry tab of the adapters guide.
 - `evalproof import garak` reads the `report.jsonl` a garak scan writes (0.9 and later). Each
@@ -60,7 +61,8 @@ grade with rubric sets and the `facts` scorer.
   written from the tool's source or schema and no real result file was available.
 - `evalproof import inspect` imports the tool trace of each sample from its `events`: the
   calls with their arguments, results, errors and working time, the tokens of each model round
-  and the last reply. `tool_called`, `tool_order` and the other agent checks run on an imported
+  and the last reply; the model and tool events of scorers (inside a `scorers` span) are not the
+  agent's and are skipped. `tool_called`, `tool_order` and the other agent checks run on an imported
   log. Strings Inspect stored as `attachment://` references are resolved. A condensed log has no
   events, and one warning says so. A case collapsed from several epochs keeps the trace of its
   first epoch that did not error, and the run records `environment.trace_from` as `first
@@ -69,8 +71,8 @@ grade with rubric sets and the `facts` scorer.
   `plugin:<id>`, `strategy:<id>` and `severity:<level>`) and reads the repeats of a test run
   with `--repeat` as one case, so `--epochs trials` works on a red-team file.
 - `evalproof import-dataset adk FILE --out cases.jsonl` turns a Google ADK eval set
-  (`*.evalset.json`) or the flat legacy `*.test.json` list into a dataset that `evalproof run`
-  reads. The first invocation is the case's `input` and the later ones are its `turns`, the
+  (`*.evalset.json`) or the flat legacy `*.test.json` list (one conversation, so one case) into a
+  dataset that `evalproof run` reads. The first invocation is the case's `input` and the later ones are its `turns`, the
   last final response is the `reference`, `session_input.state` is the `state`, the tool calls
   of each invocation become one `tool_order` check with its turn, and `rubrics` are kept for the
   rubric-set judge. User-simulation (`conversation_scenario`) cases cannot be replayed, so they

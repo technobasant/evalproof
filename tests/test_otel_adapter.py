@@ -216,6 +216,28 @@ def test_adk_schema_1_file() -> None:
     assert trace.meta["conventions"] == ["adk-schema-1"]
 
 
+def test_adk_merged_tools_span_of_parallel_calls_is_not_a_call() -> None:
+    """ADK writes one more execute_tool span when tools ran in parallel (google/adk
+    telemetry/tracing.py trace_merged_tool_calls); each call also has its own span."""
+    merged = {
+        "gen_ai.operation.name": "execute_tool",
+        "gen_ai.tool.name": "(merged tools)",
+        "gen_ai.tool.description": "(merged tools)",
+        "gen_ai.tool.call.id": "evt-9",
+        "gcp.vertex.agent.tool_call_args": "N/A",
+        "gcp.vertex.agent.event_id": "evt-9",
+        "gcp.vertex.agent.tool_response": "{}",
+    }
+    result, _ = run(
+        wrap(
+            tool("a", '{"x": 1}', '{"ok": true}'),
+            tool("b", '{"x": 2}', '{"ok": true}'),
+            span("execute_tool (merged)", merged, start=5),
+        )
+    )
+    assert [c.name for c in trace_of(result).tool_calls] == ["a", "b"]
+
+
 def test_adk_schema_2_is_the_genai_convention_even_with_the_adk_event_id() -> None:
     spans = wrap(
         span(

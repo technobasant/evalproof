@@ -30,6 +30,9 @@ give the trace (inspect_ai 0.3.289 ``event/_tool.py`` and ``event/_model.py``):
 * Event strings longer than 100 characters are stored as ``attachment://<hash>`` and kept in the
   sample's ``attachments`` (``log/_condense.py:78,473-474,521-525``); they are resolved here. A
   reference that is not in ``attachments`` stays as it is, with one warning.
+* Events inside a ``span_begin`` of type ``scorers`` or ``scorer``, or a span nested in one (by
+  ``span_id`` and ``parent_id``), are the scorers' (a model-graded scorer calls a model there)
+  and are skipped.
 * A sample with ``events_data`` (``_log.py:589``) or ``input_refs`` (``_model.py:108``) and no
   ``events`` is the newer condensed log; there is no trace for it and one warning says so.
 
@@ -201,6 +204,31 @@ def _resolve(value: Any, attachments: dict[str, Any], tell: Callable[[str, str],
     return value
 
 
+def _scorer_spans(events: list[Any]) -> set[str]:
+    """The ids of the ``scorers`` and ``scorer`` spans and of every span inside them. The model
+    and tool events of a model-graded scorer sit there; they are the grader's, not the agent's."""
+    parent: dict[str, Any] = {}
+    roots: set[str] = set()
+    for event in events:
+        if isinstance(event, dict) and event.get("event") == "span_begin":
+            sid = event.get("id")
+            if isinstance(sid, str):
+                parent[sid] = event.get("parent_id")
+                if event.get("type") in ("scorers", "scorer"):
+                    roots.add(sid)
+    inside: set[str] = set()
+    for sid in parent:
+        seen: set[str] = set()
+        cur: Any = sid
+        while isinstance(cur, str) and cur not in seen:
+            if cur in roots:
+                inside.add(sid)
+                break
+            seen.add(cur)
+            cur = parent.get(cur)
+    return inside
+
+
 def _trace(raw: dict[str, Any], tell: Callable[[str, str], None]) -> Trace | None:
     """The tool calls and model calls of a sample's ``events``; None when it has none to read."""
     events = raw.get("events")
@@ -213,12 +241,13 @@ def _trace(raw: dict[str, Any], tell: Callable[[str, str], None]) -> Trace | Non
             )
         return None
     attachments = as_dict(raw.get("attachments"))
+    scoring = _scorer_spans(events)
     calls: list[ToolCall] = []
     usage: dict[str | None, ModelUsage] = {}
     rounds = 0
     reply = ""
     for event in events:
-        if not isinstance(event, dict):
+        if not isinstance(event, dict) or event.get("span_id") in scoring:
             continue
         kind = event.get("event")
         if kind == "tool":

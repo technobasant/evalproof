@@ -279,6 +279,11 @@ def validate_judge_params(params: dict[str, Any], path: str = "params") -> None:
         or not 0.0 <= min_score <= 1.0
     ):
         raise ValueError(f"{path}.min_score must be a number between 0 and 1")
+    if params.get("rubrics") == [] and params.get("case_rubrics") is not True:
+        raise ValueError(
+            f"{path}.rubrics is empty: give at least one rubric, or 'case_rubrics: true' to read "
+            "them from the cases"
+        )
     if present and not rubric_set_mode(params):
         raise ValueError(
             f"{path}: {', '.join(present)} need rubric-set mode: give 'rubrics', or "

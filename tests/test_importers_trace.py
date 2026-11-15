@@ -95,6 +95,41 @@ def test_inspect_trace_resolves_attachments_and_marks_errors() -> None:
     assert told == ["attachment"]
 
 
+def test_inspect_scorer_events_are_not_the_agents() -> None:
+    """A model-graded scorer calls a model inside the scorers span; the real log nests a scorer
+    span in a scorers span, as here. Those events are the grader's: no round, usage or reply."""
+
+    def model(span: str, text: str, tokens: int) -> dict[str, Any]:
+        usage = {"input_tokens": tokens, "output_tokens": tokens}
+        return {
+            "event": "model",
+            "span_id": span,
+            "model": "agent" if span == "gen" else "grader",
+            "output": {"usage": usage, "choices": [{"message": {"content": text}}]},
+        }
+
+    raw: dict[str, Any] = {
+        "events": [
+            {"event": "span_begin", "id": "solvers", "type": "solvers", "name": "solvers"},
+            {"event": "span_begin", "id": "gen", "parent_id": "solvers", "type": "solver"},
+            model("gen", "the answer", 5),
+            {"event": "tool", "span_id": "gen", "id": "c1", "function": "search", "arguments": {}},
+            {"event": "span_begin", "id": "scorers", "type": "scorers", "name": "scorers"},
+            {"event": "span_begin", "id": "mg", "parent_id": "scorers", "type": "scorer"},
+            {"event": "span_begin", "id": "inner", "parent_id": "mg", "type": "tool"},
+            model("mg", "GRADE: C", 50),
+            {"event": "tool", "span_id": "inner", "id": "g1", "function": "lookup"},
+            {"event": "score", "span_id": "mg", "score": {"value": "C"}},
+        ]
+    }
+    trace = inspect_ai._trace(raw, lambda key, message: None)
+    assert trace is not None
+    assert [c.name for c in trace.tool_calls] == ["search"]
+    assert trace.rounds == 1
+    assert trace.responses == ["the answer"]
+    assert [(u.model, u.tokens_in) for u in trace.usage] == [("agent", 5)]
+
+
 def test_inspect_condensed_log_has_no_trace_and_warns() -> None:
     told: list[str] = []
     for raw in ({"events_data": {"messages": []}}, {"input_refs": [[0, 1]]}, {"events": []}):

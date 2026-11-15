@@ -125,6 +125,17 @@ def test_quality_is_covered_for_a_calibrated_judge(tmp_path: Path) -> None:
     assert "calibrated against labels labels.jsonl" in quality.evidence
 
 
+def test_quality_is_covered_when_calibrating_a_per_rubric_metric(tmp_path: Path) -> None:
+    scorers = (
+        "[{name: m, type: exact_match}, {name: j, type: llm_judge, "
+        "params: {rubrics: [{id: tone, text: polite}], per_rubric_metrics: true}}]"
+    )
+    cal = "calibration: {judge_scorer: j/tone, labels: labels.jsonl}\n"
+    quality = _assess(_write(tmp_path, scorers, extra=JUDGE + cal)).get("quality")
+    assert quality.status == COVERED
+    assert "llm_judge `j`" in quality.evidence
+
+
 def test_quality_names_the_gold_scorer_when_calibrating_against_one(tmp_path: Path) -> None:
     cal = "calibration: {judge_scorer: j, gold_scorer: m, gold_sample: 2}\n"
     quality = _assess(_write(tmp_path, JUDGED, extra=JUDGE + cal)).get("quality")

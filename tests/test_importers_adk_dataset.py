@@ -146,8 +146,9 @@ def test_the_single_turn_test_file_is_an_eval_set_too() -> None:
 
 def test_the_legacy_flat_list_is_read() -> None:
     (case,) = read(LEGACY)[0]
-    assert case.id == "home_automation_agent.simple_test2.test-0"  # no eval_id: file stem, index
+    assert case.id == "home_automation_agent.simple_test2"  # no eval_id: the file name
     assert case.input == "Turn off device_3 in the Bedroom."
+    assert case.field("turns") is None
     assert case.reference == "I have set the device_3 status to off."
     assert case.field("expect") == [
         {
@@ -168,10 +169,37 @@ def test_a_legacy_list_without_expected_tools_or_reference(tmp_path: Path) -> No
     path = write(
         tmp_path, [{"query": "hello"}, {"query": "bye", "expected_tool_use": []}], "x.json"
     )
-    cases, _ = read(path)
-    assert [c.id for c in cases] == ["x-0", "x-1"]
-    assert cases[0].reference is None
-    assert cases[0].field("expect") is None
+    (case,) = read(path)[0]
+    assert case.id == "x"
+    assert case.input == "hello"
+    assert case.field("turns") == ["bye"]
+    assert case.reference is None
+    assert case.field("expect") is None
+
+
+def test_a_multi_item_legacy_list_is_one_conversation(tmp_path: Path) -> None:
+    """ADK reads the whole flat list as one eval case, each item one invocation, so it is one
+    case with turns, the last reference and one tool_order check per item that expects calls."""
+    items = [
+        {"query": "What can you do?", "expected_tool_use": [], "reference": "I roll dice."},
+        {
+            "query": "Roll a 17 sided dice twice",
+            "expected_tool_use": [
+                {"tool_name": "roll_die", "tool_input": {"sides": 17}},
+                {"tool_name": "roll_die", "tool_input": {"sides": 17}},
+            ],
+            "reference": "13 and 4.",
+        },
+    ]
+    (case,) = read(write(tmp_path, items, "dice.test.json"))[0]
+    assert case.id == "dice"
+    assert case.input == "What can you do?"
+    assert case.field("turns") == ["Roll a 17 sided dice twice"]
+    assert case.reference == "13 and 4."
+    roll = {"name": "roll_die", "args": {"sides": 17}}
+    assert case.field("expect") == [
+        {"type": "tool_order", "match": "exact", "turn": 1, "calls": [roll, roll]}
+    ]
 
 
 # --- the synthetic file: every field the real ones leave out -----------------------------------
@@ -363,7 +391,10 @@ def test_a_file_of_only_scenario_cases_is_refused() -> None:
 
 @pytest.mark.parametrize(
     ("data", "needle"),
-    [([], "the list has no cases"), ({"eval_set_id": "s", "eval_cases": []}, "has no eval_cases")],
+    [
+        ([], "the list has no invocations"),
+        ({"eval_set_id": "s", "eval_cases": []}, "has no eval_cases"),
+    ],
     ids=["list", "eval_cases"],
 )
 def test_a_file_with_no_cases_is_refused(tmp_path: Path, data: Any, needle: str) -> None:

@@ -13,12 +13,15 @@ Two shapes are read, and nothing else:
   ``conversation_scenario``, ``session_input.state`` and ``rubrics``. Inside a case both
   snake_case and camelCase keys are read (``EvalBaseModel`` accepts both, ``common.py``);
 * the legacy flat list (``local_eval_sets_manager.py:89-173``): ``[{"query", "expected_tool_use":
-  [{"tool_name", "tool_input"}], "reference"}]``. The other legacy shape, ``{name, data,
-  initial_session}``, is refused: no real file of it was found.
+  [{"tool_name", "tool_input"}], "reference"}]``. ADK reads the whole list as one eval case whose
+  items are its invocations, so it becomes one case: the first query is the ``input``, the later
+  ones the ``turns``, the last ``reference`` the ``reference``, and each item's
+  ``expected_tool_use`` a ``tool_order`` check with that item's turn. The other legacy shape,
+  ``{name, data, initial_session}``, is refused: no real file of it was found.
 
 What a case becomes (``Case`` fields, see ``dataset.py``):
 
-* ``eval_id`` is the ``id`` (the legacy list has none: ``<file stem>-<index>``);
+* ``eval_id`` is the ``id`` (the legacy list has none: the file name without ``.test.json``);
 * the text of the first invocation's ``user_content`` is the ``input``, and the later invocations'
   are ``turns``. A ``thought`` part is not text;
 * the text of the last invocation's ``final_response`` is the ``reference``, when it has one;
@@ -158,10 +161,25 @@ def _eval_case(path: Path, eval_id: str, raw: dict[str, Any], conversation: list
     )
 
 
+def _legacy_id(path: Path) -> str:
+    """The case id of a flat list: the file name without ``.test.json`` (or its last extension)."""
+    name = path.name
+    return name[: -len(".test.json")] if name.endswith(".test.json") else path.stem
+
+
 def _legacy_list(path: Path, items: list[Any]) -> list[Case]:
-    cases = []
-    for index, item in enumerate(items):
-        where = f"{path}: item {index}"
+    """The flat list is one conversation, so one case: ADK reads the whole file as the ``data``
+    of one eval case, each item one invocation (``agent_evaluator.py``
+    ``_get_eval_set_from_old_format``, ``local_eval_sets_manager.py``
+    ``_convert_invocation_to_pydantic_schema``)."""
+    if not items:
+        raise ImportFormatError(f"{path}: the list has no invocations")
+    case_id = _legacy_id(path)
+    texts: list[str] = []
+    expect: list[dict[str, Any]] = []
+    reference: Any = ""
+    for turn, item in enumerate(items):
+        where = f"{path}: item {turn}"
         if not isinstance(item, dict):
             raise ImportFormatError(f"{where} is not an object")
         if "query" not in item:
@@ -174,30 +192,25 @@ def _legacy_list(path: Path, items: list[Any]) -> list[Case]:
         query = item["query"]
         if not isinstance(query, str) or not query.strip():
             raise ImportFormatError(f"{where}: query must be a non-empty string")
+        texts.append(query)
         uses = item.get("expected_tool_use")
         if uses is not None and not isinstance(uses, list):
             raise ImportFormatError(f"{where}: expected_tool_use must be a list")
-        case_id = f"{path.stem}-{index}"
         calls = [_legacy_call(path, case_id, use) for use in uses or []]
+        if calls:
+            expect.append({"type": "tool_order", "match": "exact", "turn": turn, "calls": calls})
         reference = item.get("reference")
-        cases.append(
-            _case(
-                path,
-                case_id,
-                [query],
-                reference=reference if isinstance(reference, str) else "",
-                state=None,
-                expect=(
-                    [{"type": "tool_order", "match": "exact", "turn": 0, "calls": calls}]
-                    if calls
-                    else []
-                ),
-                rubrics=[],
-            )
+    return [
+        _case(
+            path,
+            case_id,
+            texts,
+            reference=reference if isinstance(reference, str) else "",
+            state=None,
+            expect=expect,
+            rubrics=[],
         )
-    if not cases:
-        raise ImportFormatError(f"{path}: the list has no cases")
-    return cases
+    ]
 
 
 def _case(

@@ -39,7 +39,8 @@ A separate command, `evalproof import-dataset`, turns a test set (not results) i
   [trials](repeated-trials.md#repeated-trials) with `--epochs trials`, which needs every case to
   have the same number of repeats. Under `mean`, `first` and `any`, a case with at least one
   repeat that ran is not counted as a system error; its errored repeats still score as failures.
-  Collapsing sums the judge cost of every repeat. The repeats are ordered by the source's own
+  Collapsing sums the judge cost of every repeat, except under `first`, which keeps the first
+  repeat as it is, its cost and judge cost included, and drops the rest. The repeats are ordered by the source's own
   repeat index (promptfoo `repeatIndex`, Inspect `epoch`, ADK `repetition_index`), so trial `n`
   is the `n`-th run, whatever order the file was written in.
 * A collapsed case keeps the trace of its first repeat that did not error (of the first repeat,
@@ -111,6 +112,8 @@ agent checks](testing-agents.md) can run on an imported log.
   `ok` when it has neither an `error` nor `failed`.
 * A model event is a round. Its token counts are added up, and the reply of the last one is the
   trace's response.
+* Events inside the `scorers` span (a model-graded scorer calling its grader model) belong to
+  the scoring, not the agent, and are skipped.
 * Inspect stores event strings of more than 100 characters as `attachment://<hash>` in the
   sample's `attachments`. They are resolved on import. A reference that is not in `attachments`
   stays as it is, with one warning.
@@ -231,14 +234,16 @@ exactly two shapes:
 
 * an `EvalSet` (`*.evalset.json`, an object with `eval_set_id` and `eval_cases`);
 * the flat legacy list from `*.test.json` files: `[{"query", "expected_tool_use": [{"tool_name",
-  "tool_input"}], "reference"}]`.
+  "tool_input"}], "reference"}]`. ADK reads the whole list as one conversation, each item one
+  invocation, so the file becomes one case and the rows below apply to its items as
+  invocations.
 
 Any other shape is refused, including ADK's other legacy shape (`{name, data, initial_session}`)
 and an `*.evalset_result.json` (import that with `evalproof import adk`).
 
 | ADK | evalproof case |
 |---|---|
-| `eval_id` | `id` (the legacy list has none: the file name without its last extension, a dash and the item's 0-based position) |
+| `eval_id` | `id` (the legacy list has none: the file name without `.test.json`) |
 | the first invocation's `user_content` text | `input` |
 | the later invocations' text | `turns` |
 | the last invocation's `final_response` text | `reference` |
