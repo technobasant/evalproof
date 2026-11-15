@@ -38,6 +38,19 @@ EXIT_CANNOT_GATE = 4
 
 
 @dataclass
+class GateCheck:
+    """One check the gate evaluated. ``name`` is stable and starts with the setting it applies
+    (``max_drop: m``, ``min_pass_rate: m``, ``must_pass``), so a CI system can track it across
+    runs. ``outcome`` is ``"pass"``, ``"fail"`` (a reason in ``decision.reasons``) or ``"error"``
+    (the gate could not decide it). ``message`` is the reason text for a fail or an error, and
+    what was measured for a pass."""
+
+    name: str
+    outcome: str  # "pass" | "fail" | "error"
+    message: str
+
+
+@dataclass
 class GateDecision:
     status: str  # "pass" | "warn" | "fail"
     exit_code: int
@@ -48,6 +61,16 @@ class GateDecision:
     # How big a drop the suite can detect, per gated metric. Informational: it never changes the
     # status, the warnings or the exit code.
     power: dict[str, Power] = field(default_factory=dict)
+    # Every check the gate evaluated, in order, passed or not. The failed ones are exactly
+    # ``reasons``; a decision that could not be made (exit 4) holds one ``error`` check per reason.
+    checks: list[GateCheck] = field(default_factory=list)
+
+
+def refusal(message: str, name: str = "comparison") -> GateDecision:
+    """A gate that cannot decide (exit 4) for one reason, as a decision."""
+    return GateDecision(
+        "fail", EXIT_CANNOT_GATE, [message], checks=[GateCheck(name, "error", message)]
+    )
 
 
 SHOW_IDS = 10
@@ -77,45 +100,63 @@ def _only_continuous(run: Run, name: str) -> bool:
     return any(s.value is not None for s in scores) and all(s.passed is None for s in scores)
 
 
+def continuous_floor_problems(run: Run, gate: GateConfig) -> dict[str, str]:
+    """``min_pass_rate`` metrics that cannot have a pass rate, by name: the run has scores for
+    them, but only continuous ones (no pass/fail). A setup problem, not a regression."""
+    return {
+        name: (
+            f"min_pass_rate needs a pass/fail metric, and {name!r} has only continuous "
+            "scores: gate a pass/fail scorer (a retrieval scorer takes params.pass_threshold), "
+            "or drop it from min_pass_rate"
+        )
+        for name in gate.pass_rate_floors
+        if _only_continuous(run, name)
+    }
+
+
 def continuous_floors(run: Run, gate: GateConfig) -> list[str]:
-    """``min_pass_rate`` metrics that cannot have a pass rate: the run has scores for them, but
-    only continuous ones (no pass/fail). A setup problem, not a regression."""
-    bad: list[str] = []
-    for name in gate.pass_rate_floors:
-        if _only_continuous(run, name):
-            bad.append(
-                f"min_pass_rate needs a pass/fail metric, and {name!r} has only continuous "
-                "scores: gate a pass/fail scorer (a retrieval scorer takes params.pass_threshold), "
-                "or drop it from min_pass_rate"
-            )
-    return bad
+    """The messages of ``continuous_floor_problems``."""
+    return list(continuous_floor_problems(run, gate).values())
 
 
-def absolute_checks(run: Run, gate: GateConfig) -> tuple[list[str], list[str]]:
-    """The checks that need no baseline, as ``(failures, warnings)``.
+def absolute_check_results(run: Run, gate: GateConfig) -> tuple[list[GateCheck], list[str]]:
+    """The checks that need no baseline, passed or failed, as ``(checks, warnings)``.
 
     ``min_pass_rate``: the run's pass rate on each metric it names. ``must_pass``: a case with
     one of the tags must pass every gated metric; erroring or being undecided is failing.
     Used by ``evalproof run --gate`` on its own run and by ``decide`` on the candidate. A
     metric ``continuous_floors`` names is skipped here; the callers refuse to gate on it."""
-    failures: list[str] = []
+    checks: list[GateCheck] = []
     warnings: list[str] = []
-    skip = {name for name in gate.pass_rate_floors if _only_continuous(run, name)}
+    skip = set(continuous_floor_problems(run, gate))
+    unit = "trials" if run.trials > 1 else "cases"
     for name, floor in gate.pass_rate_floors.items():
         if name in skip:
             continue
+        label = f"min_pass_rate: {name}"
         passed, counted = pass_counts(run, name)
         if not counted:
-            failures.append(
-                f"{name}: no case has a decided pass/fail score, so the pass rate is unknown"
+            checks.append(
+                GateCheck(
+                    label,
+                    "fail",
+                    f"{name}: no case has a decided pass/fail score, so the pass rate is unknown",
+                )
             )
             continue
         rate = passed / counted
         if rate < floor:
-            failures.append(
+            text = (
                 f"{name}: pass rate {rate:.3f} below the minimum {floor:.3f} "
-                f"({passed}/{counted} {'trials' if run.trials > 1 else 'cases'})"
+                f"({passed}/{counted} {unit})"
             )
+            checks.append(GateCheck(label, "fail", text))
+        else:
+            text = (
+                f"{name}: pass rate {rate:.3f} meets the minimum {floor:.3f} "
+                f"({passed}/{counted} {unit})"
+            )
+            checks.append(GateCheck(label, "pass", text))
     if gate.must_pass:
         wanted = set(gate.must_pass)
         carried = set().union(*(set(r.tags) for r in run.results))
@@ -123,10 +164,12 @@ def absolute_checks(run: Run, gate: GateConfig) -> tuple[list[str], list[str]]:
             if tag not in carried:
                 warnings.append(f"no case carries the must_pass tag {tag!r}")
         bad: list[str] = []
+        checked: set[str] = set()
         binary_seen = False
         for r in run.results:
             if not wanted & set(r.tags):
                 continue
+            checked.add(r.case_id)
             verdicts = [r.scores.get(name) for name in gate.gated]
             binary_seen = binary_seen or any(
                 s is not None and s.passed is not None for s in verdicts
@@ -147,11 +190,21 @@ def absolute_checks(run: Run, gate: GateConfig) -> tuple[list[str], list[str]]:
             )
         if bad:
             where = "in at least one trial " if run.trials > 1 else ""
-            failures.append(
+            text = (
                 f"{len(bad)} must-pass case(s) failed, errored or were undecided {where}on a "
                 f"gated metric: {_ids(bad)}"
             )
-    return failures, warnings
+            checks.append(GateCheck("must_pass", "fail", text))
+        else:
+            text = f"{len(checked)} must-pass case(s) checked, none failed, errored or undecided"
+            checks.append(GateCheck("must_pass", "pass", text))
+    return checks, warnings
+
+
+def absolute_checks(run: Run, gate: GateConfig) -> tuple[list[str], list[str]]:
+    """The absolute checks as ``(failures, warnings)``: the reasons of the checks that failed."""
+    checks, warnings = absolute_check_results(run, gate)
+    return [c.message for c in checks if c.outcome == "fail"], warnings
 
 
 def decide(
@@ -171,14 +224,24 @@ def decide(
     ``candidates``, which the power estimate divides alpha by as well."""
     reasons: list[str] = []
     warnings: list[str] = []
+    checks: list[GateCheck] = []
 
-    refused: list[str] = []
+    def cannot(refused: list[GateCheck]) -> GateDecision:
+        return GateDecision(
+            "fail", EXIT_CANNOT_GATE, [c.message for c in refused], checks=list(refused)
+        )
+
+    refused: list[GateCheck] = []
     if not cmp.comparable:
         refused.append(
-            "the dataset changed between the runs and one of them predates per-case hashes, so "
-            "the cases that stayed the same cannot be told from the ones that changed: run "
-            "`evalproof rehash BASELINE SUITE` (no model calls; it needs the cases the baseline "
-            "scored unchanged), or re-run the baseline with evalproof 0.5 or newer"
+            GateCheck(
+                "comparable",
+                "error",
+                "the dataset changed between the runs and one of them predates per-case hashes, "
+                "so the cases that stayed the same cannot be told from the ones that changed: "
+                "run `evalproof rehash BASELINE SUITE` (no model calls; it needs the cases the "
+                "baseline scored unchanged), or re-run the baseline with evalproof 0.5 or newer",
+            )
         )
     if not cmp.same_judge:
         changes = "; ".join(cmp.judge_changes) or "unrecorded"
@@ -186,39 +249,76 @@ def decide(
             warnings.append(f"the judge changed between the runs (allowed): {changes}")
         else:
             refused.append(
-                f"the judge changed between the runs, so the scores are not comparable: {changes}"
-                " (pass --allow-judge-change or set gate.allow_judge_change to accept it)"
+                GateCheck(
+                    "same_judge",
+                    "error",
+                    "the judge changed between the runs, so the scores are not comparable: "
+                    f"{changes} (pass --allow-judge-change or set gate.allow_judge_change to "
+                    "accept it)",
+                )
             )
     if gate.has_absolute_checks and candidate is None:
-        refused.append("min_pass_rate and must_pass need the candidate run, which was not given")
+        refused.append(
+            GateCheck(
+                "candidate_run",
+                "error",
+                "min_pass_rate and must_pass need the candidate run, which was not given",
+            )
+        )
     elif candidate is not None:
-        refused.extend(continuous_floors(candidate, gate))
+        refused.extend(
+            GateCheck(f"min_pass_rate: {name}", "error", text)
+            for name, text in continuous_floor_problems(candidate, gate).items()
+        )
     refused.extend(
-        f"aggregate {cmp.aggregate} needs a pass/fail metric, and {name!r} has only continuous "
-        "scores: use aggregate mean for it (or gate a pass/fail scorer)"
+        GateCheck(
+            f"aggregate: {name}",
+            "error",
+            f"aggregate {cmp.aggregate} needs a pass/fail metric, and {name!r} has only "
+            "continuous scores: use aggregate mean for it (or gate a pass/fail scorer)",
+        )
         for name in gate.gated
         if name in cmp.aggregate_ignored
     )
     if refused:
-        return GateDecision("fail", EXIT_CANNOT_GATE, refused)
+        return cannot(refused)
     warnings.extend(cmp.judge_warnings)
     if cmp.system_changes:
         warnings.append(f"the system under test changed: {'; '.join(cmp.system_changes)}")
     names = gate.gated
     if not names:  # a config built without validation must not pass by gating nothing
-        return GateDecision("fail", EXIT_CANNOT_GATE, ["no metric to gate"])
-    unusable: list[str] = []
+        return cannot([GateCheck("metrics", "error", "no metric to gate")])
+    unusable: list[GateCheck] = []
     for name in names:
         found = cmp.metrics.get(name)
         if found is None:
-            unusable.append(f"metric {name!r} has no paired scores")
+            unusable.append(
+                GateCheck(
+                    f"paired scores: {name}", "error", f"metric {name!r} has no paired scores"
+                )
+            )
         elif found.n_paired < gate.min_cases:
             unusable.append(
-                f"only {found.n_paired} paired cases for {name!r}; the gate needs "
-                f"{gate.min_cases} (add cases to the dataset, or lower gate.min_cases)"
+                GateCheck(
+                    f"min_cases: {name}",
+                    "error",
+                    f"only {found.n_paired} paired cases for {name!r}; the gate needs "
+                    f"{gate.min_cases} (add cases to the dataset, or lower gate.min_cases)",
+                )
             )
     if unusable:
-        return GateDecision("fail", EXIT_CANNOT_GATE, unusable)
+        return cannot(unusable)
+
+    exit_code = EXIT_PASS
+
+    def record(check: GateCheck, code: int = EXIT_REGRESSION) -> None:
+        """Every check goes through here, so a reason always has its check and the other way
+        round. A regression outranks a budget breach in the exit code."""
+        nonlocal exit_code
+        checks.append(check)
+        if check.outcome == "fail":
+            reasons.append(check.message)
+            exit_code = code if code == EXIT_REGRESSION else (exit_code or code)
 
     # One metric is gated on its own p-value, exactly as before. Several are corrected for
     # testing the whole set, so adding a metric to the gate cannot make a false failure likelier.
@@ -229,7 +329,6 @@ def decide(
         raw = [cmp.metrics[name].p_value for name in names]
         adjusted_ps = holm(raw) if many else raw
 
-    exit_code = EXIT_PASS
     for name, p_adj in zip(names, adjusted_ps, strict=True):
         mc = cmp.metrics[name]
         if mc.undecided:
@@ -237,17 +336,34 @@ def decide(
 
         drop_big = mc.delta <= -gate.max_drop
         significant = p_adj < gate.alpha
+        drop_check = f"max_drop: {name}"
         if drop_big and significant:
             p_text = f"{mc.test} p={mc.p_value:.4f}"
             if many:
                 p_text += f", Holm-adjusted p={p_adj:.4f}"
-            reasons.append(
-                f"{name}: {mc.baseline:.3f} → {mc.candidate:.3f} (Δ {mc.delta:+.3f}, "
-                f"95% CI [{mc.ci_low:+.3f}, {mc.ci_high:+.3f}], {p_text}) — "
-                f"a drop beyond {gate.max_drop:.3f} at α={gate.alpha}"
+            record(
+                GateCheck(
+                    drop_check,
+                    "fail",
+                    f"{name}: {mc.baseline:.3f} → {mc.candidate:.3f} (Δ {mc.delta:+.3f}, "
+                    f"95% CI [{mc.ci_low:+.3f}, {mc.ci_high:+.3f}], {p_text}) — "
+                    f"a drop beyond {gate.max_drop:.3f} at α={gate.alpha}",
+                )
             )
-            exit_code = EXIT_REGRESSION
-        elif drop_big:
+            continue
+        p_text = f"{mc.test} p={mc.p_value:.4f}"
+        if many:
+            p_text += f", Holm-adjusted p={p_adj:.4f}"
+        record(
+            GateCheck(
+                drop_check,
+                "pass",
+                f"{name}: {mc.baseline:.3f} → {mc.candidate:.3f} (Δ {mc.delta:+.3f}, "
+                f"95% CI [{mc.ci_low:+.3f}, {mc.ci_high:+.3f}], {p_text}); no drop beyond "
+                f"{gate.max_drop:.3f} that is significant at α={gate.alpha}",
+            )
+        )
+        if drop_big:
             p_text = f"p={mc.p_value:.3f}"
             if many:
                 p_text = f"Holm-adjusted p={p_adj:.3f} (raw p={mc.p_value:.3f})"
@@ -274,34 +390,55 @@ def decide(
                     f"max_new_failures counts pass/fail cases, and {name!r} is continuous, so "
                     "it was not checked on it"
                 )
-            elif len(mc.regressed) > gate.max_new_failures:
-                # A metric averaged over trials has no single failure per case: it counts the
-                # cases that passed by majority in the baseline and no longer do.
-                how = " by majority of their trials" if mc.kind == "rate" else ""
-                reasons.append(
+                continue
+            # A metric averaged over trials has no single failure per case: it counts the
+            # cases that passed by majority in the baseline and no longer do.
+            how = " by majority of their trials" if mc.kind == "rate" else ""
+            if len(mc.regressed) > gate.max_new_failures:
+                text = (
                     f"{name}: {len(mc.regressed)} case(s) newly failing{how}, more than the "
                     f"{gate.max_new_failures} allowed: {_ids(mc.regressed)}"
                 )
-                exit_code = EXIT_REGRESSION
+                outcome = "fail"
+            else:
+                text = (
+                    f"{name}: {len(mc.regressed)} case(s) newly failing{how}, within the "
+                    f"{gate.max_new_failures} allowed"
+                )
+                outcome = "pass"
+            record(GateCheck(f"max_new_failures: {name}", outcome, text))
     if candidate is not None and gate.has_absolute_checks:
-        failures, notes = absolute_checks(candidate, gate)
-        reasons.extend(failures)
+        absolute, notes = absolute_check_results(candidate, gate)
+        for check in absolute:
+            record(check)
         warnings.extend(notes)
-        if failures:
-            exit_code = EXIT_REGRESSION
 
-    if (
-        gate.max_p95_latency_ms is not None
-        and cmp.candidate.p95_latency_ms > gate.max_p95_latency_ms
-    ):
-        reasons.append(
-            f"p95 latency {cmp.candidate.p95_latency_ms:.0f} ms exceeds "
-            f"{gate.max_p95_latency_ms:.0f} ms"
+    if gate.max_p95_latency_ms is not None:
+        p95, limit = cmp.candidate.p95_latency_ms, gate.max_p95_latency_ms
+        over = p95 > limit
+        record(
+            GateCheck(
+                "max_p95_latency_ms",
+                "fail" if over else "pass",
+                f"p95 latency {p95:.0f} ms exceeds {limit:.0f} ms"
+                if over
+                else f"p95 latency {p95:.0f} ms is within {limit:.0f} ms",
+            ),
+            EXIT_BUDGET,
         )
-        exit_code = exit_code or EXIT_BUDGET
-    if gate.max_cost_usd is not None and cmp.candidate.cost_usd > gate.max_cost_usd:
-        reasons.append(f"cost ${cmp.candidate.cost_usd:.4f} exceeds ${gate.max_cost_usd:.4f}")
-        exit_code = exit_code or EXIT_BUDGET
+    if gate.max_cost_usd is not None:
+        cost, cap = cmp.candidate.cost_usd, gate.max_cost_usd
+        over = cost > cap
+        record(
+            GateCheck(
+                "max_cost_usd",
+                "fail" if over else "pass",
+                f"cost ${cost:.4f} exceeds ${cap:.4f}"
+                if over
+                else f"cost ${cost:.4f} is within ${cap:.4f}",
+            ),
+            EXIT_BUDGET,
+        )
 
     if cmp.candidate.errors > cmp.baseline.errors:
         warnings.append(f"system errors rose from {cmp.baseline.errors} to {cmp.candidate.errors}")
@@ -324,4 +461,5 @@ def decide(
         warnings,
         dict(zip(names, adjusted_ps, strict=True)) if many else {},
         power,
+        checks,
     )

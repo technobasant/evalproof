@@ -42,8 +42,10 @@ from evalproof.gate import (
     absolute_checks,
     continuous_floors,
     decide,
+    refusal,
 )
 from evalproof.importers import DATASET_FORMATS, EPOCHS, FORMATS, import_dataset, import_run
+from evalproof.junit import gate_testsuite, run_testsuite, testsuites, write_junit
 from evalproof.models import CaseResult, Run
 from evalproof.providers import ProviderError, make_provider
 from evalproof.providers.base import close_resource
@@ -98,17 +100,17 @@ def _trials(text: str) -> int:
     return value
 
 
-def _check_writable(path: Path) -> None:
-    """Fail before any case runs if the run file cannot be written: create the parent, then
-    create and delete a file in it."""
+def _check_writable(path: Path, what: str = "the run file") -> None:
+    """Fail before any case runs if the run file (or ``what`` else) cannot be written: create
+    the parent, then create and delete a file in it."""
     if path.is_dir():
-        raise ConfigError(f"cannot write the run file {path}: it is a directory")
+        raise ConfigError(f"cannot write {what} {path}: it is a directory")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".evalproof-write-check-"):
             pass
     except OSError as exc:
-        raise ConfigError(f"cannot write the run file {path}: {exc}") from exc
+        raise ConfigError(f"cannot write {what} {path}: {exc}") from exc
 
 
 def _selected_variants(cfg: SuiteConfig, args: argparse.Namespace) -> list[str | None]:
@@ -152,7 +154,11 @@ def _worst(codes: list[int]) -> int:
 
 
 def _run_variant(
-    args: argparse.Namespace, cfg: SuiteConfig, variant: str | None, out_path: str | None
+    args: argparse.Namespace,
+    cfg: SuiteConfig,
+    variant: str | None,
+    out_path: str | None,
+    junit_runs: list[Run] | None = None,
 ) -> int:
     override = None
     if args.system or args.system_prompt_file or args.label:
@@ -195,6 +201,12 @@ def _run_variant(
     out = out_path or f"runs/{cfg.name}-{run.info.started_at.replace(':', '')}.json"
     save_run(run, out)
     sys.stderr.write(f"wrote {out}\n")
+    if args.junit and junit_runs is not None:
+        # The file holds every run finished so far, so a later variant that stops the command
+        # still leaves the earlier ones reported.
+        junit_runs.append(run)
+        write_junit(args.junit, testsuites(run_testsuite(r) for r in junit_runs))
+        sys.stderr.write(f"wrote {args.junit}\n")
     markdown = run_markdown(run, args.show)
     failures: list[str] = []
     refused: list[str] = []
@@ -227,8 +239,14 @@ def cmd_run(args: argparse.Namespace) -> int:
     paths = _run_paths(args, variants)
     for path in paths:
         _check_writable(Path(path) if path else Path("runs") / "run.json")
+    if args.junit:
+        _check_writable(Path(args.junit), "the JUnit file")
+    junit_runs: list[Run] = []
     return _worst(
-        [_run_variant(args, cfg, v, path) for v, path in zip(variants, paths, strict=True)]
+        [
+            _run_variant(args, cfg, v, path, junit_runs)
+            for v, path in zip(variants, paths, strict=True)
+        ]
     )
 
 
@@ -266,12 +284,27 @@ def _gate_config(args: argparse.Namespace) -> GateConfig | None:
         raise ConfigError(format_validation_error(exc, "gate", GateConfig)) from exc
 
 
-def _refused(args: argparse.Namespace, message: str) -> int:
+def _write_gate_junit(
+    args: argparse.Namespace,
+    baseline: Run,
+    candidates: list[tuple[str, Run, GateDecision]],
+    gate: GateConfig,
+    exit_code: int,
+) -> None:
+    """Write ``--junit``: the gate's checks, whatever the verdict. Does nothing without it."""
+    if args.junit:
+        suite = gate_testsuite(baseline, candidates, gate, exit_code)
+        write_junit(args.junit, testsuites([suite]))
+
+
+def _refused(
+    args: argparse.Namespace, message: str, baseline: Run, candidate: Run, gate: GateConfig | None
+) -> int:
     """Two runs that cannot be compared at all. Under ``--gate`` that is a gate that cannot
     decide (exit 4), reported like any other; without it, a usage error."""
     if not args.gate:
         raise ConfigError(message)
-    decision = GateDecision("fail", EXIT_CANNOT_GATE, [message])
+    decision = refusal(message)
     _emit(
         f"## evalproof\n\n**Gate: ⚠️ cannot gate** (exit {EXIT_CANNOT_GATE})\n\n- {message}\n",
         args.markdown,
@@ -279,6 +312,10 @@ def _refused(args: argparse.Namespace, message: str) -> int:
     if args.json:
         payload = {"gate": json.loads(to_json(decision))}
         Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    if gate is not None:
+        _write_gate_junit(
+            args, baseline, [(run_label(candidate), candidate, decision)], gate, EXIT_CANNOT_GATE
+        )
     return EXIT_CANNOT_GATE
 
 
@@ -302,8 +339,7 @@ def _compare_matrix(
             if not args.gate:
                 raise ConfigError(f"{path}: {exc}") from exc
             message = f"{label}: {exc}"
-            refused = GateDecision("fail", EXIT_CANNOT_GATE, [message])
-            entries.append(MatrixEntry(label, path, None, refused, run, message))
+            entries.append(MatrixEntry(label, path, None, refusal(message), run, message))
             continue
         entries.append(MatrixEntry(label, path, cmp, None, run))
     # Candidates that share a label (two runs of one system) are told apart by their file.
@@ -346,12 +382,25 @@ def _compare_matrix(
             ],
         }
         Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    if args.gate:
-        return _worst([e.decision.exit_code for e in entries if e.decision is not None])
-    return EXIT_PASS
+    code = _worst([e.decision.exit_code for e in entries if e.decision is not None])
+    if gate is not None and args.gate:
+        _write_gate_junit(
+            args,
+            baseline,
+            [(e.label, e.run or baseline, e.decision) for e in entries if e.decision is not None],
+            gate,
+            code,
+        )
+    return code if args.gate else EXIT_PASS
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
+    if args.junit:
+        if not args.gate:
+            raise ConfigError(
+                "--junit needs --gate: a comparison without a gate has no checks to report"
+            )
+        _check_writable(Path(args.junit), "the JUnit file")
     baseline = load_run(args.baseline)
     candidates = [load_run(path) for path in args.candidate]
     known = list(
@@ -378,7 +427,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
             baseline, candidate, alpha=alpha, seed=args.seed, aggregate=aggregate
         )
     except ComparisonRefused as exc:
-        return _refused(args, str(exc))
+        return _refused(args, str(exc), baseline, candidate, gate)
     decision = decide(cmp, gate, candidate) if gate else None
     _emit(
         comparison_markdown(
@@ -396,6 +445,14 @@ def cmd_compare(args: argparse.Namespace) -> int:
             payload["gate"] = json.loads(to_json(decision))
         Path(args.json).write_text(json.dumps(payload, indent=2), encoding="utf-8")
     if args.gate and decision is not None:
+        if gate is not None:
+            _write_gate_junit(
+                args,
+                baseline,
+                [(run_label(candidate), candidate, decision)],
+                gate,
+                decision.exit_code,
+            )
         return decision.exit_code
     return EXIT_PASS
 
@@ -657,6 +714,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="run every variant the suite defines, one run file each",
     )
     r.add_argument("--markdown", help="also append the report to this file")
+    r.add_argument(
+        "--junit",
+        metavar="PATH",
+        help="write a JUnit XML report to PATH: one testsuite per run written, one testcase per "
+        "case (per trial when the run repeats its cases)",
+    )
     r.add_argument("--quiet", action="store_true")
     r.add_argument(
         "--show",
@@ -794,6 +857,12 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--seed", type=int, default=0)
     c.add_argument("--markdown")
     c.add_argument("--json")
+    c.add_argument(
+        "--junit",
+        metavar="PATH",
+        help="write a JUnit XML report of the gate's checks to PATH, whatever the verdict; "
+        "needs --gate",
+    )
     c.set_defaults(func=cmd_compare)
 
     k = sub.add_parser("calibrate", help="measure a judge against gold labels and correct its rate")
