@@ -286,7 +286,7 @@ def test_compare_says_nothing_when_the_filters_match_or_are_both_absent(tmp_path
     assert compare_runs(one, two).tag_filter_change is None
 
 
-def test_the_gate_passes_with_a_warning_and_the_report_shows_it(
+def test_the_gate_refuses_runs_made_with_different_tag_filters(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     suite = _suite(tmp_path)
@@ -294,7 +294,18 @@ def test_the_gate_passes_with_a_warning_and_the_report_shows_it(
     smoke = save_run(_run(suite, tag_filter=make_tag_filter(["smoke"], None)), tmp_path / "s.json")
     code = main(["compare", str(full), str(smoke), "--suite", str(suite), "--gate"])
     out = capsys.readouterr().out
-    assert code == 0  # a different filter warns, as a different --limit does
+    # A filter does not show in the pull request's diff, so a narrowed run cannot pass the gate
+    # on the subset it kept: the gate cannot decide (exit 4).
+    assert code == 4
     assert "the runs used different tag filters" in out
+    assert "same --tags and --exclude-tags" in out
+    # Without --gate the report still compares the shared cases and warns.
+    assert main(["compare", str(full), str(smoke), "--suite", str(suite)]) == 0
+    assert "different tag filters" in capsys.readouterr().out
+    # Two runs made with the same filter gate as usual.
+    smoke2 = save_run(
+        _run(suite, tag_filter=make_tag_filter(["smoke"], None)), tmp_path / "s2.json"
+    )
+    assert main(["compare", str(smoke), str(smoke2), "--suite", str(suite), "--gate"]) == 0
     code = main(["compare", str(full), str(full), "--suite", str(suite), "--gate"])
     assert "different tag filters" not in capsys.readouterr().out

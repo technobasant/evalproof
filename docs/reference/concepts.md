@@ -87,8 +87,10 @@ compared. A case edited since the baseline (same id, new content) is excluded an
 report, so adding or editing cases never blocks the gate; the baseline catches up when the
 change is merged and its run file replaces the old one. Tags label a case and do not change what
 the system is asked, so adding or changing a tag is not an edit. A `--limit` run pairs with a
-full baseline on the cases it ran, and so does a run made with `--tags` or `--exclude-tags`, with a
-warning that the two used different tag filters. Only when the dataset differs and one run predates per-case
+full baseline on the cases it ran. Runs made with different tag filters (`--tags`,
+`--exclude-tags`) are compared on the cases both hold, with a warning, but the gate refuses them
+(exit 4): a filter does not show in a pull request's diff, so the gate would decide on a subset
+nobody sees. Only when the dataset differs and one run predates per-case
 hashes (written before 0.5) can the cases that stayed the same not be told from the ones that
 changed, and the gate exits 4. Fix it without a model call: run
 `evalproof rehash BASELINE SUITE`. That works when the cases the baseline scored are still the

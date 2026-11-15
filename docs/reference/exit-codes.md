@@ -51,6 +51,7 @@ The gate could not reach a verdict, and a pass would be wrong. The causes includ
 * `min_pass_rate` on a metric that has only continuous scores, or `aggregate` set to `all` or `any` on one;
 * the judge's target, CLI, isolation or resolved model changed between the runs, unless `allow_judge_change` is set (a new CLI version alone only warns);
 * the runs repeat each case a different number of times;
+* the runs were made with different tag filters (`run --tags`, `--exclude-tags`): make both with the same filter, or with none;
 * `evalproof verify` found that the run does not match the suite or the dataset;
 * `evalproof rehash` found that the dataset does not match the run;
 * `evalproof doctor --cursor-canary` made its one call and it failed, so there is no verdict.

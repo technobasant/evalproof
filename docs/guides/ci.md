@@ -237,7 +237,8 @@ evalproof hook uninstall
 * **Where it goes.** `.git/hooks`, or the folder `core.hooksPath` names; linked worktrees share
   it. A hook lives in the clone and is not committed, so each clone installs its own.
 * **Runs made with a tag filter.** A run made with `run --tags` verifies against the cases that
-  filter selects. Do not commit one as `latest.json`: the gate would then compare only the cases both runs hold, and warns that the filters differ.
+  filter selects. Do not commit one as `latest.json`: the gate refuses (exit 4) to compare runs
+  made with different tag filters, because it would decide on a subset of the cases.
 
 The hook is the same check CI's keyless mode starts with, run earlier. Command reference:
 [`evalproof hook`](../reference/commands.md#evalproof-hook).

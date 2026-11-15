@@ -11,7 +11,8 @@ from a setup problem:
 * ``3``  budget breach: candidate p95 latency or total cost over the limit
 * ``4``  cannot gate: too few paired cases, metric missing, the dataset changed and a run predates
   per-case hashes, ``min_pass_rate`` on a metric with only continuous scores, ``aggregate`` all
-  or any on a continuous metric, the runs repeat each case a different number of times (refused
+  or any on a continuous metric, the runs were made with different tag filters (``--tags``,
+  ``--exclude-tags``), the runs repeat each case a different number of times (refused
   before this module), or the judge's target, CLI, isolation or resolved model changed (unless
   the gate sets ``allow_judge_change``). A new judge CLI version only warns: it is advisory.
 * ``2``  usage or configuration error (raised by the CLI, not here)
@@ -257,6 +258,17 @@ def decide(
                     "accept it)",
                 )
             )
+    if cmp.tag_filter_change:
+        # A filter is invisible in the pull request's diff, unlike a dataset change, so a run
+        # narrowed to some tags would otherwise be gated on that subset without anyone seeing it.
+        refused.append(
+            GateCheck(
+                "same_tag_filter",
+                "error",
+                f"{cmp.tag_filter_change}, so the gate would decide on a subset of the cases: "
+                "make both runs with the same --tags and --exclude-tags (or with neither)",
+            )
+        )
     if gate.has_absolute_checks and candidate is None:
         refused.append(
             GateCheck(

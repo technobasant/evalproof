@@ -163,7 +163,7 @@ The cases that cannot be replayed (ADK user-simulation cases) are skipped with o
 
 Compares each candidate with the baseline on the cases both runs share. With `--gate` the result becomes an exit code. Several candidates give one table, and `--gate` then corrects the p-values for all candidates and gated metrics at once and exits with the worst code (2, then 4, 1, 3, 0). Gate settings come from `--suite`; every flag below overrides the suite's `gate` block. Without `--gate` a comparison of two runs that cannot be compared is a usage error (exit 2).
 
-Runs made with different tag filters (`run --tags`, `--exclude-tags`) are compared on the cases both hold, and the report and the gate warn that the filters differ, as they do for a dataset that changed; a different filter alone never fails the gate.
+Runs made with different tag filters (`run --tags`, `--exclude-tags`) are compared on the cases both hold, and the report warns that the filters differ; with `--gate` they cannot be gated (exit 4), because a filter does not show in the diff and the gate would decide on a subset of the cases.
 
 ```bash title="Terminal"
 evalproof compare BASELINE CANDIDATE [CANDIDATE ...] [options]
