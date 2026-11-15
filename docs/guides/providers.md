@@ -177,7 +177,7 @@ it is the same model either way. `evalproof doctor` prints the mode in effect an
     binary, run as a subprocess in a fresh directory in the system temp directory (empty but for
     Cursor's permission file), its API-key variable removed from the child's environment unless
     `api_key_env` names one, a bounded runtime, and the CLI, its version and an isolation tag
-    (`opencode/0`, `cursor/2`, `copilot/2`) in the run and in the cache key. They are experimental
+    (`opencode/0`, `cursor/3` or `cursor/2`, `copilot/2`) in the run and in the cache key. They are experimental
     because their isolation is less proven than Claude Code's and Codex's. Each prints
     `evalproof: <name> provider is experimental` on stderr the first time it is used in a process.
     Like the other two they ignore `temperature`, `seed` and `max_tokens`, and `evalproof doctor`
@@ -221,12 +221,40 @@ What was checked, and what was not:
     workspace **and from the directories above it**. The workspace is empty and sits in the
     system temp directory, so nothing is found there unless `TMPDIR` points inside a project.
     `~/.claude/CLAUDE.md` was not read.
-    * **Your skills list is sent.** Cursor puts the names and descriptions of the skills under
-    your home directory (`~/.claude/skills`, `~/.cursor/skills`, `~/.codex/skills`,
-    `~/.agents/skills`, plugin skills) and its own subagents in every prompt. The paths are
-    fixed and no setting turns them off; moving `HOME` logs the CLI out. They count as input
-    tokens on every call, and `doctor` warns about it. Verified with a login; with
-    `CURSOR_API_KEY` it was not tested.
+    * **Your skills list is sent, unless the sandbox blocks it.** Cursor puts the names and
+    descriptions of the skills under your home directory (`~/.claude/skills`,
+    `~/.cursor/skills`, `~/.codex/skills`, `~/.agents/skills`, plugin skills) and its own
+    subagents in every prompt. The paths are fixed and no cursor-agent setting turns them off;
+    moving `HOME` logs the CLI out. They count as input tokens on every call. On macOS evalproof
+    blocks the reads instead (next item); elsewhere, and with the sandbox off, `doctor` warns
+    about it. Verified with a login; with `CURSOR_API_KEY` it was not tested.
+    * **On macOS the call runs in a sandbox.** By default evalproof starts cursor-agent as
+    `/usr/bin/sandbox-exec -p <profile> cursor-agent ...`, with a profile that allows everything
+    except reading these folders in your home directory: `~/.claude`, `~/.agents`, `~/.codex`,
+    `~/.gemini`, and `~/.cursor/skills`, `skills-cursor`, `rules`, `plugins` and `agents`. The
+    login is unaffected (it is in the keychain, which is not a file read). *Verified live* on
+    2026-11-15: with the profile the login still works, a canary skill placed in the workspace is
+    still seen, and no skill from your home directory reaches the prompt. The isolation tag is `cursor/3` with the sandbox and `cursor/2` without, so a reply
+    cached without the sandbox is never served to a sandboxed run, and the other way round.
+    `EVALPROOF_CURSOR_SANDBOX` chooses: `on` (the default) or `off`, anything else is an error
+    naming both. It applies only on macOS where `/usr/bin/sandbox-exec` exists; on Linux and
+    Windows it has no effect and the call is not sandboxed. If `sandbox-exec` itself fails, the
+    error says so and points at `EVALPROOF_CURSOR_SANDBOX=off`.
+    * **Your Cursor User Rules are still sent.** The rules you set in Cursor Settings > Rules
+    live on Cursor's servers and come with every prompt, whatever the CLI can read on disk, so no
+    file sandbox blocks them. They are sent to the model and count as input tokens. To run
+    without them, clear them there. `doctor` says this whenever the sandbox is on.
+    * **Check what reaches the prompt: `evalproof doctor --cursor-canary`.** This is the one
+    `doctor` option that is not free: it makes **one real cursor-agent call**, which uses your
+    Cursor quota (model `composer-2.5-fast`, or `--model`). The call goes through the provider's
+    normal path (the same flags, sandbox and tool guard), with a canary skill
+    (`evalproof-canary`) placed in the call's workspace, and asks the model which skills it can
+    see and the titles of its User Rules. The canary must be named, so you know the answer is
+    about the right context; any other skill is a leak. User rules are only counted: asked
+    for titles, models tend to quote each rule's first line, so neither titles nor contents
+    are printed. Exit 0: the canary was seen and no other skill. Exit 1: the canary was not seen
+    (no verdict on the rest) or another skill was. Exit 4: the call failed. The answer is the
+    model's own account of its context, so treat it as a best-effort check, not proof.
     * The redirected config and data directories keep the login (it is in the system keychain),
     keep each call's chat out of `~/.cursor/chats` and `~/.cursor/projects`, and mean your own
     `~/.cursor/cli-config.json` (and its allow list) is not read. A fresh config directory gets

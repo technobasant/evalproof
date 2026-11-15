@@ -42,10 +42,11 @@ from evalproof.providers.agent_cli import (
     AuthStatus,
     _int,
     _quick,
+    clip,
     render_prompt,
     run_process,
 )
-from evalproof.providers.base import ChatResponse, Message, split_system
+from evalproof.providers.base import ChatResponse, Message, ProviderError, split_system
 
 # A Linux process cannot take one argument or environment string longer than 128 KiB; stay well
 # below it. The same bound caps the OpenCode config, which travels in one environment variable.
@@ -316,6 +317,80 @@ class OpenCodeProvider(ExperimentalCLIProvider):
 _ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 _ABOUT_EMAIL = re.compile(r"^\s*User Email\s+(?P<value>.+?)\s*$", re.MULTILINE)
 
+# -- the macOS sandbox around cursor-agent ---------------------------------------------------------
+
+# ``on`` (the default) runs cursor-agent under ``sandbox-exec`` with a profile that denies reading
+# the folders below; ``off`` runs it as before. Either way it is a different isolation scheme, so
+# the tag differs (``cursor/3`` sandboxed, ``cursor/2`` not) and so does the cache key.
+CURSOR_SANDBOX_ENV = "EVALPROOF_CURSOR_SANDBOX"
+CURSOR_SANDBOX_MODES = ("on", "off")
+SANDBOX_EXEC = "/usr/bin/sandbox-exec"
+CURSOR_ISOLATION = "cursor/2"
+CURSOR_ISOLATION_SANDBOXED = "cursor/3"
+
+# What the profile denies reading, relative to the home directory. Verified on 2026-11-15 with
+# cursor-agent 2026.11.11 on macOS: cursor-agent puts the names and descriptions of the skills it
+# finds in these folders into every prompt, and redirecting ``HOME`` instead logs it out (the login
+# is in the keychain, which does not follow ``HOME``). With these reads denied the login still
+# worked, a canary skill in the workspace was still seen, and no home skill reached the prompt.
+# What no file sandbox can block: the Cursor account's "User Rules", which come from Cursor's
+# servers.
+CURSOR_SANDBOX_DENY: tuple[str, ...] = (
+    ".claude",  # ~/.claude/skills (user and plugin skills), CLAUDE.md
+    ".agents",  # ~/.agents/skills
+    ".codex",  # ~/.codex/skills
+    ".gemini",  # another agent's folder, in the verified profile
+    ".cursor/skills",  # the user's Cursor skills
+    ".cursor/skills-cursor",  # Cursor's built-in skills
+    ".cursor/rules",  # user-level rules
+    ".cursor/plugins",  # plugin skills and rules
+    ".cursor/agents",  # user-level subagents
+)
+
+
+def cursor_sandbox_mode() -> str:
+    """The mode from ``EVALPROOF_CURSOR_SANDBOX``: ``on`` when it is unset or empty."""
+    value = os.environ.get(CURSOR_SANDBOX_ENV, "").strip()
+    if not value:
+        return "on"
+    if value not in CURSOR_SANDBOX_MODES:
+        raise ProviderError(
+            f"{CURSOR_SANDBOX_ENV} must be one of {', '.join(CURSOR_SANDBOX_MODES)}, got {value!r}"
+        )
+    return value
+
+
+def sandbox_exec_available() -> bool:
+    """True on macOS with ``/usr/bin/sandbox-exec``: the only place the sandbox can run."""
+    return sys.platform == "darwin" and os.path.exists(SANDBOX_EXEC)
+
+
+def cursor_sandbox_state() -> str:
+    """``sandboxed``: cursor-agent runs under the profile. ``off``: it could, and the variable
+    says not to. ``unavailable``: there is no ``sandbox-exec`` here, whatever the variable says."""
+    mode = cursor_sandbox_mode()
+    if not sandbox_exec_available():
+        return "unavailable"
+    return "sandboxed" if mode == "on" else "off"
+
+
+def sbpl_string(value: str) -> str:
+    """``value`` as a sandbox-profile string literal: quoted, with ``\\`` and ``"`` escaped."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def cursor_sandbox_profile(home: str) -> str:
+    """The sandbox profile that denies reading ``CURSOR_SANDBOX_DENY`` under ``home``; everything
+    else stays allowed, so the login (a keychain lookup, not a file read) keeps working."""
+    paths = " ".join(f"(subpath {sbpl_string(os.path.join(home, p))})" for p in CURSOR_SANDBOX_DENY)
+    return f"(version 1)(allow default)(deny file-read* {paths})"
+
+
+def cursor_home() -> str:
+    """The home directory the profile is built for, with symlinks resolved: the sandbox compares
+    real paths."""
+    return os.path.realpath(os.path.expanduser("~"))
+
 
 class CursorProvider(ExperimentalCLIProvider):
     """``cursor-agent -p`` in ask mode in an empty workspace, with a permission config that
@@ -334,9 +409,15 @@ class CursorProvider(ExperimentalCLIProvider):
       ``.cursor/rules``) and from the directories above it; the workspace here is empty and sits
       in the system temp directory. ``~/.claude/CLAUDE.md`` was not read.
     * The names and descriptions of the user's skills (``~/.claude/skills``, ``~/.cursor/skills``,
-      ``~/.codex/skills``, ``~/.agents/skills``, plugin skills) and Cursor's own subagents are put
-      in every prompt. The paths are fixed under the home directory and no setting turns them off;
-      moving ``HOME`` logs the CLI out. ``evalproof doctor`` warns about it.
+      ``~/.codex/skills``, ``~/.agents/skills``, plugin skills) and Cursor's built-in skills and
+      subagents are put in every prompt. The paths are fixed under the home directory and no
+      setting turns them off; moving ``HOME`` logs the CLI out. On macOS the call therefore runs
+      under ``sandbox-exec`` with a profile that denies reading those folders (verified
+      2026-11-15: login still works, a canary skill in the workspace is still seen, no home skill
+      reaches the prompt); ``EVALPROOF_CURSOR_SANDBOX=off`` runs without it and the isolation tag
+      is ``cursor/3`` with the sandbox, ``cursor/2`` without. Elsewhere there is no sandbox and
+      ``evalproof doctor`` warns. The Cursor account's "User Rules" come from Cursor's servers and
+      reach every prompt either way.
     * ``CURSOR_CONFIG_DIR`` and ``CURSOR_DATA_DIR`` in the temp root keep the login (it is in the
       system keychain) and keep the chat out of ``~/.cursor/chats`` and ``~/.cursor/projects``;
       the user's own ``cli-config.json`` (its allow list included) is not read."""
@@ -344,11 +425,26 @@ class CursorProvider(ExperimentalCLIProvider):
     name = "cursor"
     binary = "cursor-agent"
     install_hint = "curl https://cursor.com/install -fsS | bash"
-    isolation = "cursor/2"
+    isolation = CURSOR_ISOLATION  # per instance: ``cursor/3`` when the sandbox applies
     key_var = "CURSOR_API_KEY"
     strip_vars = ("CURSOR_API_KEY",)
     prompt_in_argv = True
     system_in_prompt = True
+
+    def __init__(
+        self,
+        model: str,
+        *,
+        extra_workspace_files: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """``extra_workspace_files`` (relative path -> text) is written into each call's workspace
+        next to the permission file. ``evalproof doctor --cursor-canary`` uses it to plant a
+        canary skill; a suite never sets it."""
+        super().__init__(model, **kwargs)
+        self.sandboxed = cursor_sandbox_state() == "sandboxed"
+        self.isolation = CURSOR_ISOLATION_SANDBOXED if self.sandboxed else CURSOR_ISOLATION
+        self.extra_workspace_files = dict(extra_workspace_files or {})
 
     # ``--mode ask`` has a read tool that needs no approval and reaches outside the workspace
     # (verified); this project-level permission file, read from the workspace, denies it (verified:
@@ -378,6 +474,12 @@ class CursorProvider(ExperimentalCLIProvider):
         user_level = {"version": 1, **self.CLI_CONFIG}
         (config / "cli-config.json").write_text(json.dumps(user_level, indent=2), encoding="utf-8")
         (aux / self.DATA_DIR).mkdir(exist_ok=True)
+        for relative, text in self.extra_workspace_files.items():
+            path = Path(relative)
+            if path.is_absolute() or ".." in path.parts:
+                raise self.fail(f"extra workspace file {relative!r} must be inside the workspace")
+            (cwd / path).parent.mkdir(parents=True, exist_ok=True)
+            (cwd / path).write_text(text, encoding="utf-8")
 
     def call_env(self, system: str, aux_dir: str) -> dict[str, str]:
         return {
@@ -385,7 +487,19 @@ class CursorProvider(ExperimentalCLIProvider):
             "CURSOR_DATA_DIR": os.path.join(aux_dir, self.DATA_DIR),
         }
 
+    def command(self, binary: str, system_file: str, params: GenerationParams) -> list[str]:
+        # ``evalproof doctor`` prints these flags: without the sandbox wrapper, whose profile is a
+        # long string with the home directory in it. Doctor says whether the sandbox applies.
+        root = os.path.dirname(system_file)
+        return self.agent_command(binary, os.path.join(root, CWD_NAME), params)
+
     def build_command(self, binary: str, workdir: str, params: GenerationParams) -> list[str]:
+        command = self.agent_command(binary, workdir, params)
+        if not self.sandboxed:
+            return command
+        return [SANDBOX_EXEC, "-p", cursor_sandbox_profile(cursor_home()), *command]
+
+    def agent_command(self, binary: str, workdir: str, params: GenerationParams) -> list[str]:
         # The key travels in the environment, never as ``--api-key``: an argument is visible in
         # ``ps`` (a running Cursor worker was seen with its key on its command line).
         # ``stream-json`` instead of ``json``: the json result joins the model's preamble text
@@ -405,6 +519,13 @@ class CursorProvider(ExperimentalCLIProvider):
         ]
 
     def parse(self, returncode: int, stdout: str, stderr: str, latency_ms: float) -> ChatResponse:
+        if returncode != 0 and "sandbox-exec" in stderr:
+            # ``sandbox_apply: Operation not permitted`` when evalproof already runs inside
+            # another sandbox (a coding agent's, a container's): the way out is to turn ours off.
+            raise self.fail(
+                f"{clip(stderr, 300)} (the macOS sandbox did not start; set "
+                f"{CURSOR_SANDBOX_ENV}=off to run cursor-agent without it)"
+            )
         events = _json_lines(_ANSI.sub("", stdout))
         for event in events:
             if event.get("type") == "tool_call":

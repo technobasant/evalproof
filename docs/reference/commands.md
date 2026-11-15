@@ -276,21 +276,30 @@ Exit 0 on success, 4 when the dataset does not match the run, 2 for a usage erro
 
 ## evalproof doctor
 
-Checks each coding-agent CLI target (`claude-code`, `codex`, and the experimental `opencode`, `cursor` and `copilot`): binary, version, login and the isolation flags. It makes no model call. With a suite it checks the targets that suite uses; without one it surveys every CLI on the machine.
+Checks each coding-agent CLI target (`claude-code`, `codex`, and the experimental `opencode`, `cursor` and `copilot`): binary, version, login and the isolation flags. It makes no model call, except with `--cursor-canary`. With a suite it checks the targets that suite uses; without one it surveys every CLI on the machine.
 
 ```bash title="Terminal"
 evalproof doctor [SUITE]
+evalproof doctor --cursor-canary [--model MODEL]
 ```
 
 | Argument | Required | What it is |
 |---|---|---|
 | `SUITE` | no | optional: check the targets this suite uses (default: every CLI found) |
 
+| Flag | Type | Default | What it does |
+|---|---|---|---|
+| `--cursor-canary` | flag | off | instead of the free check, make **one real `cursor-agent` call** (it uses your Cursor quota) to see which skills and user rules reach the prompt; takes no `SUITE` |
+| `--model` | string | `composer-2.5-fast` | the model for `--cursor-canary`; only with `--cursor-canary` |
+
 ```bash title="Example"
 evalproof doctor evals/suite.yaml
+evalproof doctor --cursor-canary
 ```
 
-Exit 0 when every checked target is ready (or, without a suite, when at least one CLI is usable), 1 otherwise. See also: [Providers](../guides/providers.md#use-your-claude-code-or-codex-login).
+Exit 0 when every checked target is ready (or, without a suite, when at least one CLI is usable), 1 otherwise.
+
+`--cursor-canary` runs the call through the cursor provider's normal path (the same flags, the macOS sandbox if it is on, and the tool guard) with a canary skill named `evalproof-canary` in the call's workspace. It asks the model which skills and Cursor User Rules it can see, and prints whether the canary was seen, which other skills were seen, and how many user rules were named (a count only; rule titles and contents are never printed). What it prints is the model's own account of its context, so it is best effort. Exit 0 when the canary was seen and no other skill was, 1 when the canary was not seen or another skill was, 4 when the call failed and there is no verdict, 2 for a usage error (`--model` without `--cursor-canary`, a `SUITE` with it, or an invalid `EVALPROOF_CURSOR_SANDBOX`). See also: [Providers](../guides/providers.md#experimental-providers), [Providers: login](../guides/providers.md#use-your-claude-code-or-codex-login).
 
 ## evalproof readiness
 
