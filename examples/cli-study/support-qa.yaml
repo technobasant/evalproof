@@ -1,0 +1,54 @@
+# Study (2026-11): the support-qa cases on three frontier models, each reached through its
+# lab's agent CLI on a subscription login. No judge: the regex answer key is the gate metric.
+# One variant per model and prompt; each writes runs/<variant>.json. See README.md.
+name: support-qa-cli
+dataset: ../support-qa/cases.jsonl
+seed: 0
+
+system:
+  target: claude-code:claude-sonnet-5-5
+  label: "Claude Sonnet 5.5 (claude-code) + grounded prompt"
+  system_prompt_file: ../support-qa/prompt.baseline.md
+  prompt_template: "{question}"
+  timeout_s: 300
+
+variants:
+  - name: claude-baseline
+  - name: claude-candidate
+    system:
+      label: "Claude Sonnet 5.5 (claude-code) + friendly prompt"
+      system_prompt_file: ../support-qa/prompt.candidate.md
+  - name: codex-baseline
+    system:
+      target: codex:gpt-6-astra
+      label: "GPT-6 Astra, medium effort (codex) + grounded prompt"
+      params: {extra: {reasoning_effort: medium}}
+  - name: codex-candidate
+    system:
+      target: codex:gpt-6-astra
+      label: "GPT-6 Astra, medium effort (codex) + friendly prompt"
+      system_prompt_file: ../support-qa/prompt.candidate.md
+      params: {extra: {reasoning_effort: medium}}
+  - name: gemini-baseline
+    system:
+      target: cursor:gemini-4-argon-medium
+      label: "Gemini 4 Argon Medium (cursor) + grounded prompt"
+  - name: gemini-candidate
+    system:
+      target: cursor:gemini-4-argon-medium
+      label: "Gemini 4 Argon Medium (cursor) + friendly prompt"
+      system_prompt_file: ../support-qa/prompt.candidate.md
+
+scorers:
+  # The answer key: regexes written per question (see ../support-qa). Free gold, no model.
+  - name: answer_key
+    type: regex
+    params: {any_of_field: accept, none_of_field: reject}
+
+gate:
+  metric: answer_key
+  max_drop: 0.03
+  alpha: 0.05
+  min_cases: 40
+
+cache_dir: .evalproof/cache
