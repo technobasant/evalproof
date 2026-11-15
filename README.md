@@ -90,8 +90,10 @@ that changed.
 **In GitHub Actions**, no install step is needed: the composite action
 `technobasant/evalproof@v1.1.0` runs the evalproof of the tag you pin, and `pr-comment: "true"`
 posts the report as a pull request comment. **In GitLab CI**, `evalproof init --platform gitlab`
-writes a file you include from `.gitlab-ci.yml`
-([In CI](https://basantbhattarai.com.np/evalproof/guides/ci/)).
+writes a file you include from `.gitlab-ci.yml`; **in Bitbucket Pipelines**,
+`evalproof init --platform bitbucket` writes `bitbucket-pipelines.yml`
+([In CI](https://basantbhattarai.com.np/evalproof/guides/ci/)). `evalproof hook install` adds a
+git pre-push hook that runs `verify` before every push.
 
 ## What it needs to run
 

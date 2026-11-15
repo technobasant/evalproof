@@ -15,7 +15,7 @@ replaces it. Write your own notes outside them. Full docs: https://basantbhattar
 | `evals/runs/latest.json` | the committed result of the last accepted run, the baseline for the next change |
 | `evals/.evalproof/` | local scratch and the response cache, ignored by git |
 | `evals/README.md` | the commands for this repo |
-| `.github/workflows/evalproof.yml` or `.gitlab-ci.evalproof.yml` | the CI gate, if `init` wrote one |
+| `.github/workflows/evalproof.yml`, `.gitlab-ci.evalproof.yml` or `bitbucket-pipelines.yml` | the CI gate, if `init` wrote one (for Bitbucket, `evals/bitbucket-pipelines.snippet.yml` when the file already existed) |
 
 If a path is missing, the repo may keep its suite elsewhere: search for `suite.yaml` before
 creating one.
@@ -41,13 +41,15 @@ every command from the repository root.
 | Score retrieval or RAG | Scorers `recall_at_k`, `mrr` and `ndcg` (`params: {k: 5, pass_threshold: 0.8}`). The case holds the relevant ids in `relevant` (the field is the scorer's `field` param); the system returns what it retrieved, ranked, as `retrieved`. Use `facts` for numbers and phrases an answer must contain |
 | Hold latency or cost | Set `gate.max_p95_latency_ms` and `gate.max_cost_usd`. A breach exits 3. Cost needs `pricing` on the target (`input_per_mtok`, `output_per_mtok`, US dollars) or a system that returns `cost_usd` |
 | Handle flaky output | `trials: 5` in the suite or `run --trials 5` (1 to 100). Both runs must use the same number of trials. `gate.aggregate` or `compare --aggregate` picks `mean`, `all` or `any`. The report lists flaky cases and a power line saying what drop the suite can detect; the power line never changes the exit code |
+| Run part of the suite | `evalproof run evals/suite.yaml --tags smoke --exclude-tags slow --out evals/.evalproof/smoke.json`. `--tags` keeps the cases that carry any listed tag and `--exclude-tags` drops those that carry any; both take commas or repeat, and exit 2 when no case is left. The run records the filter. Do not commit it as `latest.json` |
 | Compare several builds | `variants:` in the suite, then `evalproof run evals/suite.yaml --all-variants`. Each variant writes `runs/<name>.json` |
 | Gate results from another tool | `evalproof import FORMAT FILE --out PATH` with FORMAT one of `promptfoo`, `inspect`, `deepeval`, `lm-eval`, `garak`, `adk`, `claude-plugin-eval`, `jsonl`, `csv`. |
 | Start from test cases another tool holds | `evalproof import-dataset FORMAT FILE --out evals/cases.jsonl --suite-out evals/suite.yaml` with FORMAT `auto` or one of `promptfoo`, `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse`, `phoenix`, `adk`, `jsonl`, `csv`. In a new repository: `evalproof init --from FILE`. No model call. Assertions it cannot express stay on the case under `unmapped` and are counted in one stderr line: read it and tell the human. `promptfoo`, `adk`, `jsonl` and `csv` are stable; the rest are experimental |
 | See what the suite leaves untested | `evalproof readiness evals/suite.yaml [--run FILE] [--require behaviour,regression-gate]`. No model call |
 | Check a committed run file | `evalproof verify evals/runs/latest.json evals/suite.yaml`. No model call. Exit 4 means stale: run the suite again. For a baseline written before evalproof 0.5: `evalproof rehash RUN evals/suite.yaml` |
+| Check the run file before every push | `evalproof hook install` writes a git pre-push hook that runs `evalproof verify` and stops the push when the run file is stale; no model call. `evalproof hook uninstall` removes it. A hook it did not write is kept unless `--force`. Do not push with `--no-verify` to get past it: refresh the run |
 | Check that a CLI target is usable | `evalproof doctor evals/suite.yaml`. No model call |
-| Set up CI | `evalproof init --ci keyless` (default: CI compares committed run files, no model calls) or `--ci api-key` (CI runs the suite with a secret), with `--platform github` or `gitlab` (`gitlab` is experimental). For Jenkins, Azure DevOps or anything that reads JUnit: `evalproof run SUITE --junit FILE` and `evalproof compare A B --suite SUITE --gate --junit FILE` (experimental) |
+| Set up CI | `evalproof init --ci keyless` (default: CI compares committed run files, no model calls) or `--ci api-key` (CI runs the suite with a secret), with `--platform github`, `gitlab` or `bitbucket` (`gitlab` and `bitbucket` are experimental; `bitbucket` writes `bitbucket-pipelines.yml`, or `evals/bitbucket-pipelines.snippet.yml` to merge by hand when that file already exists). For Jenkins, Azure DevOps or anything that reads JUnit: `evalproof run SUITE --junit FILE` and `evalproof compare A B --suite SUITE --gate --junit FILE` (experimental) |
 | Test a program in another language | `target: "command:node eval/system.js"` (experimental): one run of the program per case, the case as JSON on stdin, the answer on stdout, a non-zero exit is an error. Or an HTTP endpoint: `target: http://localhost:3000/eval`, which gets `{"id", "input"}` by POST |
 | Run in a container | `docker run --rm -v "$PWD:/work" ghcr.io/technobasant/evalproof:latest run evals/suite.yaml --out evals/runs/latest.json`. Tags are `<version>`, `<major>.<minor>` and `latest`: pin one in CI. Pass a key with `-e NAME` and no value. The image has no coding-agent binary and no packages beyond evalproof's own. To reach Ollama on the host, set `base_url: http://host.docker.internal:11434` in the suite (the image's contents are experimental) |
 | Refresh this section | `evalproof init --agent-files-only` (experimental) |
@@ -163,7 +165,7 @@ colon, so `ollama:qwen3:8b` works.
 | `python:<module>:<function>` | none | runs the function from the repo with the case input; it returns `{"output": ...}` and may add `trace`, `retrieved`, `tokens_in`, `tokens_out` and `cost_usd`. Declare a `ctx` parameter to get the case id, later turns, state, variant, vars and trial |
 | `http://...`, `https://...` | none | POSTs `{"id", "input"}` (plus `turns`, `state`, `variant`, `vars` and `trial` when they apply) and reads `{"output", ...}` back |
 | `command:<program> [args]` | none | experimental. Words split like a POSIX shell, no shell runs. Runs in the suite's directory. Print plain text or a JSON object with `output` on stdout, logs on stderr |
-| `claude-code:<model>`, `codex:<model>` | none for the suite | run the installed coding-agent binary as a subprocess, isolated in an empty directory. Ignore `temperature`, `seed` and `max_tokens`. A suite with `turns` cases is refused. Run `evalproof doctor` first. Not in the Docker image, and `--platform gitlab --ci api-key` refuses them |
+| `claude-code:<model>`, `codex:<model>` | none for the suite | run the installed coding-agent binary as a subprocess, isolated in an empty directory. Ignore `temperature`, `seed` and `max_tokens`. A suite with `turns` cases is refused. Run `evalproof doctor` first. Not in the Docker image, and `--platform gitlab` or `bitbucket` with `--ci api-key` refuses them |
 | `opencode:<provider>/<model>`, `cursor:<model>`, `copilot:<model>` | none for the suite | experimental, same rules as the two above. Each prints a note on stderr the first time it is used. `copilot:auto` can resolve to a different model on each call, so it makes a poor judge: the gate refuses runs whose judge's resolved model differs (exit 4) |
 
 Settings that apply to every target:
@@ -217,9 +219,10 @@ Settings that apply to every target:
   change `gate.metric`, or loosen the rubric.
 - Never delete or edit cases, references or `accept` lists to make a run pass.
 - On exit 1, 3 or 4, stop and report to the human: the exit code, the `compare` output and what
-  you changed. Do not work around it by switching the judge, running a subset (`--limit`) or
+  you changed. Do not work around it by switching the judge, running a subset (`--limit`, `--tags`) or
   re-running until it passes.
-- Do not commit a run made with `--limit` or `--system` as `latest.json`.
+- Do not commit a run made with `--limit`, `--tags`, `--exclude-tags` or `--system` as
+  `latest.json`.
 - A different judge model makes runs incomparable (a new judge CLI version alone only warns).
   Changing the judge is the human's decision.
 - Do not change `gate.*`: those settings belong to the owner. Propose a change and let the
@@ -241,13 +244,13 @@ With several candidates, `compare --gate` exits with the worst code in the order
 
 Add `--help` to any command for its flags.
 
-- `evalproof init [--dir DIR] [--judge TARGET] [--ci keyless|api-key|none] [--platform github|gitlab] [--cli-auth api-key|oauth-token] [--from FILE] [--from-format FORMAT] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]`:
+- `evalproof init [--dir DIR] [--judge TARGET] [--ci keyless|api-key|none] [--platform github|gitlab|bitbucket] [--cli-auth api-key|oauth-token] [--from FILE] [--from-format FORMAT] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]`:
   write the starter suite, CI workflow, agent skill and this section. Existing files are kept
   unless `--force`; `AGENTS.md` is always merged, never overwritten. `--agent-files-only`
   refreshes only this section and the skill (experimental). `--from FILE` writes
   `evals/cases.jsonl` and the suite from another tool's test cases instead of the sample cases
   (`--from-format` defaults to `auto`).
-- `evalproof run SUITE [--out FILE] [--limit N] [--trials K] [--system TARGET] [--variant NAME]... [--all-variants] [--gate] [--no-cache] [--cache-only] [--junit FILE] [--markdown FILE] [--quiet] [--show N]`:
+- `evalproof run SUITE [--out FILE] [--limit N] [--tags TAG,...] [--exclude-tags TAG,...] [--trials K] [--system TARGET] [--variant NAME]... [--all-variants] [--gate] [--no-cache] [--cache-only] [--junit FILE] [--markdown FILE] [--quiet] [--show N]`:
   run the suite and write a run file. `--system-prompt-file` and `--label` also override the
   system.
 - `evalproof compare BASELINE CANDIDATE... [--suite SUITE] [--gate] [--metric NAME]... [--max-drop F] [--alpha F] [--aggregate mean|all|any] [--min-cases N] [--max-p95-ms MS] [--max-cost USD] [--min-pass-rate F] [--must-pass TAG]... [--max-new-failures N] [--allow-judge-change] [--show N] [--seed N] [--markdown FILE] [--json FILE] [--junit FILE]`:
@@ -258,6 +261,9 @@ Add `--help` to any command for its flags.
 - `evalproof report RUN [--markdown FILE] [--show N]`: print the summary of one run.
 - `evalproof verify RUN SUITE [--markdown FILE]`: check, with no model call, that a run matches
   the suite and covers exactly the dataset's cases. Exit 4 when it does not.
+- `evalproof hook install|uninstall [--suite SUITE] [--run FILE] [--force]`: write or remove a git
+  pre-push hook that runs `verify` on the committed run file. `--force` replaces a hook evalproof
+  did not write.
 - `evalproof rehash RUN SUITE [--out FILE]`: add per-case hashes to a run file from before
   evalproof 0.5.
 - `evalproof doctor [SUITE]`: check the coding-agent binary targets and a `command:` target.
@@ -276,7 +282,7 @@ Add `--help` to any command for its flags.
   scorers they need. FORMAT is `auto` (read off the file) or a tool name. The four field
   options name the columns of a `jsonl` or `csv` table. `--suite-out` refuses to overwrite a
   file without `--force`.
-- `evalproof pairwise BASELINE CANDIDATE --suite SUITE [--limit N] [--no-swap] [--no-cache] [--cache-only] [--markdown FILE] [--json FILE]`:
+- `evalproof pairwise BASELINE CANDIDATE --suite SUITE [--limit N] [--tags TAG,...] [--exclude-tags TAG,...] [--no-swap] [--no-cache] [--cache-only] [--markdown FILE] [--json FILE]`:
   ask the judge which of two outputs is better, in both orders unless `--no-swap`. Makes judge
   calls.
 <!-- evalproof:end -->

@@ -1,12 +1,12 @@
 ---
-description: Run the evalproof gate in GitHub Actions with the composite action, or in GitLab CI with a generated include file, in keyless, api-key or CLI-auth mode.
+description: Run the evalproof gate in GitHub Actions with the composite action, in GitLab CI with a generated include file or in Bitbucket Pipelines, in keyless, api-key or CLI-auth mode, and check the run file before every push with a git hook.
 ---
 
 # In CI
 
 The composite action runs `compare --gate`, appends the report to the job summary, and
-fails the job on exit codes 1, 3 or 4. This page is for anyone wiring the gate into GitHub Actions
-or GitLab CI.
+fails the job on exit codes 1, 3 or 4. This page is for anyone wiring the gate into GitHub Actions,
+GitLab CI or Bitbucket Pipelines, or checking the committed run file before every push.
 
 ## The action
 
@@ -158,6 +158,89 @@ The job writes a JUnit report, `evalproof-junit.xml`, and GitLab shows it in the
 test summary. The artifact is kept for a week, and it is saved when the gate fails, which is the
 report you want to read. What the report holds, and how to use it in Jenkins or Azure DevOps:
 [JUnit reports](../reference/junit.md).
+
+## Bitbucket Pipelines
+
+!!! note "Experimental"
+
+    `init --platform bitbucket` is experimental, like `--platform gitlab`: the file it writes can
+    change in a minor release ([Versioning](../about/versioning.md)).
+
+`evalproof init --platform bitbucket` writes `bitbucket-pipelines.yml`. Bitbucket has no way to
+include a file from the repository, so the pipeline is the file itself. `init` never edits a
+`bitbucket-pipelines.yml` that someone else wrote, and `--force` does not change that: it writes
+`evals/bitbucket-pipelines.snippet.yml` instead and prints a line telling you to merge it. The
+comment at the top of the snippet says where each part goes. A `bitbucket-pipelines.yml` that
+`init` wrote itself follows the usual rule: kept, or replaced with `--force`.
+
+```bash title="Terminal"
+evalproof init --platform bitbucket                    # keyless
+evalproof init --platform bitbucket --ci api-key --judge anthropic:claude-haiku-5-5
+```
+
+Turn Pipelines on for the repository (Repository settings, Pipelines) if you have not.
+
+The pull-request pipeline is under `pipelines: pull-requests: '**':`, so it starts for every pull
+request, and its single step compares against the file `evals/runs/latest.json` on the
+destination branch. The step runs in `python:3.13-slim`, installs git when the image has none, and
+installs the evalproof release that wrote the file. The file sets `clone: depth: full` because the
+destination branch has to be in the clone, and Bitbucket clones the last 50 commits by default.
+
+* **Keyless.** The step needs no variable and makes no model call. It verifies the committed run
+  file, then gates it against the destination branch, and warns when files in `EVALPROOF_WATCH`
+  changed but the run file did not. The file has no `branches` section: with no pull request
+  there is no destination branch to compare with.
+* **API key.** The step runs the suite with a key kept in a repository variable. Add a variable
+  named after the judge's key (`ANTHROPIC_API_KEY` for `anthropic:`) under Repository settings,
+  Pipelines, Repository variables, and mark it Secured. Responses are cached in
+  `evals/.evalproof/cache` through a cache defined under `definitions: caches:`. A second step,
+  under `branches: main:`, runs the suite on every push to `main` and keeps the run as the
+  artifact `evalproof-run.json`; download it and commit it as `evals/runs/latest.json` to move
+  the baseline. Change `main` to your default branch, or delete the step to run nothing there.
+  Bitbucket expires artifacts after 14 days.
+* **Fork pull requests.** Bitbucket starts no pipeline for a pull request from a fork, so the key
+  never reaches one and nothing runs for it.
+* **Coding-agent CLI judges.** `--platform bitbucket --ci api-key` refuses a judge that is a
+  Claude Code or Codex CLI, because the image has no Node to install the CLI with, and so refuses
+  `--cli-auth oauth-token` as well. Use a hosted API target, or `--ci keyless`.
+
+The file relies on variables Bitbucket sets for every step: `BITBUCKET_PR_DESTINATION_BRANCH`
+(the branch the pull request targets, set in pull-request pipelines only) and, in the comments,
+`BITBUCKET_PR_ID`, `BITBUCKET_BRANCH` and `BITBUCKET_CLONE_DIR`. Their definitions are in
+Atlassian's [variables and secrets](https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/)
+page, and the rule that pull-request pipelines are not started for forks is in
+[pipeline start conditions](https://support.atlassian.com/bitbucket-cloud/docs/pipeline-start-conditions/).
+The pipeline writes no JUnit report; add `--junit FILE` to the `compare` line if a tool of yours
+reads one ([JUnit reports](../reference/junit.md)).
+
+## Check before every push
+
+`evalproof hook install` writes a git `pre-push` hook that runs
+[`evalproof verify`](../reference/commands.md#evalproof-verify) on the committed run file. It makes
+no model call. A run file that no longer matches the suite or its
+dataset (an edited case, a changed prompt, a run made with `--limit`) stops the push before CI
+would have, and the message says how to refresh it.
+
+```bash title="Terminal"
+evalproof hook install                      # evals/suite.yaml and evals/runs/latest.json
+evalproof hook install --suite evals/support/suite.yaml --run evals/support/runs/latest.json
+evalproof hook uninstall
+```
+
+* **Skipping it.** `git push --no-verify` skips the hook once. The hook skips itself, with a
+  message and without stopping the push, when the suite or the run file does not exist, or when
+  neither `evalproof` nor `uvx` is available.
+* **Your own hook.** `install` replaces only a hook that starts with its marker line. A
+  `pre-push` hook you wrote is refused unless you pass `--force`; to keep it, add
+  `evalproof verify evals/runs/latest.json evals/suite.yaml` to it yourself. `uninstall` removes
+  only a hook that has the marker.
+* **Where it goes.** `.git/hooks`, or the folder `core.hooksPath` names; linked worktrees share
+  it. A hook lives in the clone and is not committed, so each clone installs its own.
+* **Runs made with a tag filter.** A run made with `run --tags` verifies against the cases that
+  filter selects. Do not commit one as `latest.json`: the gate would then compare only the cases both runs hold, and warns that the filters differ.
+
+The hook is the same check CI's keyless mode starts with, run earlier. Command reference:
+[`evalproof hook`](../reference/commands.md#evalproof-hook).
 
 ## This repository's own CI
 
