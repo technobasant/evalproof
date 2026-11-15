@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-11-15
+
 ### Added
 
 - `evalproof init` adds an evalproof section to the repository's `AGENTS.md`, so any coding agent
@@ -27,6 +29,8 @@ outside them are stable.
 ### Changed
 
 - The skill points to the `AGENTS.md` section for every task other than checking a change.
+- The npm package is published by the release workflow through npm trusted publishing, with a
+  provenance statement, instead of by hand.
 
 ## [1.0.0] — 2026-11-15
 
@@ -810,7 +814,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/technobasant/evalproof/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/technobasant/evalproof/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/technobasant/evalproof/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/technobasant/evalproof/compare/v0.7.0...v0.7.1

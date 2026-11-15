@@ -57,14 +57,14 @@ dependencies (httpx, numpy, pydantic, PyYAML); no vendor SDK, no optional extras
 
 ```bash
 uvx evalproof --version
-uvx evalproof@1.0.0 init          # pin a version
+uvx evalproof@1.1.0 init          # pin a version
 ```
 
 **Install the CLI** on your `PATH`, isolated from your projects:
 
 ```bash
 uv tool install evalproof         # or: pipx install evalproof
-evalproof --version               # evalproof 1.0.0
+evalproof --version               # evalproof 1.1.0
 ```
 
 **Add it to a project**, to call it from Python or pin it with the project's other dev tools:
@@ -84,7 +84,7 @@ that changed.
 [Docker](https://basantbhattarai.com.np/evalproof/getting-started/install/#docker)).
 
 **In GitHub Actions**, no install step is needed: the composite action
-`technobasant/evalproof@v1.0.0` runs the evalproof of the tag you pin, and `pr-comment: "true"`
+`technobasant/evalproof@v1.1.0` runs the evalproof of the tag you pin, and `pr-comment: "true"`
 posts the report as a pull request comment. **In GitLab CI**, `evalproof init --platform gitlab`
 writes a file you include from `.gitlab-ci.yml`
 ([In CI](https://basantbhattarai.com.np/evalproof/guides/ci/)).

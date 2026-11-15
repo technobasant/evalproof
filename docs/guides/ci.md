@@ -11,7 +11,7 @@ or GitLab CI.
 ## The action
 
 ```yaml title=".github/workflows/evalproof.yml"
-- uses: technobasant/evalproof@v1.0.0
+- uses: technobasant/evalproof@v1.1.0
   with:
     baseline: eval/baseline.json     # produced on main, e.g. as a build artifact
     candidate: eval/candidate.json   # produced on this branch
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: technobasant/evalproof@v1.0.0
+      - uses: technobasant/evalproof@v1.1.0
         with:
           baseline: eval/baseline.json
           candidate: eval/candidate.json
