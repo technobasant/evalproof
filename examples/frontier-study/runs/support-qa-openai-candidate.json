@@ -1,0 +1,1538 @@
+{
+  "info": {
+    "suite": "support-qa-frontier",
+    "system": "OpenAI GPT-6 Astra (medium effort) + friendly prompt",
+    "dataset_path": "support-qa.sample.jsonl",
+    "dataset_hash": "03e03610fbf641ca",
+    "started_at": "2026-11-15T05:02:10+00:00",
+    "finished_at": "2026-11-15T05:02:10+00:00",
+    "wall_time_s": 0.013,
+    "evalproof_version": "0.8.0",
+    "seed": 0,
+    "environment": {
+      "python": "3.13.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "machine": "arm64",
+      "processor": "arm",
+      "system_target": "codex:gpt-6-astra",
+      "system_model_resolved": "gpt-6-astra"
+    },
+    "suite_hash": "cf84478230aac1cf",
+    "variant": "openai-candidate",
+    "trials": 1
+  },
+  "results": [
+    {
+      "case_id": "q01",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Quillfox Plus costs **$6 per user per month** billed monthly, or **$60 per user per year** billed annually—equivalent to **$5 per month**.",
+        "retrieved": [],
+        "latency_ms": 6865.782750071958,
+        "tokens_in": 9107,
+        "tokens_out": 42,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "67eb547b89e75411",
+      "content_hash": "5a49db17f26494b9",
+      "trial": 0
+    },
+    {
+      "case_id": "q03",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Team costs **$11 per user per month** billed monthly, or **$110 per user per year** billed annually (about $9.17/month). There’s a **3-seat minimum**.",
+        "retrieved": [],
+        "latency_ms": 7498.053375049494,
+        "tokens_in": 9101,
+        "tokens_out": 45,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "106cc7e084ab50d9",
+      "content_hash": "78c3f5ca6e79e3bb",
+      "trial": 0
+    },
+    {
+      "case_id": "q05",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Enterprise has **custom pricing** with a **minimum of 50 seats**. The cost depends on your quote; there’s no fixed published per-user price.",
+        "retrieved": [],
+        "latency_ms": 6813.754874980077,
+        "tokens_in": 9099,
+        "tokens_out": 36,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6eca3d46d7114518",
+      "content_hash": "ea35bfa950de1e98",
+      "trial": 0
+    },
+    {
+      "case_id": "q07",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Plus costs $72 per year when paid monthly ($6 × 12), versus $60 annually. One user saves **$12 per year** by paying annually.",
+        "retrieved": [],
+        "latency_ms": 6882.7432920224965,
+        "tokens_in": 9109,
+        "tokens_out": 37,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "c08dafce2ba94216",
+      "content_hash": "916f29dfc125e161",
+      "trial": 0
+    },
+    {
+      "case_id": "q09",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Yes! Nonprofits get **40% off Quillfox’s Team plan**. No other nonprofit discounts are available.",
+        "retrieved": [],
+        "latency_ms": 6651.814667042345,
+        "tokens_in": 9096,
+        "tokens_out": 28,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "b61c54ad2598cd67",
+      "content_hash": "4eabc81962627857",
+      "trial": 0
+    },
+    {
+      "case_id": "q11",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Team plan requires a minimum of **3 seats**.",
+        "retrieved": [],
+        "latency_ms": 7161.3530840259045,
+        "tokens_in": 9100,
+        "tokens_out": 16,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "f1e73a977c390561",
+      "content_hash": "b025633b400f6c27",
+      "trial": 0
+    },
+    {
+      "case_id": "q13",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Free plan includes **100 MB of storage**.",
+        "retrieved": [],
+        "latency_ms": 5521.955250063911,
+        "tokens_in": 9097,
+        "tokens_out": 15,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "23f5be3f456474b3",
+      "content_hash": "e455ce6ca48bb765",
+      "trial": 0
+    },
+    {
+      "case_id": "q15",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Each Team user gets **50 GB of storage**.",
+        "retrieved": [],
+        "latency_ms": 5790.268999990076,
+        "tokens_in": 9097,
+        "tokens_out": 15,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d10c12d850d25a39",
+      "content_hash": "5c6732414212549b",
+      "trial": 0
+    },
+    {
+      "case_id": "q17",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Free plan keeps version history for **7 days**.",
+        "retrieved": [],
+        "latency_ms": 7360.207041958347,
+        "tokens_in": 9101,
+        "tokens_out": 16,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6f3650f36b0c294a",
+      "content_hash": "4f21d09f39ea3d92",
+      "trial": 0
+    },
+    {
+      "case_id": "q19",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Team keeps **365 days of version history**, so you can restore any earlier version of a note within that window.",
+        "retrieved": [],
+        "latency_ms": 6646.203374955803,
+        "tokens_in": 9101,
+        "tokens_out": 27,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "7fae881d6e958851",
+      "content_hash": "5135f7b92583a991",
+      "trial": 0
+    },
+    {
+      "case_id": "q21",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "**Team** includes SAML single sign-on (SSO). It costs $11 per user/month billed monthly, or $110 per user/year billed annually, with a minimum of 3 seats.",
+        "retrieved": [],
+        "latency_ms": 4945.717375027016,
+        "tokens_in": 9096,
+        "tokens_out": 44,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "0af4cf777ea86718",
+      "content_hash": "6567eb9bd4cb04b8",
+      "trial": 0
+    },
+    {
+      "case_id": "q23",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Yes! Quillfox Enterprise includes audit log export.",
+        "retrieved": [],
+        "latency_ms": 6102.670582942665,
+        "tokens_in": 9097,
+        "tokens_out": 15,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d5035b8ef95286cf",
+      "content_hash": "1132a4442d282928",
+      "trial": 0
+    },
+    {
+      "case_id": "q25",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Yes! The Free plan includes **7 days of version history**, so you can restore earlier versions of a note within that window.",
+        "retrieved": [],
+        "latency_ms": 6594.845875049941,
+        "tokens_in": 9098,
+        "tokens_out": 30,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "351971d24950a57c",
+      "content_hash": "27b6acbf93a6a023",
+      "trial": 0
+    },
+    {
+      "case_id": "q27",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "No! You can start a 21-day free trial of Plus or Team without a credit card.",
+        "retrieved": [],
+        "latency_ms": 9261.363958008587,
+        "tokens_in": 9103,
+        "tokens_out": 24,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "015515612eef8ae3",
+      "content_hash": "cf825058b0f2bf4d",
+      "trial": 0
+    },
+    {
+      "case_id": "q29",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "Yes! Annual plans are eligible for a **full refund within 30 days of purchase**. Contact email support to request your refund.",
+        "retrieved": [],
+        "latency_ms": 8599.586084019393,
+        "tokens_in": 9100,
+        "tokens_out": 31,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "81e007e465182206",
+      "content_hash": "402136888065634f",
+      "trial": 0
+    },
+    {
+      "case_id": "q31",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "Your monthly plan stays active until the end of your current billing period, even if you cancel earlier. Monthly payments aren’t refundable.",
+        "retrieved": [],
+        "latency_ms": 5537.357332999818,
+        "tokens_in": 9103,
+        "tokens_out": 30,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "77da989e622b1671",
+      "content_hash": "086c0aff2277bee6",
+      "trial": 0
+    },
+    {
+      "case_id": "q33",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "Bank transfer is available only on Enterprise. On the Team plan, you can pay by credit or debit card, or PayPal.",
+        "retrieved": [],
+        "latency_ms": 4948.891583015211,
+        "tokens_in": 9103,
+        "tokens_out": 30,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "8c5ae27d7fa7eaac",
+      "content_hash": "2b4015f13c7d9c38",
+      "trial": 0
+    },
+    {
+      "case_id": "q35",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "Invoices are emailed on the 1st of each month.",
+        "retrieved": [],
+        "latency_ms": 7901.824209024198,
+        "tokens_in": 9093,
+        "tokens_out": 16,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "98c53c5518b2df7e",
+      "content_hash": "9e9f9ab6c86b0e3d",
+      "trial": 0
+    },
+    {
+      "case_id": "q37",
+      "tags": [
+        "limits"
+      ],
+      "output": {
+        "output": "The maximum attachment size on Plus is **25 MB per attachment**.",
+        "retrieved": [],
+        "latency_ms": 5493.507583043538,
+        "tokens_in": 9096,
+        "tokens_out": 18,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "ba3e9c28807ef878",
+      "content_hash": "c8f3e5f0a6c2e531",
+      "trial": 0
+    },
+    {
+      "case_id": "q39",
+      "tags": [
+        "limits"
+      ],
+      "output": {
+        "output": "One notebook can hold up to **5,000 notes**.",
+        "retrieved": [],
+        "latency_ms": 5492.374999914318,
+        "tokens_in": 9098,
+        "tokens_out": 17,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "a6aca0ac3e4203e8",
+      "content_hash": "d1ab568211cc4ecf",
+      "trial": 0
+    },
+    {
+      "case_id": "q41",
+      "tags": [
+        "limits"
+      ],
+      "output": {
+        "output": "If you downgrade to Free and exceed its limits, your extra notes become **read-only—nothing is deleted**.\n\nFree includes 1 user, 3 notebooks, and 100 MB of storage.",
+        "retrieved": [],
+        "latency_ms": 5907.350625027902,
+        "tokens_in": 9106,
+        "tokens_out": 44,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "27dc0b513238207a",
+      "content_hash": "499b69f3f871f9d2",
+      "trial": 0
+    },
+    {
+      "case_id": "q43",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "Quillfox supports **macOS 13 and later**.",
+        "retrieved": [],
+        "latency_ms": 5579.437833046541,
+        "tokens_in": 9095,
+        "tokens_out": 17,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "0a42bb1b5036dc5d",
+      "content_hash": "227da897a4c3ce0d",
+      "trial": 0
+    },
+    {
+      "case_id": "q45",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "Quillfox requires **Android 12 or later**.",
+        "retrieved": [],
+        "latency_ms": 8617.769917007536,
+        "tokens_in": 9097,
+        "tokens_out": 16,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d3f818011bc78160",
+      "content_hash": "8ed7b7862443cc25",
+      "trial": 0
+    },
+    {
+      "case_id": "q47",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "No—the Quillfox web app requires an internet connection. For offline editing, use the desktop or mobile apps; your changes sync within 5 seconds once you’re back online.",
+        "retrieved": [],
+        "latency_ms": 6038.483917014673,
+        "tokens_in": 9095,
+        "tokens_out": 40,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "df77724a8830f51e",
+      "content_hash": "5b0bf8e567c3cc1f",
+      "trial": 0
+    },
+    {
+      "case_id": "q49",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "Changes sync between devices within **5 seconds when online**. Desktop and mobile apps also support offline editing; the web app requires a connection.",
+        "retrieved": [],
+        "latency_ms": 6418.5258749639615,
+        "tokens_in": 9098,
+        "tokens_out": 32,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "ddead9335f9f680f",
+      "content_hash": "37aa73a51e98b1ae",
+      "trial": 0
+    },
+    {
+      "case_id": "q51",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "Yes! Quillfox supports screen readers on all platforms: Windows, macOS, iOS, Android, and the web.",
+        "retrieved": [],
+        "latency_ms": 6833.58133409638,
+        "tokens_in": 9101,
+        "tokens_out": 30,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "66dbe233f832a561",
+      "content_hash": "51b1d4f52700f926",
+      "trial": 0
+    },
+    {
+      "case_id": "q53",
+      "tags": [
+        "security"
+      ],
+      "output": {
+        "output": "Quillfox encrypts your data at rest using **AES-256 encryption**.",
+        "retrieved": [],
+        "latency_ms": 5987.7222089562565,
+        "tokens_in": 9093,
+        "tokens_out": 21,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "c4b2d0d064f0792b",
+      "content_hash": "95665b0637357ab9",
+      "trial": 0
+    },
+    {
+      "case_id": "q55",
+      "tags": [
+        "security"
+      ],
+      "output": {
+        "output": "No—Quillfox supports two-factor authentication through an authenticator app or a security key, but not SMS codes.",
+        "retrieved": [],
+        "latency_ms": 5087.02741691377,
+        "tokens_in": 9100,
+        "tokens_out": 28,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "8bec9e7357b05fbd",
+      "content_hash": "c1f6024a2677a6e0",
+      "trial": 0
+    },
+    {
+      "case_id": "q57",
+      "tags": [
+        "security"
+      ],
+      "output": {
+        "output": "Quillfox hosts data in **Frankfurt (EU) or Virginia (US)**. Your region is chosen at signup and can’t be changed later.\n\nI can’t see your account’s selected region.",
+        "retrieved": [],
+        "latency_ms": 6170.68087507505,
+        "tokens_in": 9094,
+        "tokens_out": 45,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "bf1ce9c091d581e3",
+      "content_hash": "5ffaf4d3769bc2a6",
+      "trial": 0
+    },
+    {
+      "case_id": "q59",
+      "tags": [
+        "security"
+      ],
+      "output": {
+        "output": "A deleted Quillfox account can be recovered for **14 days** after deletion. It is permanently erased within 30 days.",
+        "retrieved": [],
+        "latency_ms": 6552.869791048579,
+        "tokens_in": 9099,
+        "tokens_out": 30,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "04439e934e2882a3",
+      "content_hash": "67db6b8c9098d773",
+      "trial": 0
+    },
+    {
+      "case_id": "q61",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "Quillfox supports exporting notes to **Markdown, PDF, and HTML**.",
+        "retrieved": [],
+        "latency_ms": 5502.978959004395,
+        "tokens_in": 9092,
+        "tokens_out": 20,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "4103e42267b5c315",
+      "content_hash": "bdd76c3997430760",
+      "trial": 0
+    },
+    {
+      "case_id": "q63",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "The REST API is included on **Team and Enterprise**, with a limit of **600 requests per minute per workspace**.",
+        "retrieved": [],
+        "latency_ms": 5889.434208045714,
+        "tokens_in": 9101,
+        "tokens_out": 28,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "7a69cbf1fabb9259",
+      "content_hash": "020b204e98565688",
+      "trial": 0
+    },
+    {
+      "case_id": "q65",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "Quillfox integrates with **Slack, Google Drive, and GitHub**. Microsoft Teams isn’t supported yet.",
+        "retrieved": [],
+        "latency_ms": 6704.43424989935,
+        "tokens_in": 9099,
+        "tokens_out": 27,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "8012f8c8739e42c6",
+      "content_hash": "3ee5fa36d2f525b6",
+      "trial": 0
+    },
+    {
+      "case_id": "q67",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "Quillfox has **40 built-in templates**.",
+        "retrieved": [],
+        "latency_ms": 4382.741375011392,
+        "tokens_in": 9098,
+        "tokens_out": 15,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "82e954f554341135",
+      "content_hash": "30dfbc31e4a6f0bf",
+      "trial": 0
+    },
+    {
+      "case_id": "q69",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "Yes! You can restore any earlier version of a note within your plan’s version history window:\n\n- **Free:** 7 days\n- **Plus:** 90 days\n- **Team:** 365 days\n- **Enterprise:** Unlimited version history",
+        "retrieved": [],
+        "latency_ms": 6478.072999976575,
+        "tokens_in": 9100,
+        "tokens_out": 54,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "e796399efddbdc77",
+      "content_hash": "d6487c931af2e45f",
+      "trial": 0
+    },
+    {
+      "case_id": "q71",
+      "tags": [
+        "support"
+      ],
+      "output": {
+        "output": "On Plus, email support replies within **1 business day**.",
+        "retrieved": [],
+        "latency_ms": 7622.7437920169905,
+        "tokens_in": 9096,
+        "tokens_out": 17,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "1101f5836797d09d",
+      "content_hash": "cba1cf4a737a986e",
+      "trial": 0
+    },
+    {
+      "case_id": "q73",
+      "tags": [
+        "support"
+      ],
+      "output": {
+        "output": "Live chat is included on **Team and Enterprise**, Monday–Friday, **08:00–18:00 CET**.",
+        "retrieved": [],
+        "latency_ms": 5895.468708011322,
+        "tokens_in": 9096,
+        "tokens_out": 29,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "e628bf5207cff76b",
+      "content_hash": "7bd24141ad45e74f",
+      "trial": 0
+    },
+    {
+      "case_id": "q75",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Enterprise storage per user isn’t specified in the plan details I have. Your dedicated support manager can confirm the storage allowance.",
+        "retrieved": [],
+        "latency_ms": 6355.620583985001,
+        "tokens_in": 9099,
+        "tokens_out": 28,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 0.0,
+          "passed": false,
+          "reason": "no accept pattern matched",
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "da0d3aac9861a67b",
+      "content_hash": "52ce3cfa16522882",
+      "trial": 0
+    },
+    {
+      "case_id": "q77",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Quillfox’s published policies don’t specify a guaranteed uptime SLA. If you need a contractual uptime commitment, contact support to confirm whether one is available for Enterprise.",
+        "retrieved": [],
+        "latency_ms": 6639.360375003889,
+        "tokens_in": 9099,
+        "tokens_out": 37,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "5e0504bb177bc7c1",
+      "content_hash": "eb6ea031a9000a30",
+      "trial": 0
+    },
+    {
+      "case_id": "q79",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Quillfox’s provided policies don’t specify a workspace guest limit. Guests can view shared notes without an account. For the exact invitation limit, email support is available on every plan.",
+        "retrieved": [],
+        "latency_ms": 6777.855750056915,
+        "tokens_in": 9100,
+        "tokens_out": 41,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 0.0,
+          "passed": false,
+          "reason": "no accept pattern matched",
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "307f8c3cb1d44e0c",
+      "content_hash": "d7fb68b1901ff3c6",
+      "trial": 0
+    },
+    {
+      "case_id": "q81",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "I don’t have a verified user count for Quillfox—the product information provided doesn’t include that figure.",
+        "retrieved": [],
+        "latency_ms": 6149.206292000599,
+        "tokens_in": 9098,
+        "tokens_out": 26,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 0.0,
+          "passed": false,
+          "reason": "no accept pattern matched",
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "a3d10d0a49463945",
+      "content_hash": "ada26f8bb3c10f00",
+      "trial": 0
+    },
+    {
+      "case_id": "q83",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Plus is priced in USD: **$6 per user/month** or **$60 per user/year**. There’s no listed euro price; the euro amount depends on your payment provider’s exchange rate and any conversion fees.",
+        "retrieved": [],
+        "latency_ms": 8651.213875040412,
+        "tokens_in": 9099,
+        "tokens_out": 49,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "e7bfa2388ad6a31a",
+      "content_hash": "f906ff5963afcd1d",
+      "trial": 0
+    }
+  ]
+}

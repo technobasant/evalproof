@@ -1,0 +1,1538 @@
+{
+  "info": {
+    "suite": "support-qa-frontier",
+    "system": "Google Gemini 4 Argon Medium + friendly prompt",
+    "dataset_path": "support-qa.sample.jsonl",
+    "dataset_hash": "03e03610fbf641ca",
+    "started_at": "2026-11-15T05:02:11+00:00",
+    "finished_at": "2026-11-15T05:02:11+00:00",
+    "wall_time_s": 0.014,
+    "evalproof_version": "0.8.0",
+    "seed": 0,
+    "environment": {
+      "python": "3.13.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "machine": "arm64",
+      "processor": "arm",
+      "system_target": "cursor:gemini-4-argon-medium",
+      "system_model_resolved": "gemini-4-argon-medium"
+    },
+    "suite_hash": "a2217984b48e263c",
+    "variant": "google-candidate",
+    "trials": 1
+  },
+  "results": [
+    {
+      "case_id": "q01",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help with that! \n\nQuillfox Plus costs **$6 per user per month** when billed monthly. If you prefer annual billing, it's **$60 per user per year** (which comes out to $5 per user per month!). \n\nWith the Plus plan, you get unlimited notebooks, 10 GB of storage per user, and 90 days of version history. Plus, you can try it out with a **21-day free trial**—no credit card needed! (And if you're a student with a valid `.edu` email address, you can actually get Plus free for a whole year!)\n\nLet me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 12550.178000004962,
+        "tokens_in": 8876,
+        "tokens_out": 152,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "67eb547b89e75411",
+      "content_hash": "5a49db17f26494b9",
+      "trial": 0
+    },
+    {
+      "case_id": "q03",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help!\n\nThe **Team plan** is **$11 per user per month** when billed monthly, or **$110 per user per year** when billed annually (which comes out to about $9.17 per user per month!). \n\nHere are a few helpful details to keep in mind for the Team plan:\n- **Minimum seats:** 3 seats\n- **Free trial:** You can try it out with a 21-day free trial—no credit card needed!\n- **Nonprofit discount:** Eligible nonprofits get 40% off the Team plan.\n\nLet me know if you have any other questions about getting your team set up on Quillfox!",
+        "retrieved": [],
+        "latency_ms": 12537.293499917723,
+        "tokens_in": 8885,
+        "tokens_out": 150,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "106cc7e084ab50d9",
+      "content_hash": "78c3f5ca6e79e3bb",
+      "trial": 0
+    },
+    {
+      "case_id": "q05",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Hi there! Great question! \n\nQuillfox's **Enterprise plan** uses **custom pricing** and requires a **minimum of 50 seats**. \n\nAlong with custom pricing, the Enterprise plan includes:\n- Unlimited version history\n- Audit log export\n- A dedicated support manager, plus access to phone support and live chat (Monday–Friday, 08:00–18:00 CET)\n- 200 MB maximum attachment size and REST API access (up to 600 requests per minute per workspace)\n- Payment via bank transfer (in addition to credit/debit cards and PayPal)\n\nIf you have fewer than 50 seats, our **Team plan** is $11 per user/month (billed monthly) or $110 per user/year (billed annually) with a minimum of 3 seats!\n\nLet me know if you have any other questions—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 13053.887542104349,
+        "tokens_in": 8886,
+        "tokens_out": 205,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 0.0,
+          "passed": false,
+          "reason": "rejected by '\\\\$\\\\s?\\\\d'",
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6eca3d46d7114518",
+      "content_hash": "ea35bfa950de1e98",
+      "trial": 0
+    },
+    {
+      "case_id": "q07",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "One user saves **$12 per year** on the Plus plan by paying annually instead of monthly! \n\nHere is how the math breaks down:\n- **Billed monthly:** $6/month × 12 months = **$72 per year**\n- **Billed annually:** **$60 per year**\n- **Total savings:** **$12 per year** (that's like getting two months free!)\n\nPlus also comes with a 21-day free trial (no credit card needed) and a 30-day full refund policy on annual plans, so it's super easy to try it out risk-free. Let me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 13349.864416057244,
+        "tokens_in": 8891,
+        "tokens_out": 149,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "c08dafce2ba94216",
+      "content_hash": "916f29dfc125e161",
+      "trial": 0
+    },
+    {
+      "case_id": "q09",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Yes! Nonprofits get a **40% discount on the Team plan**. \n\nFor reference, the standard price for the Team plan (which has a 3-seat minimum) is $11 per user per month when billed monthly, or $110 per user per year when billed annually. With the 40% nonprofit discount, that comes out to **$6.60 per user/month** (billed monthly) or **$66 per user/year** (billed annually).\n\nWith the Team plan, you also get a 21-day free trial (no credit card required), 50 GB of storage per user, 365 days of version history, an admin console, SAML SSO, and live chat/priority email support.\n\nLet me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 16566.014582989737,
+        "tokens_in": 8875,
+        "tokens_out": 175,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "b61c54ad2598cd67",
+      "content_hash": "4eabc81962627857",
+      "trial": 0
+    },
+    {
+      "case_id": "q11",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Hi there! The Team plan has a minimum of **3 seats**. \n\nIt's $11 per user per month when billed monthly, or $110 per user per year when billed annually—and if you need to grow later on, team admins can add extra seats at any time (prorated by the day)! You can also try it out with a 21-day free trial with no credit card required.\n\nLet me know if you have any other questions about the Team plan!",
+        "retrieved": [],
+        "latency_ms": 15717.588040977716,
+        "tokens_in": 8886,
+        "tokens_out": 109,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "f1e73a977c390561",
+      "content_hash": "b025633b400f6c27",
+      "trial": 0
+    },
+    {
+      "case_id": "q13",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The **Free** plan includes **100 MB** of storage! \n\nHere are a few other helpful details about what comes with the Free plan:\n- **Users:** 1 user\n- **Notebooks:** Up to 3 notebooks (with up to 5,000 notes per notebook)\n- **Attachment size limit:** Up to 25 MB per attachment\n- **Version history:** 7 days\n- **Public sharing:** Up to 5 publicly shared notes\n\nIf you ever find yourself needing more space, you can upgrade to **Plus** (10 GB per user) or **Team** (50 GB per user)—and both come with a 21-day free trial with no credit card required! Let me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 13345.901250024326,
+        "tokens_in": 8868,
+        "tokens_out": 169,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "23f5be3f456474b3",
+      "content_hash": "e455ce6ca48bb765",
+      "trial": 0
+    },
+    {
+      "case_id": "q15",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Each user on the **Team** plan gets **50 GB of storage**! \n\nAlong with that generous storage space, the Team plan also allows individual file attachments up to **200 MB** each, unlimited notebooks, and 365 days of version history. Let me know if you have any other questions about the Team plan!",
+        "retrieved": [],
+        "latency_ms": 16077.305207960308,
+        "tokens_in": 8888,
+        "tokens_out": 75,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d10c12d850d25a39",
+      "content_hash": "5c6732414212549b",
+      "trial": 0
+    },
+    {
+      "case_id": "q17",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help!\n\nOn the **Free** plan, version history is kept for **7 days**, and you can restore any earlier version of a note within that 7-day window.\n\nIf you ever need a longer window, our **Plus** plan keeps version history for **90 days**, **Team** keeps it for **365 days**, and **Enterprise** includes **unlimited** version history.\n\nLet me know if you have any other questions about Quillfox!",
+        "retrieved": [],
+        "latency_ms": 17884.006415959448,
+        "tokens_in": 8885,
+        "tokens_out": 106,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6f3650f36b0c294a",
+      "content_hash": "4f21d09f39ea3d92",
+      "trial": 0
+    },
+    {
+      "case_id": "q19",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "On the **Team** plan, version history is kept for **365 days**, and you can restore any earlier version of a note within that window!\n\nIf you ever need unlimited version history, that's available on our **Enterprise** plan (while **Free** includes 7 days and **Plus** includes 90 days). Let me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 12253.175208112225,
+        "tokens_in": 8878,
+        "tokens_out": 84,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "7fae881d6e958851",
+      "content_hash": "5135f7b92583a991",
+      "trial": 0
+    },
+    {
+      "case_id": "q21",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Single sign-on (SSO) through SAML is included starting on the **Team plan**! \n\nHere are the quick details for the **Team plan**:\n- **Price:** $11 per user/month (billed monthly) or $110 per user/year (billed annually), with a minimum of 3 seats.\n- **What else is included:** 50 GB of storage per user, 365 days of version history, an admin console, REST API access, and live chat support.\n- **Free trial:** You can try the Team plan free for **21 days** with no credit card required! (And if you're a nonprofit, you can get 40% off.)\n\nNeed 50 or more seats? Our **Enterprise plan** (custom pricing, 50-seat minimum) is also available and adds unlimited version history, audit log export, and a dedicated support manager. Note that our **Free** and **Plus** plans do not include SSO.\n\nLet me know if you have any questions about setting up SSO or starting a trial—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 15711.68279205449,
+        "tokens_in": 8874,
+        "tokens_out": 241,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "0af4cf777ea86718",
+      "content_hash": "6567eb9bd4cb04b8",
+      "trial": 0
+    },
+    {
+      "case_id": "q23",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Yes, it does! The **Enterprise** plan includes **audit log export**. \n\nAlong with audit log export, the Enterprise plan also includes:\n- Unlimited version history\n- A dedicated support manager\n- Phone, live chat, and email support\n- Custom pricing (with a minimum of 50 seats) and the option to pay via bank transfer\n\nLet me know if you have any other questions about Enterprise or anything else at Quillfox—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 12186.507208971307,
+        "tokens_in": 8881,
+        "tokens_out": 103,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d5035b8ef95286cf",
+      "content_hash": "1132a4442d282928",
+      "trial": 0
+    },
+    {
+      "case_id": "q25",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Yes, it sure does! The **Free plan** includes **7 days of version history**, and you can restore any earlier version of a note within that 7-day window.\n\nIf you ever need a longer lookback window, our paid plans offer even more:\n- **Plus:** 90 days of version history\n- **Team:** 365 days of version history\n- **Enterprise:** Unlimited version history\n\nLet me know if you have any other questions—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 11464.621333987452,
+        "tokens_in": 8882,
+        "tokens_out": 110,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "351971d24950a57c",
+      "content_hash": "27b6acbf93a6a023",
+      "trial": 0
+    },
+    {
+      "case_id": "q27",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "No, you don't need a credit card at all! Both our **Plus** and **Team** plans come with a **21-day free trial**, and you can jump right in and start exploring Quillfox without entering any payment information. \n\nLet me know if you have any questions about choosing between Plus and Team—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 14656.920042005368,
+        "tokens_in": 8880,
+        "tokens_out": 79,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "015515612eef8ae3",
+      "content_hash": "cf825058b0f2bf4d",
+      "trial": 0
+    },
+    {
+      "case_id": "q29",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "Yes, you can! Annual plans can be refunded in full within **30 days of purchase**. \n\n(Just as a helpful note, monthly plans aren't eligible for refunds, though they can be cancelled at any time and will remain active until the end of your current billing period.)\n\nLet me know if you'd like help with an annual plan refund or have any other questions!",
+        "retrieved": [],
+        "latency_ms": 11598.089084029198,
+        "tokens_in": 8879,
+        "tokens_out": 84,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "81e007e465182206",
+      "content_hash": "402136888065634f",
+      "trial": 0
+    },
+    {
+      "case_id": "q31",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help with this. \n\nYou can cancel a monthly plan at any time, and it will **stay active until the end of your current billing period** (note that monthly plans are not refunded). \n\nOnce your billing period ends and your account moves to the Free plan (1 user, 3 notebooks, 100 MB of storage, and 7 days of version history), none of your data is deleted—if you're over the Free plan limits, any extra notes simply become read-only.\n\nLet me know if there's anything else I can help you with!",
+        "retrieved": [],
+        "latency_ms": 12619.506792048924,
+        "tokens_in": 8882,
+        "tokens_out": 130,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "77da989e622b1671",
+      "content_hash": "086c0aff2277bee6",
+      "trial": 0
+    },
+    {
+      "case_id": "q33",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help with your question about payment methods.\n\nBank transfer isn't available on the Team plan—that payment option is only offered on our Enterprise plan (which has custom pricing and a minimum of 50 seats). \n\nFor the Team plan, you can pay using a **credit card**, **debit card**, or **PayPal**, and you can choose either monthly billing ($11 per user/month) or annual billing ($110 per user/year, with a minimum of 3 seats). You'll also receive emailed invoices on the 1st of each month!\n\nLet me know if you have any other questions about setting up your Team plan!",
+        "retrieved": [],
+        "latency_ms": 15435.324833029881,
+        "tokens_in": 8890,
+        "tokens_out": 146,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "8c5ae27d7fa7eaac",
+      "content_hash": "2b4015f13c7d9c38",
+      "trial": 0
+    },
+    {
+      "case_id": "q35",
+      "tags": [
+        "billing"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help with that!\n\nInvoices are emailed out on the **1st of each month**.\n\nPlease let me know if you have any other billing questions or if there's anything else I can assist you with!",
+        "retrieved": [],
+        "latency_ms": 11277.016334002838,
+        "tokens_in": 8879,
+        "tokens_out": 52,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "98c53c5518b2df7e",
+      "content_hash": "9e9f9ab6c86b0e3d",
+      "trial": 0
+    },
+    {
+      "case_id": "q37",
+      "tags": [
+        "limits"
+      ],
+      "output": {
+        "output": "On the **Plus** plan, the maximum attachment size is **25 MB**! (And you also get 10 GB of total storage per user to keep all your notes and files organized.)\n\nIf you ever need to upload larger files, our **Team** and **Enterprise** plans support attachments up to **200 MB** each. \n\nLet me know if you have any other questions about Plus—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 17374.856667011045,
+        "tokens_in": 8874,
+        "tokens_out": 97,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 0.0,
+          "passed": false,
+          "reason": "rejected by '\\\\b200\\\\s?MB\\\\b'",
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "ba3e9c28807ef878",
+      "content_hash": "c8f3e5f0a6c2e531",
+      "trial": 0
+    },
+    {
+      "case_id": "q39",
+      "tags": [
+        "limits"
+      ],
+      "output": {
+        "output": "A single notebook in Quillfox can hold up to **5,000 notes**! \n\nLet me know if you have any other questions about notebooks, storage, or our plans—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 13117.202832945623,
+        "tokens_in": 8882,
+        "tokens_out": 50,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "a6aca0ac3e4203e8",
+      "content_hash": "d1ab568211cc4ecf",
+      "trial": 0
+    },
+    {
+      "case_id": "q41",
+      "tags": [
+        "limits"
+      ],
+      "output": {
+        "output": "If you downgrade to the Free plan while you're over its limits (1 user, 3 notebooks, and 100 MB of storage), **nothing is deleted**! Any extra notes simply become **read-only**, so you'll still have full access to view and export them (to Markdown, PDF, or HTML) whenever you need. \n\nFor reference, on the Free plan you'll also have 7 days of version history, a 25 MB maximum attachment size, and the ability to share up to 5 notes publicly.\n\nLet me know if you have any other questions—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 17112.926749978215,
+        "tokens_in": 8892,
+        "tokens_out": 137,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "27dc0b513238207a",
+      "content_hash": "499b69f3f871f9d2",
+      "trial": 0
+    },
+    {
+      "case_id": "q43",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "Quillfox supports **macOS 13 or later** for the desktop app (which also includes offline editing support!). \n\nIf you happen to be on an older version of macOS, you can still access Quillfox directly through the web app whenever you have an internet connection. Let me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 14022.107915952802,
+        "tokens_in": 8876,
+        "tokens_out": 72,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "0a42bb1b5036dc5d",
+      "content_hash": "227da897a4c3ce0d",
+      "trial": 0
+    },
+    {
+      "case_id": "q45",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help! \n\nThe Quillfox mobile app requires **Android 12 or later**. \n\nJust a quick tip: if you happen to be on an older Android device, you can still access your notes anytime through the Quillfox web app in your mobile browser (as long as you have an internet connection). \n\nLet me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 12025.404207990505,
+        "tokens_in": 8891,
+        "tokens_out": 84,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d3f818011bc78160",
+      "content_hash": "8ed7b7862443cc25",
+      "trial": 0
+    },
+    {
+      "case_id": "q47",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "No, the Quillfox web app requires an internet connection to work. \n\nHowever, if you need to edit your notes offline, our desktop and mobile apps support offline editing! They are available for:\n- **Desktop:** Windows 11 and macOS 13 (or later)\n- **Mobile:** iOS 16 (or later) and Android 12 (or later)\n\nOnce you're back online, your changes will automatically sync within 5 seconds. Let me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 12827.55825005006,
+        "tokens_in": 8881,
+        "tokens_out": 115,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "df77724a8830f51e",
+      "content_hash": "5b0bf8e567c3cc1f",
+      "trial": 0
+    },
+    {
+      "case_id": "q49",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help!\n\nWhen you're online, changes sync between your devices **within 5 seconds**. \n\nIf you happen to go offline, our desktop and mobile apps also support offline editing—as soon as you reconnect to the internet, your changes will sync right up (note that the web app does require an active connection).\n\nLet me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 12624.261916964315,
+        "tokens_in": 8882,
+        "tokens_out": 86,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "ddead9335f9f680f",
+      "content_hash": "37aa73a51e98b1ae",
+      "trial": 0
+    },
+    {
+      "case_id": "q51",
+      "tags": [
+        "platforms"
+      ],
+      "output": {
+        "output": "Yes, it does! Screen reader support is available across all Quillfox platforms—including our apps for Windows 11, macOS 13 or later, iOS 16 or later, Android 12 or later, and the web. \n\nLet me know if you have any other questions about accessibility or getting started with Quillfox!",
+        "retrieved": [],
+        "latency_ms": 17329.32395907119,
+        "tokens_in": 8877,
+        "tokens_out": 76,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "66dbe233f832a561",
+      "content_hash": "51b1d4f52700f926",
+      "trial": 0
+    },
+    {
+      "case_id": "q53",
+      "tags": [
+        "security"
+      ],
+      "output": {
+        "output": "At Quillfox, your data is encrypted at rest using **AES-256** encryption! (And when your data is in transit, it's protected with **TLS 1.3**.) \n\nPlease let me know if you have any other questions about how we keep your notes secure!",
+        "retrieved": [],
+        "latency_ms": 15737.286790972576,
+        "tokens_in": 8881,
+        "tokens_out": 66,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "c4b2d0d064f0792b",
+      "content_hash": "95665b0637357ab9",
+      "trial": 0
+    },
+    {
+      "case_id": "q55",
+      "tags": [
+        "security"
+      ],
+      "output": {
+        "output": "Hi there! Thanks for reaching out!\n\nQuillfox does **not** support SMS codes for two-factor authentication. Instead, you can set up two-factor authentication using either an **authenticator app** or a **security key**. \n\nIf you are on our **Team** (or **Enterprise**) plan, we also support **single sign-on (SSO) through SAML**.\n\nLet me know if you have any other questions about keeping your account secure—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 19028.273125062697,
+        "tokens_in": 8884,
+        "tokens_out": 107,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "8bec9e7357b05fbd",
+      "content_hash": "c1f6024a2677a6e0",
+      "trial": 0
+    },
+    {
+      "case_id": "q57",
+      "tags": [
+        "security"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help with this!\n\nYour Quillfox data is hosted in either **Frankfurt (EU)** or **Virginia (US)**, depending on the region that was selected when your account was created. Please note that the hosting region is chosen at signup and cannot be changed afterward.\n\nTo keep your notes safe and secure, all of your data is encrypted at rest using **AES-256** and in transit using **TLS 1.3**.\n\nLet me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 21342.52949990332,
+        "tokens_in": 8885,
+        "tokens_out": 110,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "bf1ce9c091d581e3",
+      "content_hash": "5ffaf4d3769bc2a6",
+      "trial": 0
+    },
+    {
+      "case_id": "q59",
+      "tags": [
+        "security"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help with this!\n\nA deleted Quillfox account can be recovered for **14 days** after deletion. After that recovery window passes, the account and its data are permanently erased within **30 days** of deletion.\n\nLet me know if you need help recovering an account or have any other questions!",
+        "retrieved": [],
+        "latency_ms": 15809.744082973339,
+        "tokens_in": 8878,
+        "tokens_out": 71,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "04439e934e2882a3",
+      "content_hash": "67db6b8c9098d773",
+      "trial": 0
+    },
+    {
+      "case_id": "q61",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "You can export your notes from Quillfox in **Markdown**, **PDF**, and **HTML** formats! \n\nLet me know if you need any help with exporting your notes or have any other questions!",
+        "retrieved": [],
+        "latency_ms": 11016.571167041548,
+        "tokens_in": 8880,
+        "tokens_out": 45,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "4103e42267b5c315",
+      "content_hash": "bdd76c3997430760",
+      "trial": 0
+    },
+    {
+      "case_id": "q63",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help!\n\nThe REST API is included on our **Team** and **Enterprise** plans (and it's not available on the Free or Plus plans). \n\nHere are a few helpful details if you're looking to get started with it:\n- **Rate limit:** The REST API is limited to **600 requests per minute per workspace**.\n- **Team plan:** $11 per user/month billed monthly, or $110 per user/year billed annually (minimum 3 seats). You can also test it out with our **21-day free trial**—no credit card required!\n- **Enterprise plan:** Custom pricing (minimum 50 seats).\n\nLet me know if you have any other questions about our plans or the API!",
+        "retrieved": [],
+        "latency_ms": 16286.807999946177,
+        "tokens_in": 8876,
+        "tokens_out": 169,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 0.0,
+          "passed": false,
+          "reason": "rejected by \"\\\\bplus\\\\b(?!.{0,40}\\\\b(not|doesn't|does not|no)\\\\b)\"",
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "7a69cbf1fabb9259",
+      "content_hash": "020b204e98565688",
+      "trial": 0
+    },
+    {
+      "case_id": "q65",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "Quillfox integrates with **Slack**, **Google Drive**, and **GitHub**! (Please note that we don't have a Microsoft Teams integration yet.)\n\nIf you're looking to build custom connections or workflows, our **Team** and **Enterprise** plans also include access to a **REST API** (up to 600 requests per minute per workspace), as well as **single sign-on (SSO) through SAML**. Plus, on any plan, you can easily import notes from **Evernote** (`.enex` files) and **Markdown**, or export your notes to **Markdown**, **PDF**, and **HTML**.\n\nLet me know if you have any questions about setting these up—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 13949.96641704347,
+        "tokens_in": 8869,
+        "tokens_out": 159,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "8012f8c8739e42c6",
+      "content_hash": "3ee5fa36d2f525b6",
+      "trial": 0
+    },
+    {
+      "case_id": "q67",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "Quillfox comes with **40 built-in templates**! \n\nLet me know if you have any other questions about our features—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 10897.751249955036,
+        "tokens_in": 8873,
+        "tokens_out": 40,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "82e954f554341135",
+      "content_hash": "30dfbc31e4a6f0bf",
+      "trial": 0
+    },
+    {
+      "case_id": "q69",
+      "tags": [
+        "features"
+      ],
+      "output": {
+        "output": "Yes, you can! Any earlier version of a note can be restored as long as it falls within your plan's version history window. \n\nHere is how far back your version history goes depending on your plan:\n- **Free:** 7 days\n- **Plus:** 90 days\n- **Team:** 365 days\n- **Enterprise:** Unlimited version history\n\nLet me know if you have any questions about your plan or need help with anything else!",
+        "retrieved": [],
+        "latency_ms": 14554.528416018002,
+        "tokens_in": 8894,
+        "tokens_out": 102,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "e796399efddbdc77",
+      "content_hash": "d6487c931af2e45f",
+      "trial": 0
+    },
+    {
+      "case_id": "q71",
+      "tags": [
+        "support"
+      ],
+      "output": {
+        "output": "Hi there! On the **Plus** plan, you have access to email support, and our team replies within **1 business day**.\n\nFor comparison, if you ever need even faster turnaround times:\n- **Free:** Email replies within 2 business days.\n- **Team:** Email replies within 4 hours (during business hours), plus access to live chat Monday to Friday, 08:00–18:00 CET.\n- **Enterprise:** Includes live chat, phone support, and a dedicated support manager.\n\nLet me know if you have any other questions about Plus or our other plans—I'm happy to help!",
+        "retrieved": [],
+        "latency_ms": 13467.793666059151,
+        "tokens_in": 8882,
+        "tokens_out": 138,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "1101f5836797d09d",
+      "content_hash": "cba1cf4a737a986e",
+      "trial": 0
+    },
+    {
+      "case_id": "q73",
+      "tags": [
+        "support"
+      ],
+      "output": {
+        "output": "Hi there! Great question—happy to help!\n\nLive chat support is included on our **Team** and **Enterprise** plans. It's available Monday to Friday from 08:00–18:00 CET.\n\nHere’s a quick overview of how support works across all our plans:\n- **Free & Plus:** Include email support (with replies within 2 business days on Free, and 1 business day on Plus).\n- **Team:** Includes **live chat** plus priority email support (with replies within 4 hours during business hours).\n- **Enterprise:** Includes **live chat**, email support, phone support, and a dedicated support manager.\n\nIf you'd like to try out the Team plan first, you can start a 21-day free trial anytime with no credit card required! Let me know if you have any other questions.",
+        "retrieved": [],
+        "latency_ms": 18342.52499998547,
+        "tokens_in": 8870,
+        "tokens_out": 187,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "e628bf5207cff76b",
+      "content_hash": "7bd24141ad45e74f",
+      "trial": 0
+    },
+    {
+      "case_id": "q75",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Hi there! Happy to help with your question about Quillfox!\n\nOur product information doesn't actually list a specific per-user storage amount for the **Enterprise** plan. Here is what the Enterprise plan details do specify:\n\n* **Pricing & Seats:** Custom pricing with a minimum of 50 seats\n* **Attachment Limit:** Up to 200 MB per attachment\n* **Additional Enterprise Perks:** Unlimited version history, audit log export, a dedicated support manager, REST API access (600 requests/minute per workspace), bank transfer payment options, and phone & live chat support.\n\nFor comparison, the **Team** plan includes **50 GB of storage per user** (along with 10 GB per user on Plus, and 100 MB total on Free). Since Enterprise plans have custom terms, the exact per-user storage allocation would need to be confirmed directly with the sales or account team as part of your custom quote.\n\nPlease let me know if you have any other questions about Enterprise features or any of our other plans!",
+        "retrieved": [],
+        "latency_ms": 14208.137291949242,
+        "tokens_in": 8883,
+        "tokens_out": 223,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "da0d3aac9861a67b",
+      "content_hash": "52ce3cfa16522882",
+      "trial": 0
+    },
+    {
+      "case_id": "q77",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Hi there! Thanks for reaching out to Quillfox support!\n\nI don't have information in our product documentation regarding a specific uptime SLA or guarantee. \n\nHere is what I can share about how our service and support work across our plans:\n- **Sync & Offline Access:** Our desktop (Windows 11, macOS 13+) and mobile (iOS 16+, Android 12+) apps support full offline editing, and changes sync within 5 seconds once you're back online. (The web app requires an active connection.)\n- **Data Hosting & Security:** Your data is hosted in either Frankfurt (EU) or Virginia (US)—chosen at signup—and is encrypted at rest with AES-256 and in transit with TLS 1.3.\n- **Enterprise Support:** If your organization is looking into our **Enterprise** plan (custom pricing, 50-seat minimum), it includes a dedicated support manager and phone support, in addition to live chat (Monday–Friday, 08:00–18:00 CET) and email support.\n\nIf you need formal SLA terms for an Enterprise agreement, our sales team or a dedicated support manager would be the best contact to clarify if custom terms are available. Let me know if I can help answer anything else about Quillfox's plans or features!",
+        "retrieved": [],
+        "latency_ms": 21298.164875013754,
+        "tokens_in": 8881,
+        "tokens_out": 285,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "5e0504bb177bc7c1",
+      "content_hash": "eb6ea031a9000a30",
+      "trial": 0
+    },
+    {
+      "case_id": "q79",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Hi there! Thanks for reaching out to Quillfox support!\n\nI don't have the exact limit on the number of guests you can invite to a workspace in the information available to me right now. Here is what I can share about how guest access and sharing work in Quillfox:\n\n- **No account required for guests:** Guests can view shared notes without needing a Quillfox account.\n- **Public note sharing limit on Free:** If you are on the **Free** plan, you can share up to **5 notes** publicly.\n- **Paid plans & seats:** If you need full workspace members rather than view-only guests, **Team** plans require a minimum of 3 seats (and admins can add more seats anytime with daily prorated billing), while **Enterprise** starts at 50 seats.\n\nIf you need the exact cap on workspace guests for your plan, please reach out to our team via **email support** (available on all plans) or **live chat** (available on Team and Enterprise, Monday–Friday, 08:00–18:00 CET) so we can check that specific detail for you!",
+        "retrieved": [],
+        "latency_ms": 17959.304708987474,
+        "tokens_in": 8884,
+        "tokens_out": 242,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "307f8c3cb1d44e0c",
+      "content_hash": "d7fb68b1901ff3c6",
+      "trial": 0
+    },
+    {
+      "case_id": "q81",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Hi there! Thanks for reaching out! \n\nI don't have information on the total number of people currently using Quillfox, as user count statistics aren't included in our available product facts. \n\nHowever, if you're asking about how many people can use Quillfox on a specific plan, here is how our seat limits work:\n- **Free:** 1 user\n- **Plus:** Billed per user ($6/month or $60/year), suitable for individuals or multiple users\n- **Team:** Minimum of 3 seats ($11/user/month or $110/user/year), and admins can add more seats at any time\n- **Enterprise:** Minimum of 50 seats with custom pricing\n\nIf you have any questions about our plans, features, or starting a 21-day free trial (no credit card needed!), I'd be happy to help!",
+        "retrieved": [],
+        "latency_ms": 15973.485166905448,
+        "tokens_in": 8881,
+        "tokens_out": 195,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "a3d10d0a49463945",
+      "content_hash": "ada26f8bb3c10f00",
+      "trial": 0
+    },
+    {
+      "case_id": "q83",
+      "tags": [
+        "not-covered"
+      ],
+      "output": {
+        "output": "Hi there! Thanks for reaching out!\n\nOur Plus plan is priced in US dollars (USD):\n- **$6 USD** per user per month (when billed monthly)\n- **$60 USD** per user per year (when billed annually)\n\nWe don't have separate fixed pricing in euros (EUR) listed in our plan details—if you pay using a credit/debit card or PayPal from a euro-denominated account, the exact amount in euros will depend on your payment provider's exchange rate at the time of billing.\n\nPlus comes with unlimited notebooks, 10 GB of storage per user, and 90 days of version history, and you can also try it out with a **21-day free trial** (no credit card required!). \n\nLet me know if you have any other questions!",
+        "retrieved": [],
+        "latency_ms": 15507.762583903968,
+        "tokens_in": 8871,
+        "tokens_out": 176,
+        "cost_usd": 0.0,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "e7bfa2388ad6a31a",
+      "content_hash": "f906ff5963afcd1d",
+      "trial": 0
+    }
+  ]
+}

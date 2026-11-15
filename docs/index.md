@@ -141,4 +141,15 @@ questions, one Apple M5. Full method and every table in [Measurements](about/mea
 
 The other findings (correcting the judge's rate, reviewed labels, a reasoning judge) are in [Measurements](about/measurements.md).
 
+## On three frontier models
+
+A 42-case sample of the same support questions and 30 ticket-router cases on `claude-sonnet-5-5`,
+`gpt-6-astra` and `gemini-4-argon-medium`, 558 calls, no judge
+([Measurements, section 10](about/measurements.md#10-frontier-models-on-a-sample)).
+
+| Question | Measured |
+|---|---|
+| Did the answer key hold? | No: it failed 12 answers, all correct on reading, and alone showed a −7.1 pt drop from the "friendly" prompt on all three models. With the key reviewed, no regression was detected (42 cases) |
+| Do the answers repeat? | The wording changed between two runs in 17 to 29 of 42 support cases; the router gave the same label in all 90 case pairs |
+
 Documented version: **0.8.x**. This site tracks the latest release.
