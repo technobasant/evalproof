@@ -6,6 +6,10 @@ description: The JUnit XML that evalproof run --junit and evalproof compare --ga
 
 `--junit PATH` writes the result as JUnit XML, so GitLab, Jenkins, Azure DevOps and other CI systems show cases and gate checks as tests, with their own failure lists and history. This page is for anyone wiring evalproof into one of them. The report is an extra output: it changes no exit code ([Exit codes](exit-codes.md)).
 
+!!! warning "Experimental"
+
+    The JUnit report, including its test case names, is new in 1.0.0 and experimental: it can change in a minor release until it has been used in more projects. See [Versioning](../about/versioning.md#the-public-surface).
+
 Two commands write it.
 
 | Command | The report holds |

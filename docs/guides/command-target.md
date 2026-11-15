@@ -6,6 +6,10 @@ description: Test a system written in any language, such as Node.js, Go or a she
 
 This page is for anyone whose system is not Python and does not sit behind an HTTP endpoint. A `command:` target runs a program once for each case. The program reads the case as JSON on stdin and prints the answer. It can be written in Node.js, Go, Rust, Java or shell, or it can be a command-line tool you already have.
 
+!!! warning "Experimental"
+
+    The `command:` target's input and output is new in 1.0.0 and experimental: it can change in a minor release until it has been used in more projects. See [Versioning](../about/versioning.md#the-public-surface).
+
 ```yaml title="suite.yaml"
 system:
   target: "command:node eval/system.js --mode fast"

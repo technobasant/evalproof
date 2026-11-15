@@ -14,6 +14,10 @@ one minor release of deprecation warnings. Experimental features stay outside th
 [Upgrading](https://basantbhattarai.com.np/evalproof/about/upgrading/). Nothing from 0.8 is
 removed or renamed.
 
+These are experimental, outside that promise until they have been used in more projects: the
+`command:` target, `--junit`, the gate's `checks` list in `--json`, `init --platform gitlab`, the
+action's `pr-comment`, the npm launcher and the container image.
+
 ### Added
 
 - `--cache-only` on `run` and `pairwise`: every model call, the judge's included, is answered
