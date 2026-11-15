@@ -45,6 +45,7 @@ from evalproof.scan.walk import (
 )
 
 DRAFTS_OUT = "evals/drafts.jsonl"
+DEFAULT_MAX_DRAFTS = 30  # what ``evalproof draft --max-cases`` defaults to
 
 
 def _read(path: Path) -> str | None:
@@ -543,11 +544,13 @@ def _gaps(
     # -- a suite too small for its gate
     for s in suites:
         if s.cases is not None and s.cases < s.min_cases:
+            need = s.min_cases - s.cases
+            room = f" --max-cases {need}" if need > DEFAULT_MAX_DRAFTS else ""
             gaps.append(
                 Gap(
                     "few_cases",
                     f"{s.path} has {s.cases} case(s); its gate wants at least {s.min_cases}",
-                    f"{base} --gap few_cases --suite {shlex.quote(s.path)}",
+                    f"{base} --gap few_cases --suite {shlex.quote(s.path)} --per-gap {need}{room}",
                     s.path,
                     1,
                     {"suite": s.path, "cases": s.cases, "min_cases": s.min_cases},
