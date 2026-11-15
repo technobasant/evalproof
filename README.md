@@ -37,8 +37,15 @@ evalproof:
    run was made with this suite and covers the dataset as it is now;
 6. **tests agents** — asserts on the tools an agent called and what it said, across several
    turns, several builds of the same system and repeated trials, with adapters for ADK,
-   LangChain/LangGraph, the Claude Agent SDK and OpenAI Agents
-   ([Testing agents](https://basantbhattarai.com.np/evalproof/guides/testing-agents/)).
+   LangChain/LangGraph, the Claude Agent SDK, OpenAI Agents, LlamaIndex, CrewAI, Pydantic AI,
+   DSPy, Haystack, AutoGen and Semantic Kernel
+   ([Testing agents](https://basantbhattarai.com.np/evalproof/guides/testing-agents/));
+7. **finds what is not tested** — `scan` lists the model calls, agents and tools in a Python or
+   TypeScript repository that no suite reaches, and `draft` writes inputs for them, never
+   expected answers ([Find what is not tested](https://basantbhattarai.com.np/evalproof/guides/find-gaps/));
+8. **tests a system in any language** — a `command:` or HTTP target, and for TypeScript and
+   JavaScript the `evalproof` npm package's `runCommand` and `serve`
+   ([TypeScript and JavaScript](https://basantbhattarai.com.np/evalproof/guides/typescript/)).
 
 It is local-first: Ollama is the default, every major hosted provider is one `target:` line
 away ([Providers](https://basantbhattarai.com.np/evalproof/guides/providers/)), a logged-in Claude Code or Codex can be the judge with no API
@@ -50,6 +57,16 @@ Inspect, Braintrust, Langfuse, Phoenix or a Google ADK eval set can be turned in
 suite with `evalproof import-dataset auto FILE --out cases.jsonl --suite-out suite.yaml`, or when
 you set up with `evalproof init --from FILE`
 ([Import test cases](https://basantbhattarai.com.np/evalproof/guides/import-test-cases/)).
+
+## Who it is for
+
+Teams that ship an LLM feature, a RAG pipeline or an agent and change its prompt, model,
+retrieval or tools often. Use it when you need to know whether a change made answers worse
+before it merges, whether a cheaper model is good enough, whether the LLM judge you score with can
+be trusted, and which model calls and tools in the codebase no test covers. It suits a team that
+already writes test cases in another tool and wants a CI gate that does not fail on noise. It is
+not a tracing or monitoring service and does not watch production traffic; it scores runs of a
+suite, locally or in CI.
 
 ## Install
 
@@ -122,7 +139,9 @@ gate a prompt or model change in a pull request; choose between two models or pr
 whether your LLM judge can be trusted; use your Claude Code or Codex subscription as the judge; gate
 results you already have from another eval tool; check a retrieval or RAG change; hold latency and
 cost while you swap a model; gate in CI with no model calls and no secrets; test a non-LLM system
-the same way.
+the same way; start from test cases you already have in another tool; find the model calls, agents
+and tools no suite tests; test a TypeScript or JavaScript system; check the committed run before
+each push.
 
 ## Five-minute quickstart
 

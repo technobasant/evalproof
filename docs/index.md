@@ -89,13 +89,27 @@ is — the effect is worked through with a seeded simulation in
 4. **Gates CI** only when a drop is both larger than your tolerance *and* statistically significant, plus latency and cost budgets, with distinct exit codes.
 5. **Checks the run files it gates**: `verify` proves, with no model call, that a committed run was made with this suite and covers the dataset as it is now.
 6. **Tests agents**: asserts on the tools an agent called and what it said, across several turns, several builds of the same system and repeated trials, with adapters for ADK, LangChain/LangGraph, the Claude Agent SDK, OpenAI Agents, LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen and Semantic Kernel ([Testing agents](guides/testing-agents.md#testing-agents)).
+7. **Finds what is not tested**: `scan` lists the model calls, agents and tools in a Python or TypeScript repository that no suite reaches, and `draft` writes inputs for them, never expected answers ([Find what is not tested](guides/find-gaps.md)).
+8. **Tests a system in any language**: a `command:` or HTTP target, and for TypeScript and JavaScript the `evalproof` npm package's `runCommand` and `serve` ([TypeScript and JavaScript](guides/typescript.md)).
 
 It is local-first: Ollama is the default, every major hosted provider is one `target:` line
 away ([Providers](guides/providers.md#providers)), a logged-in Claude Code or Codex can be the judge with no API
 key, and every model call is cached by content so re-runs are free and reproducible. Results
 from promptfoo, Inspect, DeepEval, lm-eval, garak, Google ADK and Claude Code plugin evals can be
 [imported](guides/import.md#import-results-from-other-tools) and gated without re-running
-them, and a Google ADK eval set can be turned into a dataset.
+them, and the test cases you already have in promptfoo, DeepEval, Ragas, LangSmith, OpenAI Evals,
+Inspect, Braintrust, Langfuse, Phoenix or a Google ADK eval set can be turned into a dataset and a
+suite ([Import test cases](guides/import-test-cases.md)).
+
+## Who it is for
+
+Teams that ship an LLM feature, a RAG pipeline or an agent and change its prompt, model,
+retrieval or tools often. Use it when you need to know whether a change made answers worse
+before it merges, whether a cheaper model is good enough, whether the LLM judge you score with can
+be trusted, and which model calls and tools in the codebase no test covers. It suits a team that
+already writes test cases in another tool and wants a CI gate that does not fail on noise. It is
+not a tracing or monitoring service and does not watch production traffic; it scores runs of a
+suite, locally or in CI.
 
 ## Install in one line
 

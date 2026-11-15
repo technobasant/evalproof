@@ -19,6 +19,10 @@ writes a starting suite. This page is for anyone looking for the recipe that mat
 | Hold latency and cost while you swap a model | [Compare and gate](../reference/concepts.md#compare-and-gate) |
 | Test what an agent called and what it said | [Testing agents](../guides/testing-agents.md#testing-agents) |
 | Run each case several times | [Repeated trials](../guides/repeated-trials.md#repeated-trials) |
+| Start from test cases you already have in another tool | [Import test cases](../guides/import-test-cases.md) |
+| Find the model calls, agents and tools no suite tests | [Find what is not tested](../guides/find-gaps.md) |
+| Test a TypeScript or JavaScript system | [TypeScript and JavaScript](../guides/typescript.md) |
+| Check the committed run before each push, or run a subset of cases | [In CI](../guides/ci.md#in-ci) |
 
 ## Gate a prompt or model change in a pull request
 
@@ -105,6 +109,51 @@ Any Python function (`python:module:func`), HTTP
 endpoint or program in another language (`command:node eval/system.js`, see
 [Testing a system in any language](../guides/command-target.md)) can be the system, scored by deterministic scorers: a classifier, a router, a search
 service. The [offline example](quickstart.md#five-minute-quickstart) is a keyword router.
+
+## Start from test cases you already have in another tool
+
+Turn the cases written for promptfoo, DeepEval, Ragas, LangSmith, OpenAI Evals, Inspect,
+Braintrust, Langfuse or Phoenix, or a JSONL or CSV file, into a dataset and a suite that gates the
+scorer covering the most cases. `init --from FILE` does the same while setting up a repository
+([Import test cases](../guides/import-test-cases.md)):
+
+```bash title="Terminal"
+evalproof import-dataset auto promptfooconfig.yaml --out evals/cases.jsonl --suite-out evals/suite.yaml
+evalproof run evals/suite.yaml --out evals/runs/latest.json
+```
+
+## Find the model calls, agents and tools no suite tests
+
+`scan` reads a repository without running it or calling a model, and lists the model calls,
+agents and tools in Python and TypeScript that no suite reaches, the tools no check asserts on and
+the suites with few cases. `draft` writes inputs for those gaps, from your existing tests or from a
+model, tagged `draft`. It never writes an expected answer: that comes from your code, your
+documentation, your tests or a person ([Find what is not tested](../guides/find-gaps.md)):
+
+```bash title="Terminal"
+evalproof scan . --out scan.json
+evalproof draft --scan scan.json --out evals/drafts.jsonl --from-tests-only
+```
+
+## Test a TypeScript or JavaScript system
+
+The `evalproof` npm package is also a small library. `runCommand(handler)` turns an async
+function into a `command:` target and `serve(handler)` into an HTTP target. `fromVercelAI` and
+`fromLangChain` turn an AI SDK result or a LangChain.js agent's messages into a trace that the
+`checks` scorer reads. `evalproof init --node` writes a starting `evals/system.mjs`
+([TypeScript and JavaScript](../guides/typescript.md)):
+
+```bash title="Terminal"
+npm install --save-dev evalproof
+evalproof init --node
+```
+
+## Check the committed run before each push, or run a subset of cases
+
+`evalproof hook install` adds a git pre-push hook that runs `verify`, so a stale run file is
+caught before CI sees it. `run --tags` and `--exclude-tags` run part of a suite, and the gate
+refuses to compare two runs made with different filters
+([In CI](../guides/ci.md#in-ci)).
 
 ## Next steps
 
