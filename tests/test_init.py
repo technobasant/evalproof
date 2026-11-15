@@ -46,6 +46,7 @@ pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="fake CLIs are s
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = Path(".github/workflows/evalproof.yml")
 SKILLS = (".agents/skills/evalproof/SKILL.md", ".claude/skills/evalproof/SKILL.md")
+AGENTS_MD = "AGENTS.md"
 BASE_FILES = {"evals/suite.yaml", "evals/cases.jsonl", "evals/README.md", "evals/.gitignore"}
 
 CODEX_MODELS = {
@@ -116,7 +117,9 @@ def test_writes_the_expected_files_for_each_ci_mode(
     out_dir = tmp_path / "proj"
     code, out = run_init(out_dir, capsys, "--ci", ci)
     assert code == 0
-    expected = BASE_FILES | set(SKILLS) | ({WORKFLOW.as_posix()} if ci != "none" else set())
+    expected = (
+        BASE_FILES | set(SKILLS) | {AGENTS_MD} | ({WORKFLOW.as_posix()} if ci != "none" else set())
+    )
     assert files_under(out_dir) == expected
     for rel in expected:  # one line per file, in the order written
         assert f"  wrote          {rel}" in out
@@ -193,7 +196,9 @@ def test_a_second_run_keeps_every_file(
     code, out = run_init(tmp_path, capsys)
     assert code == 0
     assert "  wrote " not in out
-    assert out.count("kept (exists)") == len(before)
+    # AGENTS.md is merged, not kept: the second run finds its section already current.
+    assert out.count("kept (exists)") == len(before) - 1
+    assert "  unchanged      AGENTS.md" in out
     assert {p: (tmp_path / p).read_bytes() for p in files_under(tmp_path)} == before
 
 
@@ -236,14 +241,16 @@ def test_default_directory_is_the_working_directory(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     assert main(["init", "--ci", "none", "--no-skill"]) == 0
-    assert files_under(tmp_path) - {"bin/calls.log"} == BASE_FILES
+    assert files_under(tmp_path) - {"bin/calls.log"} == BASE_FILES | {AGENTS_MD}
 
 
 def test_no_skill_and_ci_none_skip_those_files(
     tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     run_init(tmp_path, capsys, "--no-skill", "--ci", "none")
-    assert files_under(tmp_path) == BASE_FILES
+    assert files_under(tmp_path) == BASE_FILES | {AGENTS_MD}
+    run_init(tmp_path / "bare", capsys, "--no-skill", "--ci", "none", "--no-agents-md")
+    assert files_under(tmp_path / "bare") == BASE_FILES
 
 
 # --- the skill ---------------------------------------------------------------------------
@@ -807,7 +814,7 @@ def test_gitlab_writes_its_own_file_and_no_github_workflow(
 ) -> None:
     code, out = run_init(tmp_path, capsys, "--platform", "gitlab", "--ci", ci)
     assert code == 0
-    expected = BASE_FILES | set(SKILLS) | ({GITLAB_FILE} if ci != "none" else set())
+    expected = BASE_FILES | set(SKILLS) | {AGENTS_MD} | ({GITLAB_FILE} if ci != "none" else set())
     assert files_under(tmp_path) == expected
     for path in files_under(tmp_path):
         assert "@@" not in (tmp_path / path).read_text(encoding="utf-8"), path

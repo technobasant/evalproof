@@ -27,8 +27,10 @@ Every `evalproof` subcommand, its arguments and every flag with its type and def
 
 Writes a starter suite, a CI workflow and an agent skill into a repository. It makes no model call. `--ci keyless` (the default) writes a workflow that compares committed run files; `--ci api-key` writes one that runs the suite with a secret; `--ci none` writes no workflow. `--platform github` (the default) writes `.github/workflows/evalproof.yml`; `--platform gitlab` writes `.gitlab-ci.evalproof.yml` and prints the two `include:` lines to add to your `.gitlab-ci.yml`, which `init` never edits. Files that already exist are kept unless you pass `--force`.
 
+It also adds an evalproof section to the repository's `AGENTS.md`, so any coding agent that reads that file knows how to use evalproof. That file is merged, never overwritten, with or without `--force`: a missing file is created, a file without the section gets it appended after one blank line, and a file that has it gets only the text between the `<!-- evalproof:begin -->` and `<!-- evalproof:end -->` markers replaced. Every byte outside the markers stays as it was, including the file's line endings. If the markers are damaged (one without the other, repeated, or in the wrong order), `init` stops with exit 2 and writes nothing. `--agent-files-only` writes the section and the skill and nothing else. [Coding agents](../guides/coding-agents.md) has the details.
+
 ```bash title="Terminal"
-evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab}] [--cli-auth {api-key,oauth-token}] [--no-skill] [--force]
+evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab}] [--cli-auth {api-key,oauth-token}] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]
 ```
 
 | Flag | Type | Default | What it does |
@@ -39,7 +41,9 @@ evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--pla
 | `--platform` | one of `github`, `gitlab` | `github` | where CI runs: `github` writes `.github/workflows/evalproof.yml`; `gitlab` writes `.gitlab-ci.evalproof.yml`, which you include from `.gitlab-ci.yml` (never edited). `gitlab` with `--ci api-key` refuses a coding-agent CLI judge ([In CI](../guides/ci.md#gitlab-ci)) |
 | `--cli-auth` | one of `api-key`, `oauth-token` | `api-key` | with `--ci api-key` and a coding-agent CLI judge, what the workflow passes the CLI: its API key (`api-key`), or `oauth-token`: `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, for `claude-code` in your own repository and CI only |
 | `--no-skill` | flag | off | do not write the agent skill |
-| `--force` | flag | off | overwrite files that already exist |
+| `--no-agents-md` | flag | off | do not add the evalproof section to `AGENTS.md` |
+| `--agent-files-only` | flag | off | experimental. Write only the agent files, the evalproof section of `AGENTS.md` and the skill: no suite and no CI workflow. It cannot be combined with `--judge`, `--ci`, `--platform` or `--cli-auth`, or with both `--no-agents-md` and `--no-skill` (exit 2). An existing skill copy is kept unless you pass `--force`, and a note says when a kept copy differs from this version |
+| `--force` | flag | off | overwrite files that already exist; `AGENTS.md` is the exception, see above |
 
 ```bash title="Example"
 evalproof init --judge claude-code:haiku

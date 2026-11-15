@@ -521,6 +521,8 @@ def cmd_init(args: argparse.Namespace) -> int:
         force=args.force,
         cli_auth=args.cli_auth,
         platform=args.platform,
+        agents_md=not args.no_agents_md,
+        agent_files_only=args.agent_files_only,
         emit=_say,
     )
 
@@ -684,7 +686,24 @@ def build_parser() -> argparse.ArgumentParser:
         "setup-token`, for claude-code in your own repository and CI only",
     )
     ini.add_argument("--no-skill", action="store_true", help="do not write the agent skill")
-    ini.add_argument("--force", action="store_true", help="overwrite files that already exist")
+    ini.add_argument(
+        "--no-agents-md",
+        action="store_true",
+        help="do not add the evalproof section to AGENTS.md",
+    )
+    ini.add_argument(
+        "--agent-files-only",
+        action="store_true",
+        help="write only the agent files (the evalproof section of AGENTS.md and the skill): no "
+        "suite and no CI workflow, so --judge, --ci, --platform and --cli-auth do not apply "
+        "(experimental)",
+    )
+    ini.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite files that already exist (AGENTS.md is never overwritten: only the text "
+        "between its evalproof markers is replaced)",
+    )
     ini.set_defaults(func=cmd_init)
 
     r = sub.add_parser("run", help="run a suite and write a run artifact")
