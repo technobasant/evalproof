@@ -959,10 +959,10 @@ def test_the_evals_readme_describes_the_gitlab_job(
 
 
 def test_a_bad_platform_is_rejected(tmp_path: Path) -> None:
-    with pytest.raises(ConfigError, match="--platform must be one of github, gitlab"):
-        init_project(tmp_path, platform="bitbucket")
+    with pytest.raises(ConfigError, match="--platform must be one of github, gitlab, bitbucket"):
+        init_project(tmp_path, platform="azure")
     with pytest.raises(SystemExit):
-        main(["init", "--dir", str(tmp_path), "--platform", "bitbucket"])
+        main(["init", "--dir", str(tmp_path), "--platform", "azure"])
     assert not any(tmp_path.iterdir())
 
 
@@ -1228,6 +1228,8 @@ def test_template_files_ship_as_package_data() -> None:
         "workflow-api-key.yml",
         "workflow-gitlab-keyless.yml",
         "workflow-gitlab-api-key.yml",
+        "workflow-bitbucket-keyless.yml",
+        "workflow-bitbucket-api-key.yml",
         "SKILL.md",
     ):
         assert template(name).strip()

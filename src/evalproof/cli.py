@@ -764,7 +764,9 @@ def build_parser() -> argparse.ArgumentParser:
         choices=PLATFORMS,
         default="github",
         help="where CI runs: github writes .github/workflows/evalproof.yml (default); gitlab "
-        "writes .gitlab-ci.evalproof.yml, which you include from .gitlab-ci.yml (never edited)",
+        "writes .gitlab-ci.evalproof.yml, which you include from .gitlab-ci.yml (never edited); "
+        "bitbucket writes bitbucket-pipelines.yml, or evals/bitbucket-pipelines.snippet.yml "
+        "when that file exists",
     )
     ini.add_argument(
         "--cli-auth",
