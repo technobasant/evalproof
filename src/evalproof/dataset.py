@@ -114,12 +114,17 @@ def write_dataset(cases: Sequence[Case], path: str | Path) -> Path:
     its default-valued fields, and with its extra fields (``turns``, ``expect``, ...)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(dataset_text(cases), encoding="utf-8", newline="\n")
+    return path
+
+
+def dataset_text(cases: Sequence[Case]) -> str:
+    """The JSONL text ``write_dataset`` writes."""
     lines = [
         json.dumps(case.model_dump(mode="json", exclude_defaults=True), ensure_ascii=False)
         for case in cases
     ]
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-    return path
+    return "\n".join(lines) + "\n"
 
 
 def case_hash(case: Case) -> str:
