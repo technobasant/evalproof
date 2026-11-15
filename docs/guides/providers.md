@@ -250,8 +250,9 @@ What was checked, and what was not:
     normal path (the same flags, sandbox and tool guard), with a canary skill
     (`evalproof-canary`) placed in the call's workspace, and asks the model which skills it can
     see and the titles of its User Rules. The canary must be named, so you know the answer is
-    about the right context; any other skill is a leak. Rule titles are listed, never their
-    contents. Exit 0: the canary was seen and no other skill. Exit 1: the canary was not seen
+    about the right context; any other skill is a leak. User rules are only counted: asked
+    for titles, models tend to quote each rule's first line, so neither titles nor contents
+    are printed. Exit 0: the canary was seen and no other skill. Exit 1: the canary was not seen
     (no verdict on the rest) or another skill was. Exit 4: the call failed. The answer is the
     model's own account of its context, so treat it as a best-effort check, not proof.
     * The redirected config and data directories keep the login (it is in the system keychain),

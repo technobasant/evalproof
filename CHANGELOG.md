@@ -17,8 +17,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - `evalproof doctor --cursor-canary [--model MODEL]` makes **one real `cursor-agent` call**
   (it uses your Cursor quota; default model `composer-2.5-fast`) with a canary skill in the
   call's workspace and asks the model which skills and user-rule titles it can see. It reports
-  whether the canary was seen, any other skill (a leak) and the rule titles, never their
-  contents. The answer is the model's own account, so it is best effort. Exit 0 when the canary
+  whether the canary was seen, any other skill (a leak) and how many user rules were named
+  (a count only: neither titles nor contents are printed). The answer is the model's own account, so it is best effort. Exit 0 when the canary
   was seen and nothing leaked, 1 otherwise, 4 when the call failed.
 
 ### Changed

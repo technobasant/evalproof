@@ -337,8 +337,8 @@ def run_cursor_canary(
     """One real ``cursor-agent`` call, through the provider's normal path (the same flags, the
     same sandbox, the same tool guard), with a canary skill in the call's workspace. The model is
     asked which skills and user rules it can see: the canary must be there, any other skill is a
-    leak, and the titles of user rules are listed. The answer is the model's own report, so the
-    result is best effort. Rule contents are never printed.
+    leak, and the user rules are counted. The answer is the model's own report, so the result is
+    best effort. Rule titles and contents are never printed.
 
     Exit 0 when the canary is seen and no other skill is named, 1 otherwise, 4 when the call
     failed and there is no verdict."""
@@ -361,10 +361,13 @@ def run_cursor_canary(
     leaked, rules, seen = parse_canary_reply(reply.text)
     out.write(f"canary skill seen: {'yes' if seen else 'no'}\n")
     out.write(f"other skills seen: {_shown(leaked) if leaked else 'none'}\n")
-    out.write(f"user rules seen (titles only): {_shown(rules) if rules else 'none'}\n")
+    # A count only: asked for titles, models answer with the first line of each rule, so printing
+    # what they name would print rule text (seen live on 2026-11-15).
+    out.write(f"user rules seen: {len(rules) if rules else 'none'} (count only, never printed)\n")
     if rules:
         out.write(
-            "user rules come from your Cursor account; clear them in Cursor Settings > Rules\n"
+            "user rules come from your Cursor account (the model may also count Cursor's own "
+            "instructions); clear them in Cursor Settings > Rules\n"
         )
     if not seen:
         out.write(

@@ -457,7 +457,7 @@ def test_the_canary_alone_is_a_pass(canary_env: FakeCLI) -> None:
     code, text = canary(canary_env, "SKILLS: evalproof-canary\nRULES: NONE")
     assert code == 0
     assert "canary skill seen: yes" in text and "other skills seen: none" in text
-    assert "user rules seen (titles only): none" in text
+    assert "user rules seen: none" in text
     assert "ok: only the canary skill reached the prompt" in text
     assert "best effort" in text and "one real cursor-agent call" in text
     assert f"model {CANARY_MODEL}" in text
@@ -510,23 +510,22 @@ def test_no_canary_is_not_a_pass_even_with_no_other_skill(canary_env: FakeCLI) -
     assert "ok:" not in text
 
 
-def test_user_rule_titles_are_listed_and_contents_are_never_printed(canary_env: FakeCLI) -> None:
+def test_user_rules_are_counted_and_never_printed(canary_env: FakeCLI) -> None:
     reply_text = (
         "SKILLS: evalproof-canary\nRULES: House style, No emojis\n"
         "The first rule says: always answer in pirate speak SECRET-RULE-BODY"
     )
     code, text = canary(canary_env, reply_text)
     assert code == 0  # user rules are reported, not failed on
-    assert "user rules seen (titles only): House style, No emojis" in text
+    assert "user rules seen: 2 (count only, never printed)" in text
     assert "Cursor Settings > Rules" in text
+    assert "House style" not in text and "No emojis" not in text
     assert "SECRET-RULE-BODY" not in text and "pirate" not in text
 
 
-def test_long_rule_titles_and_long_lists_are_cut(canary_env: FakeCLI) -> None:
-    titles = ", ".join(f"rule-{i}-" + "x" * 100 for i in range(25))
-    _, text = canary(canary_env, f"SKILLS: evalproof-canary\nRULES: {titles}")
-    line = next(ln for ln in text.splitlines() if ln.startswith("user rules seen"))
-    assert "x" * 70 not in line and "…" in line and "and 5 more" in line
+def test_no_user_rules(canary_env: FakeCLI) -> None:
+    _, text = canary(canary_env, "SKILLS: evalproof-canary\nRULES: NONE")
+    assert "user rules seen: none" in text and "Cursor Settings" not in text
 
 
 def test_a_failed_call_has_no_verdict(canary_env: FakeCLI) -> None:
