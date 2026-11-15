@@ -25,8 +25,8 @@ from evalproof.config import (
     TargetConfig,
     suite_fingerprint,
 )
-from evalproof.dataset import case_hash, content_hash, dataset_hash, load_dataset
-from evalproof.models import RUN_FORMAT_VERSION, Case, CaseResult, Run, RunInfo, Score
+from evalproof.dataset import case_hash, content_hash, dataset_hash, load_dataset, select_cases
+from evalproof.models import RUN_FORMAT_VERSION, Case, CaseResult, Run, RunInfo, Score, TagFilter
 from evalproof.providers import (
     LLM_PROVIDERS,
     ChatResponse,
@@ -161,6 +161,7 @@ def run_suite(
     cfg: SuiteConfig,
     *,
     limit: int | None = None,
+    tag_filter: TagFilter | None = None,
     use_cache: bool = True,
     cache_only: bool = False,
     client: httpx.Client | None = None,
@@ -178,6 +179,9 @@ def run_suite(
     the results come back in case order, then trial order, however the runs were scheduled.
     ``on_plan(cases, trials)`` is called once before the first run.
 
+    ``tag_filter`` keeps only the cases it selects, before ``limit`` is applied, and is recorded in
+    the run file; a filter that selects no case raises ``DatasetError``.
+
     With ``cache_only`` every model call, the judge's included, is answered from the response
     cache; the first one that is not there raises ``CacheMiss`` and no run is returned. A python,
     http or command system is refused, because it does not go through the cache."""
@@ -193,7 +197,9 @@ def run_suite(
             f"--cache-only needs a model system: a {system_cfg.kind} system is not cached, "
             "so its code would run"
         )
-    cases = load_dataset(cfg.resolve(cfg.dataset))
+    # The tag filter comes first, then ``limit``: ``--tags smoke --limit 5`` is the first five
+    # smoke cases. A case the filter leaves out never runs, so the checks below skip it too.
+    cases = select_cases(load_dataset(cfg.resolve(cfg.dataset)), tag_filter)
     check_turns_supported(system_cfg, cases)
     if variant is not None:
         check_variant_vars(system_cfg, variant, variant_vars, cases)
@@ -270,6 +276,7 @@ def run_suite(
             suite_hash=suite_fingerprint(cfg, system_cfg, variant),
             variant=variant,
             trials=n_trials,
+            tag_filter=tag_filter,
             environment=environment(
                 cfg,
                 client,

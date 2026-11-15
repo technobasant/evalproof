@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from evalproof.models import CaseResult, Run
+from evalproof.models import CaseResult, Run, TagFilter
 from evalproof.stats import (
     bootstrap_ci,
     mcnemar_exact,
@@ -109,6 +109,24 @@ class Comparison:
     # Continuous metrics that ``aggregate`` all or any cannot apply to: compared on the mean, and
     # a gate on one of them refuses.
     aggregate_ignored: list[str] = field(default_factory=list)
+    # Set when the two runs were made with different tag filters (``--tags``, ``--exclude-tags``),
+    # such as a smoke run against a full one. They share fewer cases, which is only a warning.
+    tag_filter_change: str | None = None
+
+
+def tag_filter_change(baseline: Run, candidate: Run) -> str | None:
+    """A sentence on the runs' tag filters when they differ, else None."""
+    before, after = baseline.info.tag_filter, candidate.info.tag_filter
+    if before == after:
+        return None
+
+    def label(f: TagFilter | None) -> str:
+        return f.describe() if f else "no filter"
+
+    return (
+        f"the runs used different tag filters (baseline: {label(before)}; "
+        f"candidate: {label(after)})"
+    )
 
 
 def environment_changes(baseline: Run, candidate: Run, keys: tuple[str, ...]) -> list[str]:
@@ -136,14 +154,18 @@ def judge_warnings(baseline: Run, candidate: Run) -> list[str]:
 
 
 def dataset_change_note(cmp: Comparison) -> str | None:
-    """One line on the cases left out of the comparison, or None when every case was shared."""
-    if not (cmp.only_baseline or cmp.only_candidate or cmp.edited):
-        return None
-    return (
-        f"{len(cmp.only_candidate)} case(s) added, {len(cmp.only_baseline)} removed, "
-        f"{len(cmp.edited)} edited: excluded from the comparison; gated on the "
-        f"{len(cmp.paired_ids)} cases both runs share"
-    )
+    """One line on the cases left out of the comparison, or None when every case was shared and
+    the runs used the same tag filter."""
+    note = None
+    if cmp.only_baseline or cmp.only_candidate or cmp.edited:
+        note = (
+            f"{len(cmp.only_candidate)} case(s) added, {len(cmp.only_baseline)} removed, "
+            f"{len(cmp.edited)} edited: excluded from the comparison; gated on the "
+            f"{len(cmp.paired_ids)} cases both runs share"
+        )
+    if cmp.tag_filter_change:
+        note = f"{cmp.tag_filter_change}; {note}" if note else cmp.tag_filter_change
+    return note
 
 
 def run_label(run: Run) -> str:
@@ -524,4 +546,5 @@ def compare_runs(
         trials=baseline.trials,
         aggregate=aggregate if repeated else None,
         aggregate_ignored=ignored,
+        tag_filter_change=tag_filter_change(baseline, candidate),
     )

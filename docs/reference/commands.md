@@ -70,7 +70,9 @@ evalproof run SUITE [options]
 | Flag | Type | Default | What it does |
 |---|---|---|---|
 | `--out` | string | none | where to write the run (with `--variant`, only when exactly one variant runs) |
-| `--limit` | int | none | run only the first N cases of the dataset |
+| `--limit` | int | none | run only the first N cases of the dataset (after `--tags` and `--exclude-tags` have chosen them) |
+| `--tags` | string, repeatable | none | run only the cases that carry at least one of these tags; comma-separated, and the option may repeat (`--tags smoke,edge` is `--tags smoke --tags edge`); tags match exactly, with case. Chosen before `--limit`. The filter is recorded in the run file as `info.tag_filter`, and `verify` applies it again; `compare` warns when two runs used different filters. A filter that selects no case is an error (exit 2) that lists the dataset's tags. No suite key sets it |
+| `--exclude-tags` | string, repeatable | none | run no case that carries any of these tags, with the same syntax; wins over `--tags` for a case that carries both |
 | `--no-cache` | flag | off | do not read or write the response cache |
 | `--cache-only` | flag | off | re-score or rebuild a run from the cache: every model call, the judge's included, is answered from the response cache, and a miss is an error (exit 2), never a model call, which stops the run (with several variants, the runs finished before the miss are written); the run records `cache_only: "true"` in its `environment`; not with `--no-cache`, and a `python`, `http` or `command` system is refused because it is not cached |
 | `--trials` | int, 1 to 100 | none | run each case K times (1 to 100), overriding the suite's trials |
@@ -89,7 +91,9 @@ evalproof run SUITE [options]
 evalproof run evals/suite.yaml --out runs/candidate.json --trials 3
 ```
 
-Exit 0. With `--gate`: 1 when an absolute check fails, 4 when the gate cannot apply one. Exit 2 for a configuration error and when every case errored. See [Exit codes](exit-codes.md). See also: [Concepts](concepts.md#run), [Repeated trials](../guides/repeated-trials.md#repeated-trials), [Testing agents](../guides/testing-agents.md#variants-one-suite-several-builds).
+To run a smoke subset while you iterate: `evalproof run evals/suite.yaml --tags smoke --exclude-tags slow --out runs/smoke.json`.
+
+Exit 0. With `--gate`: 1 when an absolute check fails, 4 when the gate cannot apply one. Exit 2 for a configuration error, when every case errored, and when `--tags` and `--exclude-tags` select no case. See [Exit codes](exit-codes.md). See also: [Concepts](concepts.md#run), [Repeated trials](../guides/repeated-trials.md#repeated-trials), [Testing agents](../guides/testing-agents.md#variants-one-suite-several-builds).
 
 ## evalproof import
 
@@ -157,6 +161,8 @@ The cases that cannot be replayed (ADK user-simulation cases) are skipped with o
 ## evalproof compare
 
 Compares each candidate with the baseline on the cases both runs share. With `--gate` the result becomes an exit code. Several candidates give one table, and `--gate` then corrects the p-values for all candidates and gated metrics at once and exits with the worst code (2, then 4, 1, 3, 0). Gate settings come from `--suite`; every flag below overrides the suite's `gate` block. Without `--gate` a comparison of two runs that cannot be compared is a usage error (exit 2).
+
+Runs made with different tag filters (`run --tags`, `--exclude-tags`) are compared on the cases both hold, and the report and the gate warn that the filters differ, as they do for a dataset that changed; a different filter alone never fails the gate.
 
 ```bash title="Terminal"
 evalproof compare BASELINE CANDIDATE [CANDIDATE ...] [options]
@@ -249,6 +255,8 @@ Exit 0, or 2 for a usage error.
 ## evalproof verify
 
 Checks, with no model call, that a run file was made with this suite, covers exactly the dataset's cases as they are now, and has the scores its deterministic scorers give the stored outputs.
+
+A run made with `--tags` or `--exclude-tags` records that filter, and `verify` checks it against the cases the same filter selects from the dataset now: a case that matches but is missing from the run, a case in the run that the filter does not select, and a case that gained or lost a tag all fail it.
 
 ```bash title="Terminal"
 evalproof verify RUN SUITE [--markdown FILE]
@@ -359,7 +367,9 @@ evalproof pairwise BASELINE CANDIDATE --suite SUITE [options]
 | Flag | Type | Default | What it does |
 |---|---|---|---|
 | `--suite` | string, required | none | the suite whose `judge` compares the outputs |
-| `--limit` | int | none | compare only the first N shared cases, in case-id order |
+| `--limit` | int | none | compare only the first N shared cases, in case-id order (after `--tags` and `--exclude-tags` have chosen them) |
+| `--tags` | string, repeatable | none | judge only the cases that carry at least one of these tags, read from the suite's dataset; comma-separated, and the option may repeat |
+| `--exclude-tags` | string, repeatable | none | judge no case that carries any of these tags; wins over `--tags`. A filter that selects no case in the dataset is an error (exit 2) |
 | `--no-swap` | flag | off | judge each pair in one order only (by default each pair is judged in both orders) |
 | `--no-cache` | flag | off | do not read or write the response cache |
 | `--cache-only` | flag | off | answer every judge call from the response cache; a miss is an error (exit 2), never a model call; not with `--no-cache` |

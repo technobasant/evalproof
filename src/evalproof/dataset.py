@@ -10,11 +10,45 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from evalproof.models import Case
+from evalproof.models import Case, TagFilter
 
 
 class DatasetError(ValueError):
     pass
+
+
+def parse_tag_list(values: Sequence[str] | None, option: str) -> list[str]:
+    """The tags of a repeatable, comma-separated option (``--tags a,b --tags c``): sorted, with
+    blanks and duplicates dropped. ``None`` (the option was not given) is an empty list; an option
+    that was given but names no tag, such as ``--tags ""``, is an error."""
+    if values is None:
+        return []
+    tags = sorted({tag.strip() for value in values for tag in value.split(",") if tag.strip()})
+    if not tags:
+        raise ValueError(f"{option} needs at least one tag")
+    return tags
+
+
+def make_tag_filter(
+    tags: Sequence[str] | None, exclude_tags: Sequence[str] | None
+) -> TagFilter | None:
+    """The filter ``--tags`` and ``--exclude-tags`` ask for; ``None`` when neither was given."""
+    include = parse_tag_list(tags, "--tags")
+    exclude = parse_tag_list(exclude_tags, "--exclude-tags")
+    return TagFilter(include=include, exclude=exclude) if include or exclude else None
+
+
+def select_cases(cases: list[Case], tag_filter: TagFilter | None) -> list[Case]:
+    """The cases ``tag_filter`` selects (all of them without a filter). Raises ``DatasetError``,
+    naming the tags the dataset does have, when the filter selects none."""
+    if tag_filter is None:
+        return cases
+    selected = tag_filter.apply(cases)
+    if not selected:
+        known = sorted({tag for case in cases for tag in case.tags})
+        have = f"the dataset's tags are {', '.join(known)}" if known else "no case has a tag"
+        raise DatasetError(f"{tag_filter.describe()} selects no case: {have}")
+    return selected
 
 
 def canonical_json(obj: Any) -> str:

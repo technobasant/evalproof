@@ -31,7 +31,13 @@ from evalproof.config import (
     format_validation_error,
     load_config,
 )
-from evalproof.dataset import DatasetError, load_dataset, write_dataset
+from evalproof.dataset import (
+    DatasetError,
+    load_dataset,
+    make_tag_filter,
+    select_cases,
+    write_dataset,
+)
 from evalproof.doctor import CANARY_MODEL, run_cursor_canary, run_doctor
 from evalproof.gate import (
     EXIT_BUDGET,
@@ -47,7 +53,7 @@ from evalproof.gate import (
 )
 from evalproof.importers import DATASET_FORMATS, EPOCHS, FORMATS, import_cases, import_run
 from evalproof.junit import gate_testsuite, run_testsuite, testsuites, write_junit
-from evalproof.models import CaseResult, Run
+from evalproof.models import CaseResult, Run, TagFilter
 from evalproof.providers import ProviderError, make_provider
 from evalproof.providers.base import close_resource
 from evalproof.readiness import (
@@ -109,6 +115,24 @@ def _trials(text: str) -> int:
     return value
 
 
+def _add_tag_options(parser: argparse.ArgumentParser, verb: str) -> None:
+    """``--tags`` and ``--exclude-tags``: repeatable, and each value may list several tags."""
+    parser.add_argument(
+        "--tags",
+        action="append",
+        metavar="TAG,...",
+        help=f"{verb} only the cases that carry at least one of these tags "
+        "(comma-separated; may repeat)",
+    )
+    parser.add_argument(
+        "--exclude-tags",
+        action="append",
+        metavar="TAG,...",
+        help=f"{verb} no case that carries any of these tags (comma-separated; may repeat); "
+        "wins over --tags",
+    )
+
+
 def _check_writable(path: Path, what: str = "the run file") -> None:
     """Fail before any case runs if the run file (or ``what`` else) cannot be written: create
     the parent, then create and delete a file in it."""
@@ -168,6 +192,7 @@ def _run_variant(
     variant: str | None,
     out_path: str | None,
     junit_runs: list[Run] | None = None,
+    tag_filter: TagFilter | None = None,
 ) -> int:
     override = None
     if args.system or args.system_prompt_file or args.label:
@@ -199,6 +224,7 @@ def _run_variant(
     run = run_suite(
         cfg,
         limit=args.limit,
+        tag_filter=tag_filter,
         use_cache=not args.no_cache,
         cache_only=args.cache_only,
         progress=progress,
@@ -248,6 +274,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         )
     variants = _selected_variants(cfg, args)
     paths = _run_paths(args, variants)
+    tag_filter = make_tag_filter(args.tags, args.exclude_tags)
     for path in paths:
         _check_writable(Path(path) if path else Path("runs") / "run.json")
     if args.junit:
@@ -255,7 +282,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     junit_runs: list[Run] = []
     return _worst(
         [
-            _run_variant(args, cfg, v, path, junit_runs)
+            _run_variant(args, cfg, v, path, junit_runs, tag_filter)
             for v, path in zip(variants, paths, strict=True)
         ]
     )
@@ -656,6 +683,7 @@ def cmd_pairwise(args: argparse.Namespace) -> int:
     cfg = load_config(args.suite)
     if cfg.judge is None:
         raise ConfigError("pairwise needs a 'judge' in the suite")
+    tag_filter = make_tag_filter(args.tags, args.exclude_tags)
     judge = make_provider(cfg.judge)
     with ExitStack() as owned:  # closes the judge's own HTTP client, never a passed one
         owned.callback(close_resource, judge)
@@ -667,7 +695,8 @@ def cmd_pairwise(args: argparse.Namespace) -> int:
                 cache_only=args.cache_only,
                 role="judge",
             )
-        cases = {c.id: c for c in load_dataset(cfg.resolve(cfg.dataset))}
+        selected = select_cases(load_dataset(cfg.resolve(cfg.dataset)), tag_filter)
+        cases = {c.id: c for c in selected}
         a_by, b_by = load_run(args.baseline).by_id(), load_run(args.candidate).by_id()
         ids = [cid for cid in sorted(set(a_by) & set(b_by)) if cid in cases][: args.limit]
         tally = {"a": 0, "b": 0, "tie": 0}
@@ -777,7 +806,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         help="where to write the run (with --variant, only when exactly one variant runs)",
     )
-    r.add_argument("--limit", type=int)
+    r.add_argument("--limit", type=int, help="run only the first N cases (after --tags)")
+    _add_tag_options(r, "run")
     cache_mode = r.add_mutually_exclusive_group()
     cache_mode.add_argument(
         "--no-cache", action="store_true", help="do not read or write the response cache"
@@ -1097,7 +1127,8 @@ def build_parser() -> argparse.ArgumentParser:
     pw.add_argument("baseline")
     pw.add_argument("candidate")
     pw.add_argument("--suite", required=True)
-    pw.add_argument("--limit", type=int)
+    pw.add_argument("--limit", type=int, help="judge only the first N cases (after --tags)")
+    _add_tag_options(pw, "judge")
     pw.add_argument("--no-swap", action="store_true")
     pw_cache = pw.add_mutually_exclusive_group()
     pw_cache.add_argument(

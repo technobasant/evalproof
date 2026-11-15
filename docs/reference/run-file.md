@@ -33,7 +33,8 @@ One case of a run of the ticket-router example, as evalproof 1.0.0 writes it. A 
     },
     "suite_hash": "2600c532d6653efe",
     "variant": null,
-    "trials": 1
+    "trials": 1,
+    "tag_filter": null
   },
   "results": [
     {
@@ -100,6 +101,16 @@ A file whose `format_version` is higher than the running evalproof knows is refu
 | `suite_hash` | string or null | the suite fingerprint; null before 0.5 and in imported runs | 0.5 |
 | `variant` | string or null | the variant the run was made with; null for the suite as written and before 0.6 | 0.6 |
 | `trials` | integer | repeats per case; 1 before 0.7 and in imported runs that kept no repeats | 0.7 |
+| `tag_filter` | object or null | the [tag filter](#tag-filter) the run was made with (`--tags`, `--exclude-tags`); null when every case of the dataset ran, and before 1.3 | 1.3 |
+
+## Tag filter
+
+Present in `info.tag_filter` when the run was made with `--tags` or `--exclude-tags`. `verify` applies the same filter to the dataset to know which cases the run should hold, and `compare` warns when its two runs used different filters. Both lists are sorted and hold no duplicates, so the same filter always writes the same text. Added in 1.3; it is an optional field, so `format_version` stays 1.
+
+| Field | Type | What it holds |
+|---|---|---|
+| `include` | list of strings | the tags from `--tags`: a case is selected when it carries at least one; empty when `--tags` was not given |
+| `exclude` | list of strings | the tags from `--exclude-tags`: a case that carries any of them is left out, even one `include` selects |
 
 ## Case result
 
