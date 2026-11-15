@@ -45,6 +45,19 @@ evalproof is a command-line tool and a Python library, published on
     uv run evalproof --version
     ```
 
+### npm
+
+If your project already uses Node, run it with `npx`. The `evalproof` package on npm is a small
+launcher: it finds [uv](https://docs.astral.sh/uv/) or [pipx](https://pipx.pypa.io/) and runs the
+PyPI release of the same version.
+
+```bash title="Terminal"
+npx evalproof --version
+npx evalproof init
+```
+
+You need uv or pipx on your `PATH`. The launcher does not install Python or evalproof itself.
+
 ## Supported Python
 
 Python 3.11 to 3.14.

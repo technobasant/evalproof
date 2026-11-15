@@ -67,7 +67,7 @@ from evalproof.report import (
     to_json,
 )
 from evalproof.runner import load_run, run_suite, save_run
-from evalproof.scaffold import CI_MODES, CLI_AUTHS, init_project
+from evalproof.scaffold import CI_MODES, CLI_AUTHS, PLATFORMS, init_project
 from evalproof.scorers import pairwise
 from evalproof.stats import holm
 from evalproof.verify import verify_markdown, verify_run
@@ -520,6 +520,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         skill=not args.no_skill,
         force=args.force,
         cli_auth=args.cli_auth,
+        platform=args.platform,
         emit=_say,
     )
 
@@ -666,6 +667,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="keyless",
         help="keyless: CI compares committed run files, no model calls (default); "
         "api-key: CI runs the suite with a secret; none: no workflow",
+    )
+    ini.add_argument(
+        "--platform",
+        choices=PLATFORMS,
+        default="github",
+        help="where CI runs: github writes .github/workflows/evalproof.yml (default); gitlab "
+        "writes .gitlab-ci.evalproof.yml, which you include from .gitlab-ci.yml (never edited)",
     )
     ini.add_argument(
         "--cli-auth",

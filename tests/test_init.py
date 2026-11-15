@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,8 @@ from evalproof.scaffold import (
     cli_version,
     fill,
     init_project,
+    render_ci_text,
+    requirement_lines,
     template,
 )
 from evalproof.scorers import make_scorer
@@ -785,6 +788,419 @@ def test_api_key_baseline_notice_when_the_base_has_no_run_file(
     assert code == 0 and outputs == {"found": "false"} and "::notice" in out
 
 
+# --- GitLab CI ---------------------------------------------------------------------------
+
+GITLAB_FILE = ".gitlab-ci.evalproof.yml"
+INCLUDE_LINES = ("    include:", f"      - local: {GITLAB_FILE}")
+
+
+def _gitlab_job(directory: Path) -> dict[str, Any]:
+    job: dict[str, Any] = yaml.safe_load((directory / GITLAB_FILE).read_text(encoding="utf-8"))[
+        "evalproof"
+    ]
+    return job
+
+
+@pytest.mark.parametrize("ci", ["keyless", "api-key", "none"])
+def test_gitlab_writes_its_own_file_and_no_github_workflow(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str], ci: str
+) -> None:
+    code, out = run_init(tmp_path, capsys, "--platform", "gitlab", "--ci", ci)
+    assert code == 0
+    expected = BASE_FILES | set(SKILLS) | ({GITLAB_FILE} if ci != "none" else set())
+    assert files_under(tmp_path) == expected
+    for path in files_under(tmp_path):
+        assert "@@" not in (tmp_path / path).read_text(encoding="utf-8"), path
+    if ci != "none":
+        assert f"  wrote          {GITLAB_FILE}" in out
+
+
+def test_github_stays_the_default_platform(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path / "default", capsys)
+    run_init(tmp_path / "named", capsys, "--platform", "github")
+    assert files_under(tmp_path / "default") == files_under(tmp_path / "named")
+    assert (tmp_path / "named" / WORKFLOW).is_file()
+    assert not (tmp_path / "named" / GITLAB_FILE).exists()
+
+
+def test_gitlab_init_never_touches_an_existing_gitlab_ci_yml(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    mine = "stages: [build, test]\nbuild:\n  script: make\n"
+    (tmp_path / ".gitlab-ci.yml").write_text(mine, encoding="utf-8")
+    for extra in ([], ["--force"]):
+        run_init(tmp_path, capsys, "--platform", "gitlab", *extra)
+        assert (tmp_path / ".gitlab-ci.yml").read_text(encoding="utf-8") == mine
+    assert (tmp_path / GITLAB_FILE).is_file()
+
+
+def test_gitlab_init_says_to_include_the_file(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _, out = run_init(tmp_path, capsys, "--platform", "gitlab")
+    lines = out.splitlines()
+    assert INCLUDE_LINES[0] in lines and INCLUDE_LINES[1] in lines
+    assert lines.index(INCLUDE_LINES[1]) == lines.index(INCLUDE_LINES[0]) + 1  # the two lines
+    assert "never edits" in out and ".gitlab-ci.yml" in out
+    _, out = run_init(tmp_path / "gh", capsys)  # the GitHub run says nothing of the kind
+    assert "include:" not in out and "gitlab" not in out.lower()
+    _, out = run_init(tmp_path / "none", capsys, "--platform", "gitlab", "--ci", "none")
+    assert "include:" not in out  # no file, so nothing to include
+
+
+def test_gitlab_init_keeps_an_existing_ci_file_unless_forced(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys, "--platform", "gitlab")
+    path = tmp_path / GITLAB_FILE
+    path.write_text("# mine\n", encoding="utf-8")
+    _, out = run_init(tmp_path, capsys, "--platform", "gitlab")
+    assert (
+        f"  kept (exists)  {GITLAB_FILE}" in out and path.read_text(encoding="utf-8") == "# mine\n"
+    )
+    run_init(tmp_path, capsys, "--platform", "gitlab", "--force")
+    assert path.read_text(encoding="utf-8") != "# mine\n"
+
+
+@pytest.mark.parametrize("ci", ["keyless", "api-key"])
+def test_the_gitlab_job_runs_in_merge_request_pipelines_and_reports_junit(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str], ci: str
+) -> None:
+    run_init(tmp_path, capsys, "--platform", "gitlab", "--ci", ci)
+    job = _gitlab_job(tmp_path)
+    assert job["image"] == "python:3.13-slim"
+    assert job["rules"] == [{"if": '$CI_PIPELINE_SOURCE == "merge_request_event"'}]
+    assert job["variables"]["GIT_DEPTH"] == "0"  # the target branch has to be in the clone
+    # The report is kept when the gate fails: that is the run you want to read.
+    assert job["artifacts"]["when"] == "always"
+    assert job["artifacts"]["reports"] == {"junit": "evalproof-junit.xml"}
+    script = "\n".join(job["script"])
+    assert "--gate --junit evalproof-junit.xml" in script
+    assert f"evalproof=={ACTION_REF.removeprefix('v')}" in script  # the release of this file
+    assert "CI_MERGE_REQUEST_TARGET_BRANCH_NAME" in script
+
+
+def test_the_gitlab_keyless_job_verifies_before_it_compares(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys, "--platform", "gitlab")
+    script = "\n".join(_gitlab_job(tmp_path)["script"])
+    verify = "evalproof verify evals/runs/latest.json evals/suite.yaml"
+    assert verify in script and script.index(verify) < script.index("evalproof compare")
+    assert "evalproof run" not in script  # keyless makes no model call
+    assert "cache" not in _gitlab_job(tmp_path)
+    header = (tmp_path / GITLAB_FILE).read_text(encoding="utf-8").split("evalproof:\n")[0]
+    assert "evalproof verify" in header and "edited by hand" in header
+    assert "--platform gitlab --ci api-key" in header
+
+
+def test_the_gitlab_api_key_job_names_the_variable_and_keeps_its_cache(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _, out = run_init(tmp_path, capsys, "--platform", "gitlab", "--ci", "api-key")
+    text = (tmp_path / GITLAB_FILE).read_text(encoding="utf-8")
+    job = _gitlab_job(tmp_path)
+    header = text.split("evalproof:\n")[0]
+    assert "CI/CD variable named ANTHROPIC_API_KEY" in header
+    assert "Masked" in header and "not mark it Protected" in header
+    assert job["cache"] == {
+        "key": "evalproof-responses",
+        "paths": ["evals/.evalproof/cache/"],
+        "when": "always",  # kept when the gate fails, like the GitHub save step before the gate
+    }
+    script = "\n".join(job["script"])
+    assert 'evalproof run evals/suite.yaml --out "$candidate"' in script
+    assert "CI_MERGE_REQUEST_SOURCE_PROJECT_PATH" in script and "CI_PROJECT_PATH" in script
+    assert "add the CI/CD variable ANTHROPIC_API_KEY (masked, not protected)" in out
+    assert "in CI: the ANTHROPIC_API_KEY CI/CD variable" in out
+    assert "merge requests from forks never receive the variable" in out
+    assert "repository secret" not in out
+    assert "ANTHROPIC_API_KEY" in (tmp_path / "evals" / "README.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("judge", [None, "claude-code:haiku", "codex:gpt-6"])
+def test_gitlab_api_key_refuses_a_coding_agent_cli_before_writing_anything(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str], judge: str | None
+) -> None:
+    fake_cli(bin_dir, "claude", "2.1.322 (Claude Code)")  # the default judge is claude-code
+    args = ["--judge", judge] if judge else []
+    argv = ["init", "--dir", str(tmp_path / "p"), "--platform", "gitlab", "--ci", "api-key", *args]
+    code = main(argv)
+    err = capsys.readouterr().err
+    assert code == 2 and "no Node" in err
+    assert "--ci keyless" in err and "anthropic:" in err
+    assert not (tmp_path / "p").exists()
+    # A hosted API target, or the keyless mode, is fine with the same CLI on PATH.
+    hosted = ["--judge", "anthropic:claude-haiku-5-5"]
+    assert (
+        run_init(tmp_path / "ok", capsys, "--platform", "gitlab", "--ci", "api-key", *hosted)[0]
+        == 0
+    )
+    assert run_init(tmp_path / "kl", capsys, "--platform", "gitlab", "--ci", "keyless")[0] == 0
+    assert (tmp_path / "ok" / GITLAB_FILE).is_file() and (tmp_path / "kl" / GITLAB_FILE).is_file()
+
+
+def test_the_evals_readme_describes_the_gitlab_job(
+    tmp_path: Path, bin_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    run_init(tmp_path, capsys, "--platform", "gitlab")
+    readme = (tmp_path / "evals" / "README.md").read_text(encoding="utf-8")
+    assert GITLAB_FILE in readme and "merge request" in readme and "target branch" in readme
+    assert ".github" not in readme and "pull request" not in readme
+
+
+def test_a_bad_platform_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match="--platform must be one of github, gitlab"):
+        init_project(tmp_path, platform="bitbucket")
+    with pytest.raises(SystemExit):
+        main(["init", "--dir", str(tmp_path), "--platform", "bitbucket"])
+    assert not any(tmp_path.iterdir())
+
+
+def test_the_new_templates_leave_the_github_text_alone(bin_dir: Path) -> None:
+    """Passing the default platform changes nothing a GitHub user already gets."""
+    judge = choose_judge("anthropic:claude-haiku-5-5")
+    for ci in ("keyless", "api-key", "none"):
+        assert render_ci_text(ci, judge) == render_ci_text(ci, judge, "api-key", "github")
+        assert requirement_lines(judge, ci) == requirement_lines(judge, ci, "api-key", "github")
+    assert "repository secret" in render_ci_text("api-key", judge)
+    assert [path for path, _ in build_files(judge, "keyless", False, None)][-1] == str(WORKFLOW)
+
+
+class Mr:
+    """A GitLab merge request: ``origin`` has ``main``, the clone is on a ``feature`` branch.
+
+    The GitLab job's script is run for real under ``sh`` (as the runner would). ``python`` and
+    ``evalproof`` are stubs that log their arguments; git is the real one.
+    """
+
+    def __init__(self, tmp_path: Path, job: dict[str, Any], base_has_run: bool) -> None:
+        self.tmp = tmp_path
+        self.job = job
+        origin = tmp_path / "origin.git"
+        seed = tmp_path / "seed"
+        seed.mkdir()
+        _git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
+        _git(seed, "init", "-q", "-b", "main")
+        (seed / "evals" / "runs").mkdir(parents=True)
+        (seed / "evals" / "suite.yaml").write_text("name: s\n", encoding="utf-8")
+        (seed / "src").mkdir()
+        (seed / "src" / "prompt.txt").write_text("v1\n", encoding="utf-8")
+        if base_has_run:
+            (seed / "evals" / "runs" / "latest.json").write_text('{"v": 1}', encoding="utf-8")
+        _git(seed, "add", "-A")
+        _git(seed, "commit", "-q", "-m", "base")
+        _git(seed, "push", "-q", str(origin), "main")
+        _git(tmp_path, "clone", "-q", str(origin), "repo")
+        self.repo = tmp_path / "repo"
+        _git(self.repo, "checkout", "-q", "-b", "feature")
+        self.scratch = tmp_path / "scratch"  # TMPDIR: where the job keeps its baseline
+        self.scratch.mkdir()
+        self.bin = tmp_path / "stubs"
+        self.bin.mkdir()
+        for name in ("python", "evalproof"):
+            stub = self.bin / name
+            stub.write_text(
+                "#!/bin/sh\n"
+                f'echo "{name} $*" >> "{tmp_path}/stub.log"\n'
+                '[ "$1" = verify ] && exit "${STUB_VERIFY_EXIT:-0}"\n'
+                '[ "$1" = compare ] && exit "${STUB_COMPARE_EXIT:-0}"\n'
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            stub.chmod(0o755)
+
+    def commit(self, files: dict[str, str]) -> None:
+        for rel, content in files.items():
+            path = self.repo / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-q", "-m", "change")
+
+    def run(self, **env: str) -> tuple[int, str, list[str]]:
+        """Run the job's script; return the exit code, its output and the stub log."""
+        full = {
+            **os.environ,
+            "PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_SYSTEM": os.devnull,
+            "TMPDIR": str(self.scratch),
+            "CI_MERGE_REQUEST_TARGET_BRANCH_NAME": "main",
+            "CI_MERGE_REQUEST_SOURCE_PROJECT_PATH": "group/project",
+            "CI_PROJECT_PATH": "group/project",
+            **self.job["variables"],
+            **env,
+        }
+        (self.tmp / "stub.log").write_text("", encoding="utf-8")
+        done = subprocess.run(
+            ["sh", "-c", "\n".join(self.job["script"])],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+            env=full,
+            check=False,
+        )
+        log = (self.tmp / "stub.log").read_text(encoding="utf-8").splitlines()
+        return done.returncode, done.stdout + done.stderr, log
+
+
+@pytest.fixture
+def gitlab_job(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> Callable[[str], dict[str, Any]]:
+    """Generate the GitLab file for a ci mode and return its job (init runs on a bare PATH,
+    the job's own script needs the real one)."""
+
+    def make(ci: str) -> dict[str, Any]:
+        empty = tmp_path / f"empty-{ci}"
+        empty.mkdir()
+        with monkeypatch.context() as patch:
+            patch.setenv("PATH", str(empty))
+            run_init(tmp_path / f"gen-{ci}", capsys, "--platform", "gitlab", "--ci", ci)
+        return _gitlab_job(tmp_path / f"gen-{ci}")
+
+    return make
+
+
+@needs_git
+def test_gitlab_keyless_passes_with_a_notice_when_the_target_has_no_run_file(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("keyless"), base_has_run=False)
+    mr.commit({"evals/runs/latest.json": '{"v": 2}'})
+    code, out, log = mr.run()
+    assert code == 0, out
+    assert "main has no evals/runs/latest.json yet" in out
+    assert log == []  # nothing to compare with: no install, no verify, no compare
+
+
+@needs_git
+def test_gitlab_keyless_fails_when_the_branch_removes_the_run_file(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("keyless"), base_has_run=True)
+    _git(mr.repo, "rm", "-q", "evals/runs/latest.json")
+    _git(mr.repo, "commit", "-q", "-m", "drop the run file")
+    code, out, log = mr.run()
+    assert code == 1 and "evals/runs/latest.json is missing from this branch" in out
+    assert log == []
+
+
+@needs_git
+def test_gitlab_keyless_verifies_then_compares_with_the_baseline_from_the_target(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("keyless"), base_has_run=True)
+    mr.commit({"evals/runs/latest.json": '{"v": 2}', "evals/suite.yaml": "name: s2\n"})
+    code, out, log = mr.run()
+    assert code == 0, out
+    assert "evalproof: warning" not in out
+    baseline = mr.scratch / "evalproof-baseline.json"
+    assert log == [
+        "python -m pip install --quiet evalproof==" + ACTION_REF.removeprefix("v"),
+        "evalproof verify evals/runs/latest.json evals/suite.yaml",
+        f"evalproof compare {baseline} evals/runs/latest.json "
+        "--suite evals/suite.yaml --gate --junit evalproof-junit.xml",
+    ]
+    # The baseline is the target branch's file, not the branch's own.
+    assert baseline.read_text(encoding="utf-8") == '{"v": 1}'
+
+
+@needs_git
+@pytest.mark.parametrize(
+    ("env", "ran"),
+    [
+        ({"STUB_VERIFY_EXIT": "4"}, ["verify"]),  # a run file that is not the suite's: no compare
+        ({"STUB_COMPARE_EXIT": "1"}, ["verify", "compare"]),  # a regression
+    ],
+)
+def test_gitlab_keyless_fails_the_job_with_the_commands_exit_code(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]], env: dict[str, str], ran: list[str]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("keyless"), base_has_run=True)
+    mr.commit({"evals/runs/latest.json": '{"v": 2}'})
+    code, out, log = mr.run(**env)
+    expected = int(next(iter(env.values())))
+    assert code == expected, out
+    assert [line.split()[1] for line in log if line.startswith("evalproof")] == ran
+
+
+@needs_git
+def test_gitlab_keyless_warns_when_evals_changed_but_the_run_file_did_not(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("keyless"), base_has_run=True)
+    mr.commit({"evals/cases.jsonl": "{}\n"})
+    code, out, _ = mr.run()
+    assert code == 0, out
+    assert "evalproof: warning: these files changed but evals/runs/latest.json did not" in out
+    assert "evals/cases.jsonl" in out
+    mr.commit({"src/prompt.txt": "v2\n"})
+    _, out, _ = mr.run(EVALPROOF_WATCH="src/")  # the list is yours to extend
+    assert "evalproof: warning" in out and "src/prompt.txt" in out
+    mr.commit({"evals/runs/latest.json": '{"v": 2}'})  # refreshed: nothing to warn about
+    _, out, _ = mr.run()
+    assert "evalproof: warning" not in out
+
+
+@needs_git
+def test_gitlab_api_key_runs_the_suite_only_when_something_watched_changed(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("api-key"), base_has_run=True)
+    mr.commit({"README.md": "docs\n"})
+    code, out, log = mr.run()
+    assert code == 0 and "nothing in evals/ changed" in out and log == []
+    mr.commit({"src/prompt.txt": "v2\n"})  # not watched until it is on the list
+    assert mr.run()[2] == []
+    _, _, log = mr.run(EVALPROOF_WATCH="evals/ src/")
+    assert [line.split()[1] for line in log if line.startswith("evalproof")] == ["run", "compare"]
+
+
+@needs_git
+def test_gitlab_api_key_runs_and_gates_when_the_suite_changed(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("api-key"), base_has_run=True)
+    mr.commit({"evals/cases.jsonl": "{}\n"})
+    code, out, log = mr.run()
+    assert code == 0, out
+    baseline = mr.scratch / "evalproof-baseline.json"
+    candidate = mr.scratch / "evalproof-candidate.json"
+    assert log == [
+        "python -m pip install --quiet evalproof==" + ACTION_REF.removeprefix("v"),
+        f"evalproof run evals/suite.yaml --out {candidate} --quiet",
+        f"evalproof compare {baseline} {candidate} "
+        "--suite evals/suite.yaml --gate --junit evalproof-junit.xml",
+    ]
+    code, _, _ = mr.run(STUB_COMPARE_EXIT="1")
+    assert code == 1  # a regression fails the job
+
+
+@needs_git
+def test_gitlab_api_key_skips_a_merge_request_from_a_fork(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("api-key"), base_has_run=True)
+    mr.commit({"evals/cases.jsonl": "{}\n"})
+    code, out, log = mr.run(CI_MERGE_REQUEST_SOURCE_PROJECT_PATH="fork/project")
+    assert code == 0 and "comes from a fork" in out
+    assert log == []  # no key reaches a fork's job, and nothing was run for it
+
+
+@needs_git
+def test_gitlab_api_key_passes_with_a_notice_when_the_target_has_no_run_file(
+    tmp_path: Path, gitlab_job: Callable[[str], dict[str, Any]]
+) -> None:
+    mr = Mr(tmp_path, gitlab_job("api-key"), base_has_run=False)
+    mr.commit({"evals/cases.jsonl": "{}\n"})
+    code, out, log = mr.run()
+    assert code == 0 and "has no evals/runs/latest.json yet" in out and log == []
+
+
 # --- plumbing ----------------------------------------------------------------------------
 
 
@@ -803,6 +1219,8 @@ def test_template_files_ship_as_package_data() -> None:
         "gitignore",
         "workflow-keyless.yml",
         "workflow-api-key.yml",
+        "workflow-gitlab-keyless.yml",
+        "workflow-gitlab-api-key.yml",
         "SKILL.md",
     ):
         assert template(name).strip()

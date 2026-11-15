@@ -25,10 +25,10 @@ Every `evalproof` subcommand, its arguments and every flag with its type and def
 
 ## evalproof init
 
-Writes a starter suite, a CI workflow and an agent skill into a repository. It makes no model call. `--ci keyless` (the default) writes a workflow that compares committed run files; `--ci api-key` writes one that runs the suite with a secret; `--ci none` writes no workflow. Files that already exist are kept unless you pass `--force`.
+Writes a starter suite, a CI workflow and an agent skill into a repository. It makes no model call. `--ci keyless` (the default) writes a workflow that compares committed run files; `--ci api-key` writes one that runs the suite with a secret; `--ci none` writes no workflow. `--platform github` (the default) writes `.github/workflows/evalproof.yml`; `--platform gitlab` writes `.gitlab-ci.evalproof.yml` and prints the two `include:` lines to add to your `.gitlab-ci.yml`, which `init` never edits. Files that already exist are kept unless you pass `--force`.
 
 ```bash title="Terminal"
-evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--cli-auth {api-key,oauth-token}] [--no-skill] [--force]
+evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab}] [--cli-auth {api-key,oauth-token}] [--no-skill] [--force]
 ```
 
 | Flag | Type | Default | What it does |
@@ -36,6 +36,7 @@ evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--cli
 | `--dir` | string | `.` | where to write; the default is the current directory |
 | `--judge` | string | none | model for the judge and the system, for example `claude-code:haiku` |
 | `--ci` | one of `keyless`, `api-key`, `none` | `keyless` | `keyless`: CI compares committed run files, with no model calls; `api-key`: CI runs the suite with a secret; `none`: no workflow |
+| `--platform` | one of `github`, `gitlab` | `github` | where CI runs: `github` writes `.github/workflows/evalproof.yml`; `gitlab` writes `.gitlab-ci.evalproof.yml`, which you include from `.gitlab-ci.yml` (never edited). `gitlab` with `--ci api-key` refuses a coding-agent CLI judge ([In CI](../guides/ci.md#gitlab-ci)) |
 | `--cli-auth` | one of `api-key`, `oauth-token` | `api-key` | with `--ci api-key` and a coding-agent CLI judge, what the workflow passes the CLI: its API key (`api-key`), or `oauth-token`: `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, for `claude-code` in your own repository and CI only |
 | `--no-skill` | flag | off | do not write the agent skill |
 | `--force` | flag | off | overwrite files that already exist |

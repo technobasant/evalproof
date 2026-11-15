@@ -1,0 +1,84 @@
+# Written by `evalproof init --platform gitlab --ci api-key`.
+#
+# `evalproof init` never edits .gitlab-ci.yml. Add these two lines to it, or create it:
+#
+#   include:
+#     - local: .gitlab-ci.evalproof.yml
+#
+# CI runs the suite itself with an API key kept in a CI/CD variable, then compares the new run
+# with evals/runs/latest.json on the target branch. Every case is a model call, so the job only
+# runs the suite when something you watch changed (see EVALPROOF_WATCH below). The job itself
+# starts in every merge request pipeline, so a required pipeline never waits for a run that was
+# filtered out; when nothing changed it says so and stops.
+#
+# The key: add a CI/CD variable named @@KEY_VAR@@ under Settings > CI/CD > Variables, and mark
+# it Masked. Do not mark it Protected: GitLab passes a protected variable only to pipelines on
+# protected branches, and a merge request from a feature branch is not one.
+# Merge requests from forks get no key: when GitLab runs a fork's merge request in this project,
+# the job runs nothing and says so.
+#
+# Responses are cached between runs, and the cache is kept when the gate fails, so a merge
+# request that fails keeps the answers it paid for. A changed prompt or case is a different
+# request, so it is never answered from an old response.
+#
+# The job runs in merge request pipelines only, because the baseline is the target branch. If
+# your other jobs also run on every branch push, add a `workflow: rules:` block so a push to a
+# branch with an open merge request does not start two pipelines.
+evalproof:
+  stage: test # change this if your pipeline has no `test` stage
+  image: python:3.13-slim # an image with git skips the git install below
+  timeout: 30 minutes
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: "0" # the target branch has to be in the clone
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    PIP_ROOT_USER_ACTION: ignore
+    # Space-separated paths whose change should re-run the suite: the suite and the cases, plus
+    # whatever holds your system prompt or retrieval logic. Add yours.
+    # Run files under evals/runs/ never count: CI makes the run itself.
+    EVALPROOF_WATCH: evals/
+  cache:
+    key: evalproof-responses
+    paths:
+      - evals/.evalproof/cache/ # the suite's cache_dir, next to the suite
+    when: always # also saved when the gate fails
+  script:
+    - |
+      set -eu
+      command -v git > /dev/null || { apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null; }
+      target="$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+      git fetch --quiet origin "+refs/heads/$target:refs/remotes/origin/$target"
+
+      # Check whether anything watched changed.
+      set -f
+      changed="$(git diff --name-only "origin/$target...HEAD" -- $EVALPROOF_WATCH ':(exclude)evals/runs/')"
+      set +f
+      if [ -z "$changed" ]; then
+        echo "evalproof: notice: nothing in $EVALPROOF_WATCH changed in this merge request, so the suite was not run."
+        exit 0
+      fi
+
+      # Skip merge requests from forks.
+      if [ "$CI_MERGE_REQUEST_SOURCE_PROJECT_PATH" != "$CI_PROJECT_PATH" ]; then
+        echo "evalproof: notice: this merge request comes from a fork, and a fork gets no CI/CD variables, so the suite was not run. A maintainer can run it on a branch in this project."
+        exit 0
+      fi
+
+      # Take the baseline from the target branch.
+      baseline="${TMPDIR:-/tmp}/evalproof-baseline.json"
+      candidate="${TMPDIR:-/tmp}/evalproof-candidate.json"
+      if ! git cat-file -e "origin/$target:evals/runs/latest.json" 2>/dev/null; then
+        echo "evalproof: notice: $target has no evals/runs/latest.json yet, so there is nothing to compare with. Run the suite, commit the file, and later merge requests are gated."
+        exit 0
+      fi
+      git show "origin/$target:evals/runs/latest.json" > "$baseline"
+
+      python -m pip install --quiet "evalproof==@@PIP_VERSION@@"
+      evalproof run evals/suite.yaml --out "$candidate" --quiet
+      evalproof compare "$baseline" "$candidate" --suite evals/suite.yaml --gate --junit evalproof-junit.xml
+  artifacts:
+    when: always # the report of a failed gate is the one you want to read
+    expire_in: 1 week
+    reports:
+      junit: evalproof-junit.xml

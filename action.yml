@@ -40,6 +40,18 @@ inputs:
     description: Significance level.
     required: false
     default: ""
+  pr-comment:
+    description: >-
+      Set to "true" to post the report as one comment on the pull request, and to update that
+      comment on later runs. The token needs `pull-requests: write`. The comment never changes
+      the result: when it cannot be posted (a pull request from a fork gets a read-only token)
+      the action prints a warning and keeps the gate's result.
+    required: false
+    default: "false"
+  github-token:
+    description: Token that posts the comment when `pr-comment` is "true".
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   exit-code:
@@ -62,6 +74,11 @@ runs:
         EP_ALPHA: ${{ inputs.alpha }}
         EP_SOURCE: ${{ github.action_path }}
       run: |
+        # Keep a copy of the report for the comment step: every step has its own
+        # $GITHUB_STEP_SUMMARY file, so the next step cannot read this one.
+        report="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/evalproof-report.md"
+        : > "$report"
+        trap 'cp "$GITHUB_STEP_SUMMARY" "$report" 2>/dev/null || true' EXIT
         # Verify first: a candidate that does not match the suite cannot be gated.
         if [ -n "$EP_SUITE" ] && [ "$EP_VERIFY" = "true" ]; then
           set +e
@@ -89,3 +106,53 @@ runs:
         code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
         exit $code
+    # Runs after a failed gate too, so a regression is reported where the author reads it.
+    # It never fails: the gate step's result is the action's result.
+    - id: comment
+      if: always() && inputs.pr-comment == 'true' && github.event.pull_request.number
+      shell: bash
+      env:
+        EP_COMMENT: ${{ inputs.pr-comment }}
+        EP_PR: ${{ github.event.pull_request.number }}
+        EP_REPO: ${{ github.repository }}
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        [ "$EP_COMMENT" = "true" ] && [ -n "$EP_PR" ] || exit 0
+        marker='<!-- evalproof-report -->'
+        limit=65000 # a comment holds 65536 characters; leave room for the marker and the note
+        dir="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+        report="$dir/evalproof-report.md"
+        body="$dir/evalproof-comment.md"
+
+        post() {
+          # gh reads the body from a file (-F body=@file), so a long report never hits the
+          # command-line length limit, and no JSON is built here.
+          size=$(wc -c < "$report" | tr -d ' ') || return 1
+          {
+            printf '%s\n\n' "$marker"
+            if [ "$size" -gt "$limit" ]; then
+              head -c "$limit" "$report"
+              printf '\n\n_The report was cut here to fit in a comment. The job summary has all of it._\n'
+            else
+              cat "$report"
+            fi
+          } > "$body" || return 1
+          # The first comment that carries the marker is ours; later runs update it.
+          filter='.[] | select((.body // "") | contains("'"$marker"'")) | .id'
+          ids=$(gh api "repos/$EP_REPO/issues/$EP_PR/comments" --paginate --jq "$filter") || return 1
+          id=$(printf '%s\n' "$ids" | tr -d '\r' | sed -n '1p')
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$EP_REPO/issues/comments/$id" -F "body=@$body" > /dev/null || return 1
+            echo "evalproof: updated the pull request comment $id"
+          else
+            gh api "repos/$EP_REPO/issues/$EP_PR/comments" -F "body=@$body" > /dev/null || return 1
+            echo "evalproof: posted a pull request comment"
+          fi
+        }
+
+        if [ ! -s "$report" ]; then
+          echo "evalproof: no report was written, so there is no pull request comment to post"
+        elif ! post; then
+          echo "::warning::evalproof could not post the pull request comment. The workflow needs pull-requests: write, and a pull request from a fork gets a read-only token. The gate's result is unchanged."
+        fi
+        exit 0

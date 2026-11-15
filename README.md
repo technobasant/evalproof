@@ -84,7 +84,9 @@ that changed.
 [Docker](https://basantbhattarai.com.np/evalproof/getting-started/install/#docker)).
 
 **In GitHub Actions**, no install step is needed: the composite action
-`technobasant/evalproof@v1.0.0` runs the evalproof of the tag you pin
+`technobasant/evalproof@v1.0.0` runs the evalproof of the tag you pin, and `pr-comment: "true"`
+posts the report as a pull request comment. **In GitLab CI**, `evalproof init --platform gitlab`
+writes a file you include from `.gitlab-ci.yml`
 ([In CI](https://basantbhattarai.com.np/evalproof/guides/ci/)).
 
 ## What it needs to run
