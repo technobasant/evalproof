@@ -1,0 +1,5 @@
+[
+  {"name": "refund-window", "input": "Can I get a refund?", "expected_output": "Yes, within 30 days of purchase.", "context": ["Refunds are available within 30 days."], "additional_metadata": {"topic": "billing"}},
+  {"name": "export-formats", "input": "Which export formats do you support?", "expected_output": "Markdown and PDF on every plan.", "actual_output": "Markdown and PDF."},
+  {"input": "What is the Pro price?", "expected_output": "Pro costs $8 per month."}
+]

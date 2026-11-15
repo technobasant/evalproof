@@ -1,0 +1,3 @@
+{"id": "bt-1", "input": "Can I get a refund?", "expected": "Yes, within 30 days of purchase.", "metadata": {"topic": "billing"}, "tags": ["billing", "support"]}
+{"id": "bt-2", "input": {"question": "What is the Pro price?", "plan": "pro"}, "expected": {"price": 8, "currency": "USD"}}
+{"id": "bt-3", "input": [{"role": "system", "content": "Be brief."}, {"role": "user", "content": "Which export formats do you support?"}], "expected": "Markdown and PDF."}

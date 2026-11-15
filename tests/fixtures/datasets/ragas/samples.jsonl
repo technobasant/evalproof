@@ -1,0 +1,3 @@
+{"user_input": "Can I get a refund?", "reference": "Yes, within 30 days of purchase.", "response": "Yes.", "retrieved_contexts": ["Refunds are available within 30 days."], "reference_topics": ["billing"]}
+{"user_input": "Which export formats do you support?", "reference": "Markdown and PDF."}
+{"user_input": [{"type": "human", "content": "Hi"}, {"type": "ai", "content": "Hello, how can I help?"}, {"type": "human", "content": "What is the Pro price?"}], "reference": "Pro costs $8 per month."}

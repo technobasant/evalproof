@@ -1,0 +1,49 @@
+# Hand-written from promptfoo's documented config shape (not copied from a real project).
+description: Support bot checks
+prompts:
+  - "Answer the customer: {{question}}"
+providers:
+  - openai:gpt-4o-mini
+defaultTest:
+  vars:
+    product: Notebird
+  metadata:
+    tags: [support]
+  assert:
+    - type: not-icontains
+      value: as an ai language model
+tests:
+  - description: Free plan notebooks
+    vars:
+      question: How many notebooks are on the Free plan?
+    assert:
+      - type: icontains
+        value: "3"
+      - type: llm-rubric
+        value: States that the Free plan has 3 notebooks
+  - description: Refund window
+    vars:
+      question: Can I get a refund?
+    metadata:
+      tags: [billing]
+    assert:
+      - type: contains-any
+        value: ["30 days", "thirty days"]
+      - type: regex
+        value: "\\b30\\b"
+      - type: javascript
+        value: output.length < 300
+  - vars:
+      question: Which export formats do you support?
+    assert:
+      - type: contains-all
+        value: [Markdown, PDF]
+      - type: similar
+        value: Markdown or PDF
+        threshold: 0.8
+  - description: Exact answer
+    vars:
+      question: What is the Pro price?
+    assert:
+      - type: equals
+        value: $8 per month

@@ -1,0 +1,3 @@
+input,expected_output,context,name
+Can I get a refund?,"Yes, within 30 days of purchase.",Refunds are available within 30 days.|Contact support,refund-window
+What is the Pro price?,Pro costs $8 per month.,,pro-price
