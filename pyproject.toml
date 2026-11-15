@@ -12,7 +12,7 @@ authors = [{ name = "Basant Bhattarai" }]
 requires-python = ">=3.11"
 keywords = ["llm", "evaluation", "llm-as-a-judge", "calibration", "ci", "statistics"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",

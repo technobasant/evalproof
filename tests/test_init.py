@@ -20,6 +20,7 @@ from typing import Any
 import pytest
 import yaml
 
+from evalproof._version import __version__
 from evalproof.cli import build_parser, main
 from evalproof.config import ConfigError, load_config
 from evalproof.dataset import load_dataset
@@ -395,7 +396,7 @@ def test_api_key_workflow_pins_the_cli_found_at_init_time(
         "EVALPROOF_CLI_AUTH": "api-key",
         "ANTHROPIC_API_KEY": "${{ secrets.ANTHROPIC_API_KEY }}",
     }
-    assert 'uvx evalproof@0.8.0 run evals/suite.yaml --out "$RUNNER_TEMP/' in run["run"]
+    assert f'uvx evalproof@{__version__} run evals/suite.yaml --out "$RUNNER_TEMP/' in run["run"]
     assert "judge_cli_version" in (tmp_path / WORKFLOW).read_text(encoding="utf-8")
 
 
@@ -445,7 +446,7 @@ def test_api_key_workflow_for_the_default_hosted_judge(
     steps = _steps(tmp_path / WORKFLOW)
     run = next(s for s in steps if s.get("name") == "Run the suite")
     assert run["env"] == {"ANTHROPIC_API_KEY": "${{ secrets.ANTHROPIC_API_KEY }}"}
-    assert "uvx evalproof@0.8.0 run evals/suite.yaml --out" in run["run"]
+    assert f"uvx evalproof@{__version__} run evals/suite.yaml --out" in run["run"]
     assert not any("npm install" in str(s.get("run", "")) for s in steps)
     assert "api_key_env: ANTHROPIC_API_KEY" in (tmp_path / "evals" / "suite.yaml").read_text(
         encoding="utf-8"

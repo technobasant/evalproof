@@ -9,14 +9,19 @@ from math import comb
 import numpy as np
 import pytest
 
-from evalproof.compare import MetricComparison
+from evalproof.compare import MCNEMAR_TEST, MetricComparison, compare_runs
+from evalproof.config import GateConfig
+from evalproof.gate import decide
 from evalproof.power import estimate_power
 from evalproof.stats import (
     EXACT_ENUMERATION_MAX,
     PERMUTATION_DRAWS,
+    mcnemar_exact,
+    min_significant_discordant,
     sign_flip_test,
     z_for,
 )
+from tests.conftest import make_run
 
 
 def _brute_force(diffs: list[float]) -> float:
@@ -173,6 +178,7 @@ def _mc(
     n: int = 100,
     diff_sd: float | None = 0.3,
     baseline_var: float | None = 0.2,
+    test: str = "t",
 ) -> MetricComparison:
     return MetricComparison(
         name="m",
@@ -184,7 +190,7 @@ def _mc(
         ci_low=-0.2,
         ci_high=0.0,
         p_value=0.1,
-        test="t",
+        test=test,
         diff_sd=diff_sd,
         baseline_var=baseline_var,
     )
@@ -235,3 +241,163 @@ def test_units_follow_the_kind() -> None:
     assert "points" in estimate_power(_mc("binary"), 0.02, 0.05).note
     assert "points" in estimate_power(_mc("rate"), 0.02, 0.05).note
     assert "points" not in estimate_power(_mc("continuous"), 0.02, 0.05).note
+
+
+# --- the exact floor under the minimum detectable drop -----------------------------------------
+
+
+def _exact(n: int, *, diff_sd: float | None = 0.3, baseline_var: float | None = 0.2):
+    """A binary comparison tested with the exact McNemar test, as the gate runs it."""
+    return _mc("binary", n=n, diff_sd=diff_sd, baseline_var=baseline_var, test=MCNEMAR_TEST)
+
+
+@pytest.mark.parametrize(
+    ("alpha", "k"),
+    [
+        (0.5, 3),  # 2 * 0.5**2 = 0.5 is not below 0.5: the comparison is strict, as the gate's is
+        (0.9, 2),
+        (0.1, 5),
+        (0.0626, 5),  # 2 * 0.5**5 = 0.0625
+        (0.0625, 6),  # ... and not below itself
+        (0.05, 6),
+        (0.05 / 2, 7),
+        (0.05 / 6, 8),
+        (0.01, 8),
+        (0.05 / 12, 9),
+        (0.001, 11),
+    ],
+)
+def test_min_significant_discordant_is_the_first_k_the_gate_would_call_significant(
+    alpha: float, k: int
+) -> None:
+    assert min_significant_discordant(alpha) == k
+    assert mcnemar_exact(k, 0) < alpha
+    assert mcnemar_exact(k - 1, 0) >= alpha or k == 1
+
+
+def test_min_significant_discordant_rejects_an_alpha_outside_zero_one() -> None:
+    for bad in (0.0, 1.0, -0.1, 2.0):
+        with pytest.raises(ValueError, match="alpha"):
+            min_significant_discordant(bad)
+
+
+def test_the_floor_is_the_smallest_drop_the_gate_can_actually_call_significant() -> None:
+    """Six cases worse (and none better) is the first the gate fails at alpha 0.05; five is not."""
+    n = 42
+    gate = GateConfig(metric="m", alpha=0.05, max_drop=0.02)
+    base = make_run({f"c{i:03d}": {"m": True} for i in range(n)}, system="base")
+    for worse, significant in ((5, False), (6, True)):
+        cand = make_run({f"c{i:03d}": {"m": i >= worse} for i in range(n)}, system="cand")
+        cmp = compare_runs(base, cand)
+        assert cmp.metrics["m"].test == MCNEMAR_TEST
+        assert (cmp.metrics["m"].p_value < gate.alpha) is significant
+        decision = decide(cmp, gate)
+        assert (decision.exit_code != 0) is significant
+        assert decision.power["m"].mde >= 6 / n  # never below the floor, whatever the data say
+
+
+def test_n42_binary_exact_floor_is_six_cases_and_binds_over_the_normal_figure() -> None:
+    power = estimate_power(_exact(42), max_drop=0.02, alpha_used=0.05)
+    normal = (z_for(0.05) + 0.8416212335729143) * 0.3 / np.sqrt(42)
+    assert normal < 6 / 42  # the approximation alone would have said about 13 points
+    assert power.mde == pytest.approx(6 / 42)
+    assert power.cases_needed == int(np.ceil((z_for(0.05) + 0.8416212335729143) ** 2 * 0.09 / 4e-4))
+    assert power.note == (
+        "With 42 cases the exact test cannot call a drop smaller than 14.3 points significant "
+        "(6 cases worse, none better); about 1766 cases are needed to detect max_drop "
+        "(2.0 points)."
+    )
+
+
+def test_a_uniform_baseline_reports_the_floor_instead_of_giving_up() -> None:
+    power = estimate_power(_exact(42, diff_sd=0.0, baseline_var=0.0), 0.02, 0.05)
+    assert power.mde == pytest.approx(6 / 42)
+    assert power.cases_needed == 300  # ceil(6 / 0.02)
+    assert power.note == (
+        "With 42 cases the smallest drop the exact test can call significant is 14.3 points "
+        "(6 cases worse, none better); the baseline is uniform (all pass or all fail), so power "
+        "at that size is not estimated; at least 300 cases are needed to detect max_drop "
+        "(2.0 points)."
+    )
+
+
+def test_a_uniform_baseline_does_not_ask_for_more_cases_when_the_floor_is_under_max_drop() -> None:
+    power = estimate_power(_exact(1000, diff_sd=0.0, baseline_var=0.0), 0.02, 0.05)
+    assert power.mde == pytest.approx(6 / 1000)
+    assert power.cases_needed == 300 and "needed" not in power.note
+    assert "power at that size is not estimated" in power.note
+
+
+def test_no_drop_can_be_significant_when_the_suite_has_fewer_cases_than_the_floor() -> None:
+    for n, kw in ((4, {}), (4, {"diff_sd": 0.0, "baseline_var": 0.0})):
+        power = estimate_power(_exact(n, **kw), 0.02, 0.05)
+        assert power.mde is None and power.cases_needed == 300
+        assert power.note == (
+            f"With {n} cases no drop can reach significance: the exact test needs at least 6 "
+            "cases worse (and none better) at α=0.05, more than the suite has; at least 300 "
+            "cases are needed to detect max_drop (2.0 points)."
+        )
+    # Exactly the floor is enough: six cases can all be worse.
+    six = estimate_power(_exact(6), 0.02, 0.05)
+    assert six.mde == pytest.approx(1.0) and "no drop can reach" not in six.note
+
+
+def test_a_shared_alpha_raises_the_floor() -> None:
+    tight = {"diff_sd": 0.05}  # a normal figure far under the floor, so the floor shows
+    assert estimate_power(_exact(100, **tight), 0.02, 0.05).mde == pytest.approx(0.06)  # k is 6
+    assert estimate_power(_exact(100, **tight), 0.02, 0.05 / 6).mde == pytest.approx(0.08)  # k is 8
+
+
+def test_floor_alpha_sets_the_floor_apart_from_the_alpha_of_the_normal_figure() -> None:
+    tight = {"diff_sd": 0.05}
+    split = estimate_power(_exact(100, **tight), 0.02, 0.05 / 2, floor_alpha=0.05)
+    assert split.mde == pytest.approx(0.06)  # k is 6 at 0.05, not 7 at 0.025
+    assert "(6 cases worse, none better)" in split.note
+    few = estimate_power(_exact(4), 0.02, 0.05 / 2, floor_alpha=0.05)
+    assert "at α=0.05" in few.note
+
+
+def test_with_two_gated_metrics_the_floor_uses_the_gates_alpha() -> None:
+    """Holm can pass a metric at a raw p up to alpha, so the floor is k at alpha, not alpha / 2."""
+    n = 50
+    base = make_run({f"c{i:03d}": {"a": True, "b": True} for i in range(n)}, system="base")
+    cand = make_run({f"c{i:03d}": {"a": True, "b": True} for i in range(n)}, system="cand")
+    decision = decide(compare_runs(base, cand), GateConfig(metrics=["a", "b"], max_drop=0.02))
+    for name in ("a", "b"):
+        assert decision.power[name].mde == pytest.approx(6 / n)  # 12 points; 7 / 50 would be 14
+
+
+def test_the_normal_figure_still_wins_when_it_is_larger() -> None:
+    power = estimate_power(_exact(100, diff_sd=0.9), max_drop=0.02, alpha_used=0.05)
+    normal = (z_for(0.05) + 0.8416212335729143) * 0.9 / 10
+    assert normal > 6 / 100
+    assert power.mde == pytest.approx(normal)
+    assert "this gate reliably detects drops of about" in power.note
+    assert "80% power" in power.note and "exact test cannot" not in power.note
+    z = z_for(0.05) + 0.8416212335729143
+    assert power.cases_needed == int(np.ceil((z * 0.9 / 0.02) ** 2))
+
+
+def test_the_floor_does_not_apply_to_rate_continuous_or_a_non_exact_binary_test() -> None:
+    for kind, test in (("rate", "t"), ("rate", "sign-flip permutation"), ("continuous", "t")):
+        mc = _mc(kind, n=42, test=test)
+        power = estimate_power(mc, 0.02, 0.05)
+        z = z_for(0.05) + 0.8416212335729143
+        assert power.mde == pytest.approx(z * 0.3 / np.sqrt(42))
+        assert "exact test" not in power.note
+    # A binary metric that did not use the exact test (nothing to say about a floor) is unchanged.
+    plain = estimate_power(_mc("binary", n=42, test="permutation"), 0.02, 0.05)
+    assert "exact test" not in plain.note
+    uniform = estimate_power(_mc("rate", diff_sd=0.0, baseline_var=0.0), 0.02, 0.05)
+    assert uniform.mde is None and "cannot be estimated" in uniform.note
+
+
+def test_the_power_wording_in_the_docs_names_the_floor() -> None:
+    from pathlib import Path
+
+    docs = Path(__file__).resolve().parent.parent / "docs"
+    guide = (docs / "guides" / "repeated-trials.md").read_text(encoding="utf-8")
+    glossary = (docs / "glossary.md").read_text(encoding="utf-8")
+    for text in (guide, glossary):
+        assert "exact" in text and "McNemar" in text
+    assert "6 cases" in guide or "six cases" in guide

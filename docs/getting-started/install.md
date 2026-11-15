@@ -15,7 +15,7 @@ evalproof is a command-line tool and a Python library, published on
 
     ```bash title="Terminal"
     uvx evalproof --version
-    uvx evalproof@0.8.0 init          # pin a version
+    uvx evalproof@1.0.0 init          # pin a version
     ```
 
 === "uv tool"
@@ -24,7 +24,7 @@ evalproof is a command-line tool and a Python library, published on
 
     ```bash title="Terminal"
     uv tool install evalproof
-    evalproof --version               # evalproof 0.8.0
+    evalproof --version               # evalproof 1.0.0
     ```
 
 === "pipx"
@@ -33,7 +33,7 @@ evalproof is a command-line tool and a Python library, published on
 
     ```bash title="Terminal"
     pipx install evalproof
-    evalproof --version               # evalproof 0.8.0
+    evalproof --version               # evalproof 1.0.0
     ```
 
 === "pip or a project"
@@ -62,7 +62,7 @@ Run files from older versions keep working; see the [changelog](../about/changel
 ## In GitHub Actions
 
 No install step is needed: the composite action
-`technobasant/evalproof@v0.8.0` runs the evalproof of the tag you pin ([In CI](../guides/ci.md#in-ci)).
+`technobasant/evalproof@v1.0.0` runs the evalproof of the tag you pin ([In CI](../guides/ci.md#in-ci)).
 
 ## What else you need
 

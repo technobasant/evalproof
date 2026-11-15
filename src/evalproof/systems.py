@@ -34,6 +34,7 @@ from evalproof.config import (
 from evalproof.models import Case, SystemOutput, Trace
 from evalproof.providers import (
     CLI_PROVIDERS,
+    CacheMiss,
     Message,
     Provider,
     ProviderError,
@@ -41,6 +42,7 @@ from evalproof.providers import (
     response_cost,
     with_retries,
 )
+from evalproof.providers.base import close_resource
 
 
 @dataclass(frozen=True)
@@ -107,6 +109,9 @@ class LLMSystem:
         self.name = cfg.label or cfg.target
         self.vars = dict(vars or {})  # the variant's, rendered into the prompt template
 
+    def close(self) -> None:
+        close_resource(self.provider)
+
     def _user(self, case: Case, **turn: Any) -> Message:
         variables = {**self.vars, **case.render_vars(**turn)}
         return Message(role="user", content=render(self.cfg.prompt_template, variables))
@@ -130,6 +135,8 @@ class LLMSystem:
     def _single(self, case: Case, params: GenerationParams) -> SystemOutput:
         try:
             resp = self.provider.chat(self.messages(case), params)
+        except CacheMiss:
+            raise  # a cache-only run stops; it is not a failure of this case
         except ProviderError as exc:
             return SystemOutput(output="", error=str(exc))
         return SystemOutput(
@@ -158,6 +165,8 @@ class LLMSystem:
                 ]
             try:
                 resp = self.provider.chat(msgs, params)
+            except CacheMiss:
+                raise
             except ProviderError as exc:
                 # What the earlier turns cost is still spent, so budgets see it.
                 return SystemOutput(
@@ -346,7 +355,13 @@ class HttpSystem:
         self.variant = variant
         self.vars = dict(vars or {})
         self.trials = trials  # the body carries ``trial`` only when a case runs more than once
-        self._client = client or httpx.Client(timeout=cfg.timeout_s)
+        self._owns_client = client is None
+        self._client = httpx.Client(timeout=cfg.timeout_s) if client is None else client
+
+    def close(self) -> None:
+        """Close the HTTP client this created; a client passed in stays its owner's to close."""
+        if self._owns_client:
+            self._client.close()
 
     def _body(self, case: Case, trial: int = 0) -> dict[str, Any]:
         body: dict[str, Any] = {"id": case.id, "input": case.input}
@@ -422,6 +437,7 @@ def make_system(
     variant: str | None = None,
     vars: dict[str, Any] | None = None,
     trials: int = 1,
+    cache_only: bool = False,
 ) -> System:
     kind = cfg.kind
     if kind == "python":
@@ -432,5 +448,7 @@ def make_system(
         return HttpSystem(cfg, client=client, variant=variant, vars=vars, trials=trials)
     provider: Provider = make_provider(cfg, client=client)
     if cache is not None:
-        provider = CachedProvider(provider, cache, base_url=cfg.base_url)
+        provider = CachedProvider(
+            provider, cache, base_url=cfg.base_url, cache_only=cache_only, role="system"
+        )
     return LLMSystem(cfg, provider, vars=vars)

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from evalproof.config import SuiteConfig
 from evalproof.dataset import case_hash, content_hash, dataset_hash, load_dataset
-from evalproof.models import Run
+from evalproof.models import RUN_FORMAT_VERSION, Run
 
 
 class RehashError(ValueError):
@@ -55,6 +55,7 @@ def rehash_run(run: Run, cfg: SuiteConfig) -> Run:
             "your change) and rehash there, or re-run the suite"
         )
     out = run.model_copy(deep=True)
+    out.format_version = RUN_FORMAT_VERSION  # the file is rewritten, so it is in today's format
     for r in out.results:
         case = by_id[r.case_id]
         r.case_hash = case_hash(case)

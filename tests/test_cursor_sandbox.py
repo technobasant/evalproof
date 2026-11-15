@@ -114,6 +114,10 @@ def test_the_deny_list_is_relative_and_names_no_one() -> None:
     assert "basant" not in cursor_sandbox_profile("/H")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows reads USERPROFILE, not HOME, and symlinks need a privilege",
+)
 def test_the_home_is_resolved_through_symlinks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -228,6 +232,25 @@ def test_the_isolation_tag_is_cursor_3_with_the_sandbox_and_cursor_2_without(
     assert fake.calls() == []
 
 
+def test_the_facts_without_the_binary_keep_the_tag_this_instance_would_give(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    monkeypatch.setenv("PATH", str(empty))
+    target = TargetConfig(target="cursor:auto")
+    sandbox_available(monkeypatch, True)
+    assert cli_facts(target) == {
+        "cli": "cursor",
+        "cli_version": "unavailable",
+        "isolation": "cursor/3",
+        "sampling": "cli-default",
+    }
+    monkeypatch.setenv("EVALPROOF_CURSOR_SANDBOX", "off")
+    assert cli_facts(target)["isolation"] == "cursor/2"
+    assert cli_facts(target)["cli_version"] == "unavailable"
+
+
 def test_the_cache_key_differs_between_sandboxed_and_not(
     fake: FakeCLI, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -252,7 +275,9 @@ def test_a_call_runs_the_cli_behind_sandbox_exec(
     # has newlines), drops ``-p PROFILE`` and runs the rest, as the real one does once the
     # profile is applied.
     stand_in = tmp_path / "fake-sandbox-exec"
-    stand_in.write_text('#!/bin/sh\nprintf \'%s\\0\' "$@" > "$0.argv"\nshift 2\nexec "$@"\n')
+    stand_in.write_text(
+        '#!/bin/sh\nprintf \'%s\\0\' "$@" > "$0.argv"\nshift 2\nexec "$@"\n', encoding="utf-8"
+    )
     stand_in.chmod(stand_in.stat().st_mode | stat.S_IXUSR)
     monkeypatch.setattr(experimental, "SANDBOX_EXEC", str(stand_in))
     sandbox_available(monkeypatch, True)

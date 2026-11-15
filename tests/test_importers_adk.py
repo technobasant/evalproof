@@ -32,13 +32,13 @@ def _quiet(_: str) -> None:
 
 
 def _data() -> dict[str, Any]:
-    loaded: dict[str, Any] = json.loads(PLAIN.read_text())
+    loaded: dict[str, Any] = json.loads(PLAIN.read_text(encoding="utf-8"))
     return loaded
 
 
 def _write(tmp_path: Path, data: Any, name: str = "result.evalset_result.json") -> Path:
     path = tmp_path / name
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data), encoding="utf-8")
     return path
 
 
@@ -103,8 +103,10 @@ def test_system_label_comes_from_the_option() -> None:
 
 
 def test_both_encodings_give_the_same_run() -> None:
-    assert isinstance(json.loads(DOUBLE.read_text()), str)  # the pre-1.22.0 file is a string
-    assert isinstance(json.loads(PLAIN.read_text()), dict)
+    assert isinstance(
+        json.loads(DOUBLE.read_text(encoding="utf-8")), str
+    )  # the pre-1.22.0 file is a string
+    assert isinstance(json.loads(PLAIN.read_text(encoding="utf-8")), dict)
     plain = import_run("adk", PLAIN, warn=_quiet)
     double = import_run("adk", DOUBLE, warn=_quiet)
     assert double.info.dataset_path != plain.info.dataset_path
@@ -167,8 +169,8 @@ def _camelled(value: Any) -> Any:
 
 def test_camel_case_keys_are_read_too(tmp_path: Path) -> None:
     camel = _write(tmp_path, _camelled(_data()))
-    assert '"evalCaseResults"' in camel.read_text()
-    assert '"device_id"' in camel.read_text()
+    assert '"evalCaseResults"' in camel.read_text(encoding="utf-8")
+    assert '"device_id"' in camel.read_text(encoding="utf-8")
     assert _without_path(import_run("adk", camel, warn=_quiet)) == _without_path(
         import_run("adk", PLAIN, warn=_quiet)
     )
@@ -379,7 +381,7 @@ def test_text_ignores_thought_parts_and_a_case_without_invocations_still_imports
 @pytest.mark.parametrize(
     ("content", "message"),
     [
-        (json.loads(EVAL_SET.read_text()), "this is an ADK eval set"),
+        (json.loads(EVAL_SET.read_text(encoding="utf-8")), "this is an ADK eval set"),
         ({"hello": "world"}, "no eval_case_results list"),
         ([1, 2], "expected a JSON object"),
         ({"eval_case_results": []}, "no eval_case_results"),
@@ -403,7 +405,7 @@ def test_the_real_eval_set_is_refused_as_not_a_result() -> None:
 
 def test_a_string_that_is_not_json_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "x.evalset_result.json"
-    path.write_text(json.dumps("not json at all"))
+    path.write_text(json.dumps("not json at all"), encoding="utf-8")
     with pytest.raises(ImportFormatError, match="not valid JSON"):
         import_run("adk", path, warn=_quiet)
 

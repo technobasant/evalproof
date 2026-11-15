@@ -73,6 +73,14 @@ detect max_drop (2.0 points)." The estimate uses the spread of the per-case diff
 the status, a warning or the exit code. A suite too small to see a 2-point drop passes a 2-point
 drop, and now the report says why.
 
+A binary metric with one trial per case, or with repeated trials combined with `all` or `any`, is
+gated with the exact McNemar test, which has a floor the normal approximation does not see: at least
+`k` cases must be worse and none better, with `k` set by the gate's `alpha` alone (6 at α=0.05),
+however many metrics are gated. The power line then reports the larger of the two figures, and says
+"With 42 cases the exact test cannot call a drop smaller than 14.3 points significant (6 cases
+worse, none better)". With a uniform baseline it still reports that floor, and says power at that
+size is not estimated; with fewer than `k` cases it says no drop can reach significance.
+
 ## The example
 
 `examples/agent-tools/suite-flaky.yaml` has a `flaky` build that forgets the

@@ -21,6 +21,13 @@ def test_importers_and_holm_are_public() -> None:
     assert evalproof.holm([0.01, 0.04, 0.03]) == [0.03, 0.06, 0.06]
 
 
+def test_the_errors_a_caller_catches_are_public() -> None:
+    for name in ("CacheMiss", "ProviderError", "RunFileError"):
+        assert name in evalproof.__all__ and hasattr(evalproof, name)
+    assert issubclass(evalproof.CacheMiss, evalproof.ProviderError)
+    assert issubclass(evalproof.RunFileError, ValueError)  # the CLI turns it into exit 2
+
+
 def test_the_import_example_runs() -> None:
     # What the README's "Import results from other tools" shows, on a committed fixture.
     fixture = ROOT / "tests" / "fixtures" / "table" / "long.csv"
@@ -32,7 +39,7 @@ def test_version_has_one_source() -> None:
     # pyproject.toml reads the version from _version.py at build time; nothing else
     # may write it down.
     assert evalproof.__version__.count(".") == 2
-    pyproject = (ROOT / "pyproject.toml").read_text()
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert 'dynamic = ["version", "readme"]' in pyproject
     assert "\nversion =" not in pyproject
 

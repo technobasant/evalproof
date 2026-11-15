@@ -673,7 +673,10 @@ def test_sources_dict_list_single_span_path_string_and_array_file(tmp_path: Path
     path = fixture("genai-content-on.json")
     assert run(str(path))[0]["output"] == run(path)[0]["output"] == "It is 20 C in Paris."
     array = tmp_path / "spans.json"
-    array.write_text('[\n  {"name": "x", "attributes": {}}, {"name": "y", "attributes": {}}\n]\n')
+    array.write_text(
+        '[\n  {"name": "x", "attributes": {}}, {"name": "y", "attributes": {}}\n]\n',
+        encoding="utf-8",
+    )
     assert trace_of(run(array)[0]).tool_calls == []
 
 
@@ -839,11 +842,11 @@ def test_input_that_holds_no_spans_is_refused(source: Any, message: str) -> None
 
 def test_an_empty_file_and_broken_json_name_the_file(tmp_path: Path) -> None:
     empty = tmp_path / "empty.json"
-    empty.write_text("  \n")
+    empty.write_text("  \n", encoding="utf-8")
     with pytest.raises(ValueError, match="no spans found"):
         otel.from_spans(empty)
     broken = tmp_path / "broken.jsonl"
-    broken.write_text('{"resourceSpans": []}\n{"resourceSpans": [\n')
+    broken.write_text('{"resourceSpans": []}\n{"resourceSpans": [\n', encoding="utf-8")
     with pytest.raises(ValueError, match=r"broken\.jsonl is not JSON at line 3"):
         otel.from_spans(broken)
 

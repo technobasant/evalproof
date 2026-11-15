@@ -72,7 +72,13 @@ class OpenAICompatibleProvider:
             else:
                 defaults[profile.auth_header] = key
         self._headers = merge_headers(defaults, headers)
-        self._client = client or httpx.Client(timeout=timeout_s)
+        self._owns_client = client is None
+        self._client = httpx.Client(timeout=timeout_s) if client is None else client
+
+    def close(self) -> None:
+        """Close the HTTP client this created; a client passed in stays its owner's to close."""
+        if self._owns_client:
+            self._client.close()
 
     def payload(self, messages: list[Message], params: GenerationParams) -> dict[str, Any]:
         body: dict[str, Any] = {

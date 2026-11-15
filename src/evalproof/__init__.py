@@ -35,8 +35,9 @@ from evalproof.models import (
     ToolCall,
     Trace,
 )
+from evalproof.providers import CacheMiss, ProviderError
 from evalproof.report import calibration_markdown, comparison_markdown, run_markdown
-from evalproof.runner import load_run, run_suite, save_run
+from evalproof.runner import RunFileError, load_run, run_suite, save_run
 from evalproof.stats import holm, mcnemar_exact, paired_bootstrap, wilson
 from evalproof.systems import RunContext
 
@@ -46,6 +47,7 @@ __all__ = [
     "EXIT_PASS",
     "EXIT_REGRESSION",
     "EXIT_USAGE",
+    "CacheMiss",
     "CalibrationReport",
     "Case",
     "CaseResult",
@@ -59,8 +61,10 @@ __all__ = [
     "ImportFormatError",
     "MetricComparison",
     "ModelUsage",
+    "ProviderError",
     "Run",
     "RunContext",
+    "RunFileError",
     "RunInfo",
     "RunStats",
     "Score",

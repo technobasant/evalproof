@@ -24,6 +24,12 @@ Read run files, compare two of them and turn the comparison into a gate decision
 
 ::: evalproof.GateDecision
 
+::: evalproof.RunFileError
+
+::: evalproof.CacheMiss
+
+::: evalproof.ProviderError
+
 ## Calibrate
 
 Measure a judge against gold labels and correct its pass rate.

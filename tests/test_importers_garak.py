@@ -30,7 +30,7 @@ def _sha(text: str) -> str:
 
 def _write(tmp_path: Path, rows: list[dict[str, Any]]) -> Path:
     path = tmp_path / "report.jsonl"
-    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
     return path
 
 
@@ -75,7 +75,9 @@ def test_real_report_maps_fields() -> None:
 
 
 def _eval_rows(path: Path) -> list[dict[str, Any]]:
-    lines = (json.loads(line) for line in path.read_text().splitlines() if line.strip())
+    lines = (
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    )
     return [row for row in lines if row.get("entry_type") == "eval"]
 
 
@@ -189,7 +191,7 @@ def test_legacy_report_reads_string_prompts_and_integer_scores() -> None:
 
 def test_garak_rejects_other_files(tmp_path: Path) -> None:
     other = tmp_path / "other.jsonl"
-    other.write_text('{"id": "a", "metric": "m", "score": 1}\n')
+    other.write_text('{"id": "a", "metric": "m", "score": 1}\n', encoding="utf-8")
     with pytest.raises(ImportFormatError, match="not a garak report"):
         import_run("garak", other)
     with pytest.raises(ImportFormatError, match="no attempt entries"):

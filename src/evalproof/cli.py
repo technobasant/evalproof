@@ -7,17 +7,19 @@ doctor | pairwise | readiness``
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import sys
 import tempfile
 from collections.abc import Sequence
+from contextlib import ExitStack
 from pathlib import Path
 
 from pydantic import ValidationError
 
 from evalproof._version import __version__
-from evalproof.cache import CachedProvider, ResponseCache
+from evalproof.cache import CachedProvider, ResponseCache, case_scope
 from evalproof.calibration import calibrate
 from evalproof.compare import AGGREGATES, Comparison, ComparisonRefused, compare_runs, run_label
 from evalproof.config import (
@@ -44,6 +46,7 @@ from evalproof.gate import (
 from evalproof.importers import DATASET_FORMATS, EPOCHS, FORMATS, import_dataset, import_run
 from evalproof.models import CaseResult, Run
 from evalproof.providers import ProviderError, make_provider
+from evalproof.providers.base import close_resource
 from evalproof.readiness import (
     assess,
     exit_code,
@@ -182,6 +185,7 @@ def _run_variant(
         cfg,
         limit=args.limit,
         use_cache=not args.no_cache,
+        cache_only=args.cache_only,
         progress=progress,
         system_override=override,
         variant=variant,
@@ -538,42 +542,51 @@ def cmd_pairwise(args: argparse.Namespace) -> int:
     if cfg.judge is None:
         raise ConfigError("pairwise needs a 'judge' in the suite")
     judge = make_provider(cfg.judge)
-    if not args.no_cache:
-        judge = CachedProvider(judge, ResponseCache(cfg.resolve(cfg.cache_dir)), cfg.judge.base_url)
-    cases = {c.id: c for c in load_dataset(cfg.resolve(cfg.dataset))}
-    a_by, b_by = load_run(args.baseline).by_id(), load_run(args.candidate).by_id()
-    ids = [cid for cid in sorted(set(a_by) & set(b_by)) if cid in cases][: args.limit]
-    tally = {"a": 0, "b": 0, "tie": 0}
-    inconsistent = 0
-    rows = []
-    for cid in ids:
-        res = pairwise(
-            judge,
-            cfg.judge.params,
-            cases[cid],
-            a_by[cid].output.output,
-            b_by[cid].output.output,
-            swap=not args.no_swap,
-        )
-        tally[res.winner] += 1
-        inconsistent += 0 if res.consistent else 1
-        rows.append({"id": cid, **res.__dict__})
-    n = len(ids)
-    md = [
-        "## Pairwise preference",
-        "",
-        f"{n} cases · baseline wins {tally['a']} · candidate wins {tally['b']} · "
-        f"ties {tally['tie']}",
-    ]
-    if not args.no_swap:
-        md.append(
-            f"Position-inconsistent verdicts (flipped when the order was swapped): "
-            f"{inconsistent}/{n} ({100 * inconsistent / n if n else 0:.1f}%) — reported as ties"
-        )
-    _emit("\n".join(md) + "\n", args.markdown)
-    if args.json:
-        Path(args.json).write_text(json.dumps(rows, indent=2), encoding="utf-8")
-    return EXIT_PASS
+    with ExitStack() as owned:  # closes the judge's own HTTP client, never a passed one
+        owned.callback(close_resource, judge)
+        if not args.no_cache:
+            judge = CachedProvider(
+                judge,
+                ResponseCache(cfg.resolve(cfg.cache_dir)),
+                cfg.judge.base_url,
+                cache_only=args.cache_only,
+                role="judge",
+            )
+        cases = {c.id: c for c in load_dataset(cfg.resolve(cfg.dataset))}
+        a_by, b_by = load_run(args.baseline).by_id(), load_run(args.candidate).by_id()
+        ids = [cid for cid in sorted(set(a_by) & set(b_by)) if cid in cases][: args.limit]
+        tally = {"a": 0, "b": 0, "tie": 0}
+        inconsistent = 0
+        rows = []
+        for cid in ids:
+            with case_scope(cid):
+                res = pairwise(
+                    judge,
+                    cfg.judge.params,
+                    cases[cid],
+                    a_by[cid].output.output,
+                    b_by[cid].output.output,
+                    swap=not args.no_swap,
+                )
+            tally[res.winner] += 1
+            inconsistent += 0 if res.consistent else 1
+            rows.append({"id": cid, **res.__dict__})
+        n = len(ids)
+        md = [
+            "## Pairwise preference",
+            "",
+            f"{n} cases · baseline wins {tally['a']} · candidate wins {tally['b']} · "
+            f"ties {tally['tie']}",
+        ]
+        if not args.no_swap:
+            md.append(
+                f"Position-inconsistent verdicts (flipped when the order was swapped): "
+                f"{inconsistent}/{n} ({100 * inconsistent / n if n else 0:.1f}%) — reported as ties"
+            )
+        _emit("\n".join(md) + "\n", args.markdown)
+        if args.json:
+            Path(args.json).write_text(json.dumps(rows, indent=2), encoding="utf-8")
+        return EXIT_PASS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -612,7 +625,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="where to write the run (with --variant, only when exactly one variant runs)",
     )
     r.add_argument("--limit", type=int)
-    r.add_argument("--no-cache", action="store_true")
+    cache_mode = r.add_mutually_exclusive_group()
+    cache_mode.add_argument(
+        "--no-cache", action="store_true", help="do not read or write the response cache"
+    )
+    cache_mode.add_argument(
+        "--cache-only",
+        action="store_true",
+        help="answer every model call (the judge's too) from the cache; a miss is an error and "
+        "no model is called",
+    )
     r.add_argument(
         "--trials",
         type=_trials,
@@ -884,14 +906,34 @@ def build_parser() -> argparse.ArgumentParser:
     pw.add_argument("--suite", required=True)
     pw.add_argument("--limit", type=int)
     pw.add_argument("--no-swap", action="store_true")
-    pw.add_argument("--no-cache", action="store_true")
+    pw_cache = pw.add_mutually_exclusive_group()
+    pw_cache.add_argument(
+        "--no-cache", action="store_true", help="do not read or write the response cache"
+    )
+    pw_cache.add_argument(
+        "--cache-only",
+        action="store_true",
+        help="answer every judge call from the cache; a miss is an error and no model is called",
+    )
     pw.add_argument("--markdown")
     pw.add_argument("--json")
     pw.set_defaults(func=cmd_pairwise)
     return p
 
 
+def _utf8_streams() -> None:
+    """Write UTF-8 to stdout and stderr. Redirected on Windows they use the ANSI code page, which
+    has no check mark or arrow, and a report would stop with ``UnicodeEncodeError``."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(ValueError, OSError):
+                reconfigure(encoding="utf-8")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
+    if sys.platform == "win32":  # pragma: no cover - the test calls _utf8_streams itself
+        _utf8_streams()
     args = build_parser().parse_args(argv)
     try:
         code: int = args.func(args)

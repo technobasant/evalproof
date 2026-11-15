@@ -19,6 +19,7 @@ from evalproof.providers.agent_cli_experimental import (
 )
 from evalproof.providers.anthropic import AnthropicProvider
 from evalproof.providers.base import (
+    CacheMiss,
     ChatResponse,
     Message,
     Provider,
@@ -37,6 +38,7 @@ __all__ = [
     "PROFILES",
     "AgentCLIProvider",
     "AnthropicProvider",
+    "CacheMiss",
     "ChatResponse",
     "ClaudeCodeProvider",
     "CodexProvider",

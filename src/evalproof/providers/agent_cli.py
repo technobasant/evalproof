@@ -255,13 +255,18 @@ class AgentCLIProvider:
             env[self.key_var] = self._api_key
         return env
 
-    def fingerprint(self) -> dict[str, str]:
+    def facts(self, version: str) -> dict[str, str]:
+        """The fingerprint given a version. ``isolation`` is read from the instance, because
+        the cursor provider's tag depends on its sandbox setting."""
         return {
             "cli": self.name,
-            "cli_version": cli_version(self.binary_path()),
+            "cli_version": version,
             "isolation": self.isolation,
             "sampling": SAMPLING,
         }
+
+    def fingerprint(self) -> dict[str, str]:
+        return self.facts(cli_version(self.binary_path()))
 
     def cache_salt(self, params: GenerationParams) -> dict[str, object]:
         """A change to the flag set must not be answered from the cache. The CLI's version is
@@ -618,14 +623,32 @@ CLI_PROVIDERS: dict[str, type[AgentCLIProvider]] = {
 }
 
 
+UNAVAILABLE = "unavailable"
+
+
 def cli_facts(cfg: TargetConfig) -> dict[str, str]:
     """The fingerprint of a CLI target for the run artifact, or ``{}`` for any other target.
 
-    Best effort and free: it asks the binary for its version, never for a model reply."""
+    Best effort and free: it asks the binary for its version, never for a model reply. When the
+    binary is not there (or will not say its version) the run still records the CLI, its
+    isolation tag and the sampling mode, with the version ``"unavailable"``, so a run rebuilt
+    from the cache on a machine without the CLI keeps the facts ``compare`` checks."""
     cls = CLI_PROVIDERS.get(cfg.kind)
     if cls is None:
         return {}
+    model = cfg.target.split(":", 1)[1]
     try:
-        return cls(cfg.target.split(":", 1)[1], timeout_s=cfg.timeout_s).fingerprint()
+        provider = cls(model, timeout_s=cfg.timeout_s)
     except ProviderError:
-        return {}
+        # Not constructible (the cursor provider rejects a bad sandbox setting): the class-level
+        # tag is the best that is known.
+        return {
+            "cli": cls.name,
+            "cli_version": UNAVAILABLE,
+            "isolation": cls.isolation,
+            "sampling": SAMPLING,
+        }
+    try:
+        return provider.fingerprint()
+    except ProviderError:
+        return provider.facts(UNAVAILABLE)

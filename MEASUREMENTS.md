@@ -293,7 +293,7 @@ lists the files and every change made to the key.
 | | |
 |---|---|
 | Models | Anthropic `claude-sonnet-5-5`; OpenAI `gpt-6-astra`, reasoning effort medium; Google `gemini-4-argon-medium` |
-| Date | 2026-11-15, evalproof 0.8.0 |
+| Date | 2026-11-15, evalproof 0.8.0; run files rebuilt from the cache with evalproof 1.0.0, no model called |
 | Sampling | the provider default; temperature and seed cannot be set |
 | Support Q&A | the grounded prompt twice (84 answers per model), the friendly prompt once (42) |
 | Ticket router | one-word queue label with [`prompt.router.md`](https://github.com/technobasant/evalproof/blob/main/examples/frontier-study/prompt.router.md), twice (60 answers per model) |

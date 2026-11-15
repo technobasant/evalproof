@@ -557,7 +557,14 @@ def test_missing_binary_names_the_install_command(
     monkeypatch.setenv("PATH", str(empty))
     with pytest.raises(ProviderError, match=re.escape(cli.cls.install_hint)):
         cli.provider().chat(USER, PARAMS)
-    assert cli_facts(TargetConfig(target=f"{cli.name}:{cli.model}")) == {}  # best effort
+    # Best effort, and still honest: the cli, its isolation tag and the sampling are known without
+    # the binary; only the version is not, so it says so instead of leaving the key out.
+    assert cli_facts(TargetConfig(target=f"{cli.name}:{cli.model}")) == {
+        "cli": cli.name,
+        "cli_version": "unavailable",
+        "isolation": cli.provider().isolation,
+        "sampling": "cli-default",
+    }
 
 
 def test_a_plain_failure_is_not_retried(cli: Case) -> None:

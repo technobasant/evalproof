@@ -228,7 +228,10 @@ def test_prompt_file_label_builds_on_the_suite_label(
     example: Path, tmp_path: Path, labels: list[str | None]
 ) -> None:
     suite = example / "suite.yaml"
-    suite.write_text(suite.read_text("utf-8").replace("system:\n", "system:\n  label: router\n"))
+    suite.write_text(
+        suite.read_text("utf-8").replace("system:\n", "system:\n  label: router\n"),
+        encoding="utf-8",
+    )
     prompt = tmp_path / "p.txt"
     prompt.write_text("x", "utf-8")
     _run_with(example, tmp_path, "--system-prompt-file", str(prompt))

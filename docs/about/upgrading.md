@@ -1,12 +1,12 @@
 ---
-description: What to change when you move an evalproof setup from 0.5 to 0.8, release by release, and how run files from older versions behave.
+description: What to change when you move an evalproof setup from 0.5 to 1.0, release by release, and how run files from older versions behave.
 ---
 
 # Upgrading
 
 What each release from 0.5 onwards changes for an existing setup, and what to do about it. It is for anyone who already has a suite and committed run files and is moving to a newer version. The [changelog](changelog.md) has the complete list; this page keeps the parts that can break something.
 
-evalproof is below 1.0, so a minor release can change behaviour. Read the sections between your version and the one you are moving to, newest last.
+Since 1.0 the public surface changes incompatibly only in a major release, after a deprecation ([Versioning and support](versioning.md)). Before 1.0 a minor release could change behaviour, so moving from an older version, read every section between your version and 1.0.
 
 ## The short path
 
@@ -16,6 +16,18 @@ evalproof is below 1.0, so a minor release can change behaviour. Read the sectio
 4. Open a pull request. Comparisons now pair on the new run file's hashes.
 
 Steps 2 and 3 matter most when you move from 0.4 or earlier, because older run files lack the hashes that `compare` and `verify` read.
+
+## 1.0
+
+Nothing from 0.8 is removed or renamed, and a suite or run file that worked under 0.8 works under 1.0.
+
+**Changed:** for a pass/fail metric compared with the exact McNemar test (one trial per case, or repeated trials combined with `all` or `any`), the power line and the `power` fields of `--json` output never report a detectable drop below what the exact McNemar test can call significant at all: at α 0.05 that is 6 cases worse and none better, so 14.3 points on 42 cases. On small suites the figure is larger than 0.8 printed, and a suite with fewer than 6 cases is told that no drop can be significant. The gate's verdict is unchanged; only the advice beside it is.
+
+**Changed, for run files:** a run file now records `format_version`. Files without it (written before 1.0) load as version 1. From 1.0 on, a file whose version is newer than the installed evalproof understands is refused with an error, instead of loading with the unknown fields dropped; 0.8 and earlier do not check, and read a 1.0 file as before.
+
+**Changed, for agent CLI targets:** when the CLI binary is not on `PATH` while a run is made (a run served from the cache), the run's environment still records the CLI, its isolation tag and its sampling, with `cli_version: unavailable`. Under 0.8 those keys were missing.
+
+**Added, with nothing to change:** `--cache-only` on `run` and `pairwise`, which rebuilds a run from cached replies and exits 2 on the first case it would have to call a model for; `fold_quotes` on the `regex` scorer; the Cursor sandbox on macOS and `evalproof doctor --cursor-canary`. See [Commands](../reference/commands.md) and [Configuration](../reference/configuration.md).
 
 ## 0.8
 

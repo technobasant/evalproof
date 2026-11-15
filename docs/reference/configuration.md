@@ -162,6 +162,7 @@ The parameters of each type:
 | `regex` | `none_of` | none | patterns that must not match |
 | `regex` | `none_of_field` | none | a case field holding patterns that must not match |
 | `regex` | `flags` | `i` | `i` ignores case, `m` makes `^` and `$` match at each line |
+| `regex` | `fold_quotes` | `false` | match the output's typographic quotes (`’ ‘ “ ”`, and the primes and fullwidth forms) as the ASCII `'` and `"`, so an answer key written with plain quotes still matches; the patterns are used as written |
 | `json_schema` | `schema` | none | the JSON schema |
 | `json_schema` | `schema_field` | none | a case field holding the schema |
 | `numeric_tolerance` | `field` | `reference` | the case field holding the expected number |

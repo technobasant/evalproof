@@ -4,7 +4,40 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-11-15
+
+The first stable release. The public surface (the names in `evalproof.__all__` and
+`evalproof.adapters.__all__`, commands, flags, exit codes, `--json` fields, suite keys, the run
+file format and dataset fields) now changes incompatibly only in a major release, after at least
+one minor release of deprecation warnings. Experimental features stay outside that promise. See
+[Versioning and support](https://basantbhattarai.com.np/evalproof/about/versioning/) and
+[Upgrading](https://basantbhattarai.com.np/evalproof/about/upgrading/). Nothing from 0.8 is
+removed or renamed.
+
 ### Added
+
+- `--cache-only` on `run` and `pairwise`: every model call, the judge's included, is answered
+  from the response cache, and the first reply that is not cached stops the command with exit 2
+  and names the case, the trial and the target; no model is called. It cannot be combined with
+  `--no-cache`, and a `python` or `http` system is refused because its code is not cached. A run
+  made this way records `cache_only: "true"` in its environment and does not query an Ollama
+  server for versions and digests.
+- Run files record `format_version` (1). A file without it, written before 1.0, reads as 1.
+  From 1.0 on, a file with a newer format than the installed evalproof reads is refused with
+  exit 2 and an error giving the file's format version and the newest one this evalproof reads,
+  and asking for an upgrade, instead of being read with the fields it does not know dropped.
+  Releases before 1.0 do not check it.
+- `fold_quotes: true` on the `regex` scorer matches the output's typographic quotes, primes and
+  fullwidth forms as ASCII `'` and `"`, so an answer key written with plain quotes still matches.
+  The patterns are used as written, and a suite that does not set it hashes as before. A value
+  other than true or false stops the suite at load.
+- `CacheMiss`, `ProviderError` and `RunFileError` are exported from `evalproof`, so code that
+  calls `run_suite` or `load_run` can catch them by name.
+- CI runs the test suite on macOS and Windows as well as Linux. On Windows the command line
+  writes UTF-8 to a redirected stdout and stderr, and run files are written with LF line endings
+  on every platform.
+- A versioning and support policy: what the public surface is, how deprecation works, and which
+  versions get fixes.
 
 - On macOS the `cursor:` provider now runs `cursor-agent` inside `sandbox-exec`, with a profile
   that denies reading the folders where skills and rules live (`~/.claude`, `~/.agents`,
@@ -29,6 +62,20 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ### Changed
 
+- The power estimate beside the gate never reports a detectable drop smaller than the exact
+  McNemar test can call significant. For a pass/fail metric compared with that test (one trial
+  per case, or repeated trials combined with `all` or `any`) it needs `k` cases worse and none
+  better (`k` = 6 at the gate's α of 0.05, whatever the number of gated metrics), so no drop
+  under `k / n` is significant however the normal approximation reads: on 42 cases the figure is
+  now 14.3 points. The figure and the cases needed are the larger of the two bounds; a uniform
+  baseline reports the floor, and a suite with fewer than `k` cases is told no drop can be
+  significant. The gate's verdict does not change.
+- When an agent CLI binary is not on `PATH` while a run is made, the run's environment still
+  records the CLI, its isolation tag and its sampling, with `cli_version: unavailable`; those
+  keys used to be missing.
+- HTTP clients that evalproof opens (the Ollama, Anthropic and OpenAI-compatible providers, the
+  `http` system and the Ollama version lookup) are closed when the run or command ends.
+- Development status is Production/Stable.
 - The cursor isolation tag is `cursor/3` when the sandbox is on and `cursor/2` when it is not, so
   cached replies and compared runs never mix the two. The `doctor` warning about the skills list
   now depends on the sandbox: with it on, it names the blocked folders and the User Rules limit.
@@ -682,7 +729,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/technobasant/evalproof/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/technobasant/evalproof/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/technobasant/evalproof/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/technobasant/evalproof/compare/v0.6.0...v0.7.0

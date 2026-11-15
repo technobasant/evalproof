@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -16,7 +17,10 @@ import yaml
 
 ACTION = Path(__file__).resolve().parents[1] / "action.yml"
 
-pytestmark = pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32" or shutil.which("bash") is None,
+    reason="needs bash, a #!/bin/bash stub on a ':'-separated PATH (not Windows)",
+)
 
 
 def _step_script() -> str:
@@ -62,6 +66,7 @@ def _run_step(
         env=base | env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     out = tmp_path / "argv.txt"

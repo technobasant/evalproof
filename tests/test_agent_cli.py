@@ -682,7 +682,19 @@ def test_missing_binary_names_the_install_command(
         claude_provider().chat(USER, PARAMS)
     with pytest.raises(ProviderError, match="npm install -g @openai/codex"):
         codex_provider().chat(USER, PARAMS)
-    assert cli_facts(TargetConfig(target="codex:m")) == {}  # best effort: no raise
+    # Best effort, no raise, and the facts that need no binary are still recorded.
+    assert cli_facts(TargetConfig(target="codex:m")) == {
+        "cli": "codex",
+        "cli_version": "unavailable",
+        "isolation": "codex/1",
+        "sampling": "cli-default",
+    }
+    assert cli_facts(TargetConfig(target="claude-code:haiku")) == {
+        "cli": "claude-code",
+        "cli_version": "unavailable",
+        "isolation": "claude-code/1",
+        "sampling": "cli-default",
+    }
 
 
 # -- retries -------------------------------------------------------------------------------

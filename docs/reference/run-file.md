@@ -10,10 +10,11 @@ A run file is the JSON record of one run of a suite: what the system answered fo
 
 ## An example
 
-One case of a run of the ticket-router example, as evalproof 0.7.0 wrote it. A real file has one entry in `results` per case and trial.
+One case of a run of the ticket-router example, as evalproof 1.0.0 writes it. A real file has one entry in `results` per case and trial.
 
 ```json title="runs/baseline.json"
 {
+  "format_version": 1,
   "info": {
     "suite": "ticket-router",
     "system": "python:router:baseline_route",
@@ -22,7 +23,7 @@ One case of a run of the ticket-router example, as evalproof 0.7.0 wrote it. A r
     "started_at": "2026-11-14T14:34:46+00:00",
     "finished_at": "2026-11-14T14:34:46+00:00",
     "wall_time_s": 0.001,
-    "evalproof_version": "0.7.0",
+    "evalproof_version": "1.0.0",
     "seed": 0,
     "environment": {
       "python": "3.13.15",
@@ -72,8 +73,15 @@ One case of a run of the ticket-router example, as evalproof 0.7.0 wrote it. A r
 
 | Field | Type | What it holds |
 |---|---|---|
+| `format_version` | integer | the layout of the file, 1 in evalproof 1.0; a file without it was written before 1.0 and is read as 1; see [File format version](#file-format-version) |
 | `info` | object | facts about the run; see [Run info](#run-info) |
 | `results` | list | one [case result](#case-result) per case and trial |
+
+### File format version
+
+`format_version` says which layout a run file has. It rises only when a change would make an older evalproof misread a file; adding an optional field does not raise it, because an older evalproof ignores a field it does not know. A run file written before 1.0 has no `format_version`, and evalproof reads it as format 1.
+
+A file whose `format_version` is higher than the running evalproof knows is refused, never half-read. Every command that reads a run file prints `evalproof: error: <file>: this run file is format version N, written by a newer evalproof than <version> (which reads up to format version M): upgrade evalproof to read it` and exits 2. A `format_version` that is not a whole number from 1 is refused the same way. `evalproof rehash` writes the current format version into the file it rewrites.
 
 ## Run info
 
@@ -88,7 +96,7 @@ One case of a run of the ticket-router example, as evalproof 0.7.0 wrote it. A r
 | `wall_time_s` | number | seconds from start to end | 0.1 |
 | `evalproof_version` | string | the version that wrote the file | 0.1 |
 | `seed` | integer | the suite's `seed` | 0.1 |
-| `environment` | object | `python`, `platform`, `machine` and `processor`, plus facts about the model targets, such as `judge_model_resolved`, the model id the provider reported | 0.1 |
+| `environment` | object | `python`, `platform`, `machine` and `processor`, plus facts about the model targets, such as `judge_model_resolved`, the model id the provider reported; `cache_only` is `"true"` when the run was made with `--cache-only`, so its replies came from the response cache and no model ran | 0.1 |
 | `suite_hash` | string or null | the suite fingerprint; null before 0.5 and in imported runs | 0.5 |
 | `variant` | string or null | the variant the run was made with; null for the suite as written and before 0.6 | 0.6 |
 | `trials` | integer | repeats per case; 1 before 0.7 and in imported runs that kept no repeats | 0.7 |
@@ -171,7 +179,7 @@ With `trials` above 1, `results` holds one entry per case and trial, each with i
 
 ## Reading older files
 
-Every field added after 0.1 has a default, so any older file still loads. `compare` and the gate say what an older file lacks: without `case_hash` they cannot tell an edited case from an unchanged one, and `verify` needs a run made with evalproof 0.5 or newer. `evalproof rehash` adds the case hashes to a file from before 0.5. [Upgrading](../about/upgrading.md#run-files-from-older-versions) lists what each version lacks.
+Every field added after 0.1 has a default, so any older file still loads, `format_version` included: a file without it is format 1. `compare` and the gate say what an older file lacks: without `case_hash` they cannot tell an edited case from an unchanged one, and `verify` needs a run made with evalproof 0.5 or newer. `evalproof rehash` adds the case hashes to a file from before 0.5. [Upgrading](../about/upgrading.md#run-files-from-older-versions) lists what each version lacks.
 
 ## Next steps
 

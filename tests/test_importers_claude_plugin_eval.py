@@ -30,13 +30,13 @@ def _quiet(_: str) -> None:
 
 
 def _data() -> dict[str, Any]:
-    loaded: dict[str, Any] = json.loads(FIXTURE.read_text())
+    loaded: dict[str, Any] = json.loads(FIXTURE.read_text(encoding="utf-8"))
     return loaded
 
 
 def _write(tmp_path: Path, data: Any) -> Path:
     path = tmp_path / "aggregate-result.json"
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data), encoding="utf-8")
     return path
 
 
@@ -331,7 +331,9 @@ def test_a_file_that_is_not_a_result_is_refused(tmp_path: Path, change: Any, mes
     data = _data()
     change(data)
     path = tmp_path / "aggregate-result.json"
-    path.write_text(json.dumps(data))  # json.dumps writes NaN, which json.loads reads back
+    path.write_text(
+        json.dumps(data), encoding="utf-8"
+    )  # json.dumps writes NaN, which json.loads reads back
     with pytest.raises(ImportFormatError, match=message):
         import_run("claude-plugin-eval", path, system="with", warn=_quiet)
 

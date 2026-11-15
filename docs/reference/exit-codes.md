@@ -30,6 +30,8 @@ evalproof prints `evalproof: error: <message>` to stderr and exits 2. The causes
 
 * a suite or dataset file that is missing, empty or invalid, or an unknown key in the suite (the message names the key);
 * a provider error, such as a missing API key;
+* `evalproof run --cache-only` (or `pairwise --cache-only`) reaching a model call that is not in the cache: the message names the case, and no model was called;
+* a run file written by a newer evalproof (its `format_version` is higher than this evalproof reads): the message names the file and says to upgrade ([Run file format](run-file.md#file-format-version));
 * an unknown `--metric`, `--variant` or `--require` dimension;
 * `evalproof run` where every case errored, with the first error in the message;
 * `evalproof compare` without `--gate` on two runs that cannot be compared.
