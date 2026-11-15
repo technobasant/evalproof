@@ -32,10 +32,12 @@ def test_the_npm_license_is_a_copy_of_the_repository_license() -> None:
     assert copy.read_bytes() == (ROOT / "LICENSE").read_bytes()
 
 
-def test_the_npm_package_ships_only_the_launcher_readme_and_license() -> None:
+def test_the_npm_package_ships_only_the_launcher_library_readme_and_license() -> None:
     package = json.loads((NPM / "package.json").read_text("utf-8"))
-    assert package["files"] == ["bin", "README.md", "LICENSE"]
+    assert package["files"] == ["bin", "lib", "README.md", "LICENSE"]
     assert package["bin"] == {"evalproof": "bin/evalproof.js"}
+    assert package["main"] == "lib/index.js"
+    assert package["types"] == "lib/index.d.ts"
     assert "dependencies" not in package
     for name in package["files"]:
         assert (NPM / name).exists(), name
@@ -46,7 +48,7 @@ def test_the_node_tests_pass() -> None:
     node = shutil.which("node")
     assert node is not None
     done = subprocess.run(
-        [node, "--test", str(NPM / "test" / "launcher.test.js")],
+        [node, "--test", *(str(p) for p in sorted((NPM / "test").glob("*.test.js")))],
         cwd=NPM,
         capture_output=True,
         text=True,

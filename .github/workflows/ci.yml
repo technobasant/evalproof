@@ -198,6 +198,36 @@ jobs:
           if [ "$got" != "0" ]; then echo "::error::agent k=5 readiness: expected exit 0, got $got"; exit 1; fi
           echo "agent k=5 readiness → exit $got (expected 0)"
 
+  # The npm package is a launcher and a small helper library for JavaScript and TypeScript
+  # systems (runCommand, serve, the converters). Its tests use node:test, a fake `uvx` and fake
+  # SDK objects: no network and no model. Node 18 is the oldest the package supports.
+  npm:
+    name: npm package (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node: ["18", "24"]
+        include:
+          - os: windows-latest
+            node: "24"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - name: Tests
+        working-directory: npm
+        run: npm test
+      - name: The tarball lists the library and its types
+        working-directory: npm
+        run: npm pack --dry-run
+
   # The Streamlit app imports src/ directly, so a library change can break it without
   # failing the tests above. Install the app's own requirements, as Streamlit Community
   # Cloud does, and drive both views.
