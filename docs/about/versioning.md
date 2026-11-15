@@ -47,8 +47,8 @@ Fixes go into the latest minor release. Security fixes also go into the previous
 
 | Version | Supported |
 |---|---|
-| 1.3.x | yes |
-| 1.2.x, 1.1.x, 1.0.x | security fixes until 2027-02-13 |
+| 1.4.x | yes |
+| 1.3.x, 1.2.x, 1.1.x, 1.0.x | security fixes until 2027-02-13 |
 | < 1.0 | no |
 
 Report a vulnerability privately, as the [security policy](https://github.com/technobasant/evalproof/blob/main/SECURITY.md) describes. [Security and data handling](security.md) covers what evalproof stores and sends.

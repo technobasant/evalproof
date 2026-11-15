@@ -1,6 +1,6 @@
 {
   "name": "evalproof",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Run evalproof, the LLM eval and CI regression gate, with npx, and test a JavaScript or TypeScript system with it. A launcher plus a small helper library: evalproof itself is a Python program, installed from PyPI at the matching version.",
   "keywords": [
     "evalproof",

@@ -11,7 +11,7 @@ authors:
   - family-names: Bhattarai
     given-names: Basant
     website: "https://basantbhattarai.com.np"
-version: 1.3.0
+version: 1.4.0
 date-released: "2026-11-15"
 license: Apache-2.0
 repository-code: "https://github.com/technobasant/evalproof"

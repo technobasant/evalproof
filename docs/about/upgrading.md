@@ -17,6 +17,14 @@ Since 1.0 the public surface changes incompatibly only in a major release, after
 
 Steps 2 and 3 matter most when you move from 0.4 or earlier, because older run files lack the hashes that `compare` and `verify` read.
 
+## 1.4
+
+Nothing is removed or renamed, and a suite, dataset or run file that worked under 1.3 works under 1.4.
+
+**Added, with nothing to change:** adapters for LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen and Semantic Kernel ([Agent SDK adapters](../guides/adapters.md)); a helper library in the `evalproof` npm package, `init --node` and a scan of TypeScript tools and agents ([Testing a TypeScript or JavaScript system](../guides/typescript.md)).
+
+**One change in what `scan` reports:** TypeScript and JavaScript code now takes part in the `uncovered_code` and `tool_unchecked` gaps, so a repository with a TypeScript agent can show gaps it did not show under 1.3.
+
 ## 1.3
 
 Nothing is removed or renamed, and a suite, dataset or run file that worked under 1.2 works under 1.3. A run file gains an optional `tag_filter` field; `format_version` is unchanged.

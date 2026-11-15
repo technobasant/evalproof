@@ -4,8 +4,16 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-11-15
+
 ### Added
 
+- Adapters for LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen and Semantic Kernel turn
+  a run of each framework into a trace (tool calls, tokens), next to the adapters for LangChain,
+  ADK, the Claude Agent SDK and the OpenAI Agents SDK. They read each framework's objects
+  without importing it. They were written from each SDK's source and tested with fake objects of
+  those shapes, not yet against real runs, and are experimental: they warn when used. See
+  [Agent SDK adapters](https://basantbhattarai.com.np/evalproof/guides/adapters/).
 - The `evalproof` npm package is now a helper library for a JavaScript or TypeScript system as
   well as the `npx` launcher. `runCommand(handler)` runs a `command:` target: it reads the case
   from stdin, awaits the handler (which returns a string or `{output, retrieved, trace,
@@ -925,7 +933,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/technobasant/evalproof/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/technobasant/evalproof/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/technobasant/evalproof/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/technobasant/evalproof/compare/v1.0.0...v1.1.0
