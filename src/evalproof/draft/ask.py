@@ -152,7 +152,10 @@ def ask(
 
 
 def _function_at(path: Path, line: int) -> dict[str, str] | None:
-    """The function in ``path`` that contains ``line``: its name, signature and docstring."""
+    """The function in ``path`` that contains ``line``: its name, signature and docstring. Only a
+    Python file is read: a TypeScript file is not Python, even when it happens to parse."""
+    if path.suffix != ".py":
+        return None
     try:
         tree = ast.parse(path.read_text(encoding="utf-8-sig"))
     except (OSError, SyntaxError, ValueError, UnicodeDecodeError):

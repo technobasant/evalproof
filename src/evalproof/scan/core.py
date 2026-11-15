@@ -3,11 +3,13 @@ no suite tests yet.
 
 Static only: no model call, and no user code is imported or executed (Python is read with
 ``ast``, TypeScript and JavaScript with regular expressions). Suites are loaded with
-``load_config``, which does not import anything either.
+``load_config``, which does not import anything either. What a suite's target runs is known for a
+``python:`` target and for a ``command:`` that starts a script with node, tsx, bun or deno.
 """
 
 from __future__ import annotations
 
+import json
 import posixpath
 import re
 import shlex
@@ -20,7 +22,7 @@ from typing import Any
 
 import yaml
 
-from evalproof.config import ConfigError, SuiteConfig, load_config
+from evalproof.config import ConfigError, SuiteConfig, command_argv, load_config
 from evalproof.dataset import load_dataset
 from evalproof.importers._detect import candidates
 from evalproof.models import Case
@@ -36,7 +38,8 @@ from evalproof.scan.model import (
 )
 from evalproof.scan.pyscan import EXCERPT_CHARS as EXCERPT_LIMIT
 from evalproof.scan.pyscan import PyInfo, analyze_python
-from evalproof.scan.tsscan import analyze_typescript
+from evalproof.scan.tsgraph import NodeCommand, TsGraph, node_command
+from evalproof.scan.tsscan import TsInfo, is_import_only, read_typescript
 from evalproof.scan.walk import (
     DATA_SUFFIXES,
     PROMPT_SUFFIXES,
@@ -153,6 +156,8 @@ def scan_path(
 
     walked = walk(root, excludes)
     py: dict[str, PyInfo] = {}
+    ts: dict[str, TsInfo] = {}
+    declarations: list[str] = []
     findings: list[Finding] = []
     yaml_files: list[str] = []
     data_files: list[str] = []
@@ -160,7 +165,9 @@ def scan_path(
     unparsable = 0
     for rel in walked.files:
         suffix = posixpath.splitext(rel)[1].lower()
-        if suffix in PY_SUFFIXES or (suffix in TS_SUFFIXES and not rel.endswith(".d.ts")):
+        if rel.endswith(".d.ts"):
+            declarations.append(rel)  # types only: no finding, but an import can name it
+        elif suffix in PY_SUFFIXES or suffix in TS_SUFFIXES:
             text = _read(root / rel)
             if text is None:
                 unparsable += 1
@@ -174,7 +181,8 @@ def scan_path(
                 py[rel] = info
                 findings.extend(info.findings)
             else:
-                findings.extend(analyze_typescript(rel, text))
+                ts[rel] = read_typescript(rel, text)
+                findings.extend(ts[rel].findings)
         elif suffix in YAML_SUFFIXES:
             yaml_files.append(rel)
         elif suffix in DATA_SUFFIXES:
@@ -211,6 +219,8 @@ def scan_path(
         py, [posixpath.dirname(rel) for rel in suite_rels if not rel.startswith("/")]
     )
     edges = {path: index.edges(info) for path, info in py.items()}
+    workspace, alias_keys = _ts_aliases(root, data_files) if ts else (set(), [])
+    graph = TsGraph(ts, declarations, workspace, alias_keys)
 
     suites: list[SuiteInfo] = []
     suite_cases: dict[str, list[Case] | None] = {}
@@ -226,7 +236,7 @@ def scan_path(
             notes.append(f"{rel}: its dataset {shown(dataset)} could not be read")
         suite_cases[rel] = cases
         checked |= _suite_check_names(cfg, cases or [])
-        reachability, reaches, reason = _reach(cfg, rel, index, edges)
+        reachability, reaches, reason = _reach(cfg, rel, index, edges, graph)
         suites.append(
             SuiteInfo(
                 path=rel,
@@ -280,7 +290,15 @@ def scan_path(
     findings.extend(_pytest_findings(py, index, edges, model_files, known_reach, scan_ref))
 
     findings.sort(key=lambda f: (FINDING_KINDS.index(f.kind), f.path, f.line))
-    gaps, not_computed = _gaps(findings, suites, suite_cases, checked, py, scan_ref)
+    gaps, not_computed = _gaps(
+        findings,
+        suites,
+        suite_cases,
+        checked,
+        py,
+        scan_ref,
+        {p for p, i in ts.items() if i.is_test},
+    )
     return ScanReport(
         root=root.as_posix(),
         files=len(walked.files),
@@ -313,11 +331,23 @@ def _merge_tools(findings: list[Finding]) -> list[Finding]:
 
 
 def _reach(
-    cfg: SuiteConfig, suite_rel: str, index: ModuleIndex, edges: dict[str, set[str]]
+    cfg: SuiteConfig,
+    suite_rel: str,
+    index: ModuleIndex,
+    edges: dict[str, set[str]],
+    graph: TsGraph,
 ) -> tuple[str, list[str], str | None]:
     """What the suite's target runs: ``known`` with the files it reaches for a ``python:`` target
-    found in the repository, otherwise ``unknown`` with the reason."""
+    found in the repository, or for a ``command:`` that starts a script with node, tsx, bun or deno
+    and whose imports can all be followed; otherwise ``unknown`` with the reason."""
     target = cfg.system.target
+    if cfg.system.kind == "command":
+        try:
+            command = node_command(command_argv(target))
+        except ValueError:
+            command = None
+        if command is not None:
+            return _reach_script(target, command, posixpath.dirname(suite_rel), graph)
     if cfg.system.kind != "python":
         return (
             "unknown",
@@ -330,6 +360,69 @@ def _reach(
     if start is None:
         return "unknown", [], f"the python module {module!r} is not among the scanned files"
     return "known", reachable(start, edges), None
+
+
+def _reach_script(
+    target: str, command: NodeCommand, suite_dir: str, graph: TsGraph
+) -> tuple[str, list[str], str | None]:
+    """The files a ``command:`` target reaches by following the relative imports from its script,
+    which the command reads from the suite's directory. A script or an import the scan cannot
+    resolve makes the answer ``unknown``: it may lead anywhere."""
+    if command.problem:
+        return (
+            "unknown",
+            [],
+            f"the target {target!r} {command.problem}, so the code it runs is not known",
+        )
+    entries: list[str] = []
+    for script in command.scripts:
+        found = graph.resolve_path(posixpath.join(suite_dir, script))
+        if found is None or found not in graph.infos:
+            return (
+                "unknown",
+                [],
+                f"the script {script!r} that {target!r} runs is not among the scanned files",
+            )
+        entries.append(found)
+    files, problems = graph.reach(entries)
+    if problems:
+        shown = "; ".join(problems[:3]) + (
+            f"; and {len(problems) - 3} more" if len(problems) > 3 else ""
+        )
+        return "unknown", [], f"the code {target!r} runs cannot be followed: {shown}"
+    return "known", files, None
+
+
+def _ts_aliases(root: Path, data_files: list[str]) -> tuple[set[str], list[str]]:
+    """The names of the packages this repository defines (``name`` in each ``package.json``) and the
+    path aliases its ``tsconfig.json`` and ``jsconfig.json`` files declare: an import of either is
+    this repository's code, which the scan does not follow."""
+    names: set[str] = set()
+    keys: list[str] = []
+    for rel in data_files:
+        base = posixpath.basename(rel).lower()
+        is_config = base in ("tsconfig.json", "jsconfig.json") or (
+            base.startswith("tsconfig.") and base.endswith(".json")
+        )
+        if base != "package.json" and not is_config:
+            continue
+        text = _read(root / rel)
+        if text is None:
+            continue
+        if base == "package.json":
+            try:
+                data = json.loads(text)
+            except ValueError:
+                continue
+            name = data.get("name") if isinstance(data, dict) else None
+            if isinstance(name, str) and name:
+                names.add(name)
+            continue
+        for block in re.finditer(r'"paths"\s*:\s*\{(.*?)\}', text, re.DOTALL):
+            for key in re.findall(r'"([^"]+)"\s*:', block.group(1)):
+                if key.split("*")[0]:
+                    keys.append(key)
+    return names, list(dict.fromkeys(keys))
 
 
 def _dataset_findings(
@@ -430,6 +523,7 @@ def _gaps(
     checked: set[str],
     py: dict[str, PyInfo],
     scan_ref: str,
+    ts_tests: set[str],
 ) -> tuple[list[Gap], dict[str, str]]:
     """What the code has that no suite tests. A gap that cannot be told (a dataset that will not
     read, a target whose code is unknown) is listed in the second result with the reason."""
@@ -475,10 +569,11 @@ def _gaps(
                 )
 
     # -- code no suite's target reaches
-    test_files = {p for p, i in py.items() if i.is_test}
+    test_files = {p for p, i in py.items() if i.is_test} | ts_tests
     code: dict[str, int] = {}
     for f in findings:
-        is_code = f.kind in ("model_call", "agent", "tool") and f.language == "python"
+        # a TypeScript file that only imports an SDK, with no call found, is not code to test
+        is_code = f.kind in ("model_call", "agent", "tool") and not is_import_only(f)
         if is_code and f.path not in test_files:
             code[f.path] = min(code.get(f.path, f.line), f.line)
     unknown = [s for s in suites if s.reachability != "known"]
