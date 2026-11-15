@@ -32,9 +32,10 @@ import tempfile
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, ClassVar
 
+from evalproof._fsutil import rmtree_retry
 from evalproof.config import GenerationParams, TargetConfig
 from evalproof.providers.base import (
     ChatResponse,
@@ -84,6 +85,16 @@ def cli_auth_mode() -> str:
 def clip(text: str, limit: int = MAX_ERROR_CHARS) -> str:
     text = text.strip()
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def config_path(path: str) -> str:
+    """``path`` as a value for a CLI's ``-c key=value`` flag. codex reads the value as TOML and
+    falls back to the raw text when it is not valid TOML, so a bare path works; but a Windows
+    path's backslashes would be escapes (``\\U``) the moment a CLI read it as a TOML string, and
+    Windows accepts ``/`` as a separator, so a Windows path is given with forward slashes."""
+    if sys.platform == "win32":
+        return PureWindowsPath(path).as_posix()
+    return path
 
 
 def render_prompt(messages: list[Message]) -> str:
@@ -317,7 +328,7 @@ class AgentCLIProvider:
             latency_ms = (time.perf_counter() - start) * 1000
             return self.parse(code, out, err, latency_ms)
         finally:
-            shutil.rmtree(workdir, ignore_errors=True)
+            rmtree_retry(workdir)
 
 
 class ClaudeCodeProvider(AgentCLIProvider):
@@ -487,7 +498,7 @@ class CodexProvider(AgentCLIProvider):
             "-c",
             "project_doc_max_bytes=0",
             "-c",
-            f"model_instructions_file={system_file}",
+            f"model_instructions_file={config_path(system_file)}",
             "-c",
             "skills.include_instructions=false",
             "-c",

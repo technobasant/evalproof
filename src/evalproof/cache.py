@@ -10,13 +10,18 @@ re-run reproduces the run artifact; the run's own wall time shows the real speed
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
-from collections.abc import Iterator
+import os
+import tempfile
+import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
 
+from evalproof._fsutil import replace_retry
 from evalproof.config import GenerationParams
 from evalproof.providers.base import CacheMiss, ChatResponse, Message, Provider, close_resource
 
@@ -79,30 +84,49 @@ def case_scope(case_id: str, trial: int = 0) -> Iterator[None]:
 
 
 class ResponseCache:
-    def __init__(self, root: str | Path) -> None:
+    """One JSON file per key, written to a unique temp file and moved into place, so a reader
+    never sees half a write and two threads storing the same key cannot trip over each other.
+
+    The cache is best-effort: a lookup that cannot read an entry (a torn write, or Windows
+    refusing a read while another handle replaces the file) is a miss, and a store that cannot
+    complete is dropped. Neither ever fails the case that triggered it. ``sleep`` is how the
+    retry of a refused replace waits; tests pass a fake."""
+
+    def __init__(self, root: str | Path, *, sleep: Callable[[float], None] = time.sleep) -> None:
         self.root = Path(root)
+        self._sleep = sleep
 
     def _path(self, key: str) -> Path:
         return self.root / key[:2] / f"{key}.json"
 
     def get(self, key: str) -> ChatResponse | None:
         path = self._path(key)
-        if not path.exists():
-            return None
         try:
             resp = ChatResponse.model_validate_json(path.read_text(encoding="utf-8"))
-        except ValueError:
-            return None  # a torn write is a miss, not a crash
+        except (OSError, ValueError):
+            return None  # absent, being replaced, or a torn write: a miss, not a crash
         return resp.model_copy(update={"cached": True})
 
     def put(self, key: str, response: ChatResponse) -> None:
         path = self._path(key)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(response.model_copy(update={"cached": False}).model_dump_json(), "utf-8")
-        tmp.replace(path)
+        payload = response.model_copy(update={"cached": False}).model_dump_json().encode("utf-8")
+        tmp: str | None = None
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f"{key}.", suffix=".tmp")
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(payload)
+            if replace_retry(tmp, path, sleep=self._sleep):
+                tmp = None  # moved into place; nothing to clean up
+        except OSError:
+            pass  # best-effort: a cache that cannot be written is a cache miss next time
+        finally:
+            if tmp is not None:
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp)
 
     def stats(self) -> dict[str, int]:
+        # Only finished entries: a stray ``<key>.<random>.tmp`` from an interrupted put is not one.
         files = list(self.root.glob("*/*.json")) if self.root.exists() else []
         return {"entries": len(files), "bytes": sum(f.stat().st_size for f in files)}
 

@@ -80,7 +80,7 @@ def load_dataset(path: str | Path) -> list[Case]:
         raise DatasetError(f"dataset not found: {path}")
     cases: list[Case] = []
     seen: set[str] = set()
-    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for lineno, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), start=1):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         try:
@@ -118,7 +118,7 @@ def write_dataset(cases: Sequence[Case], path: str | Path) -> Path:
         json.dumps(case.model_dump(mode="json", exclude_defaults=True), ensure_ascii=False)
         for case in cases
     ]
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return path
 
 

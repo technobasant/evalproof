@@ -476,7 +476,7 @@ def load_config(path: str | Path) -> SuiteConfig:
     if not path.exists():
         raise ConfigError(f"suite file not found: {path}")
     try:
-        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        raw = yaml.safe_load(path.read_text(encoding="utf-8-sig")) or {}
     except yaml.YAMLError as exc:
         raise ConfigError(f"{path}: invalid YAML: {exc}") from exc
     if not isinstance(raw, dict):
@@ -492,7 +492,8 @@ def load_config(path: str | Path) -> SuiteConfig:
             for key in ("system_prompt", "prompt_template"):
                 file_key = f"{key}_file"
                 if file_key in block:
-                    block[key] = (path.parent / block.pop(file_key)).read_text(encoding="utf-8")
+                    text_file = path.parent / block.pop(file_key)
+                    block[key] = text_file.read_text(encoding="utf-8-sig")
     try:
         return SuiteConfig.model_validate(raw)
     except ValidationError as exc:
