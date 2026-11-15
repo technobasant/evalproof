@@ -1,0 +1,3 @@
+{"id": "a1b2c3d4-0001", "inputs": {"question": "Can I get a refund?"}, "outputs": {"answer": "Yes, within 30 days of purchase."}, "metadata": {"dataset_split": ["base"], "source": "support"}}
+{"id": "a1b2c3d4-0002", "inputs": {"question": "Which export formats do you support?"}, "outputs": {"answer": "Markdown and PDF."}, "split": "test"}
+{"inputs": {"question": "What is the Pro price?"}, "outputs": {"answer": "Pro costs $8 per month.", "confidence": "high"}}

@@ -1,0 +1,3 @@
+{"id": "px-1", "input": {"question": "Can I get a refund?"}, "output": {"answer": "Yes, within 30 days of purchase."}, "metadata": {"topic": "billing"}, "splits": ["train"]}
+{"input": {"question": "What is the Pro price?"}, "output": {"answer": "Pro costs $8 per month."}}
+{"input": {"question": "Which export formats do you support?"}, "output": null}

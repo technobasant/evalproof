@@ -1,0 +1,2 @@
+{"question": "Can I get a refund?", "ground_truth": "Yes, within 30 days of purchase.", "answer": "Yes.", "contexts": ["Refunds are available within 30 days."]}
+{"question": "What is the Pro price?", "ground_truths": ["Pro costs $8 per month.", "$8/month"]}

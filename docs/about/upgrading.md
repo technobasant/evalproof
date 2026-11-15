@@ -17,6 +17,18 @@ Since 1.0 the public surface changes incompatibly only in a major release, after
 
 Steps 2 and 3 matter most when you move from 0.4 or earlier, because older run files lack the hashes that `compare` and `verify` read.
 
+## 1.2
+
+Nothing is removed or renamed, and a suite, dataset or run file that worked under 1.1 works under 1.2.
+
+**Added, with nothing to change:** `evalproof import-dataset` reads test cases from promptfoo, DeepEval, Ragas, LangSmith, OpenAI Evals, Inspect, Braintrust, Langfuse, Phoenix and any JSONL or CSV table, with `auto` to detect the format; `--suite-out` writes a suite with the scorers those cases need; `evalproof init --from FILE` starts a repository from them. See [Import test cases](../guides/import-test-cases.md).
+
+`evalproof import-dataset adk` writes the same dataset as before, and also accepts `--suite-out`.
+
+## 1.1
+
+Nothing is removed or renamed. `evalproof init` also writes an evalproof section into the repository's `AGENTS.md` (between markers, leaving the rest of the file as it was); pass `--no-agents-md` to skip it. See [Coding agents](../guides/coding-agents.md).
+
 ## 1.0
 
 Nothing from 0.8 is removed or renamed, and a suite or run file that worked under 0.8 works under 1.0.

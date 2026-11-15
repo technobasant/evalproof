@@ -1,0 +1,4 @@
+question,__expected,__expected1,__expected2,__description,__metadata:tags[]
+How many notebooks are on the Free plan?,icontains:3,not-contains:unlimited,llm-rubric:Says three notebooks,Free plan,"plans,support"
+Can I get a refund?,contains:30 days,regex:\b30\b,javascript:output.length < 300,Refund window,billing
+What is the Pro price?,$8 per month,,,Pro price,plans

@@ -50,8 +50,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from evalproof.config import ScorerConfig
 from evalproof.dataset import validate_case_fields
 from evalproof.importers._common import ImportFormatError, read_json
+from evalproof.importers._dataset import DatasetOptions, ImportedDataset, reject_fields
 from evalproof.importers.adk import _content_text, _field, _list
 from evalproof.models import Case
 
@@ -312,3 +314,25 @@ def _merged(path: Path, case_id: str, rubrics: list[dict[str, str]]) -> list[dic
                 "(on the case and an invocation, or on two invocations); give them distinct ids"
             )
     return list(by_id.values())
+
+
+def read_dataset(path: Path, opts: DatasetOptions) -> ImportedDataset:
+    """``read`` with the scorers its cases need: a ``checks`` scorer for the tool-order checks,
+    the rubric-set judge for the rubrics, and the judge against the reference."""
+    reject_fields(opts, FORMAT)
+    cases = read(path, opts.warn)
+    extras = [c.model_extra or {} for c in cases]
+    scorers: list[ScorerConfig] = []
+    if any(e.get("expect") for e in extras):
+        scorers.append(
+            ScorerConfig(
+                name="checks", type="checks", params={"field": "expect", "on_missing": "skip"}
+            )
+        )
+    if any(c.reference for c in cases):
+        scorers.append(ScorerConfig(name="judge", type="llm_judge"))
+    if any(e.get("rubrics") for e in extras):
+        scorers.append(
+            ScorerConfig(name="rubrics", type="llm_judge", params={"case_rubrics": True})
+        )
+    return ImportedDataset(cases=cases, scorers=scorers, format=FORMAT)

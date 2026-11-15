@@ -23,7 +23,16 @@ Import each side with the same importer, then gate as usual, for example
 `evalproof compare runs/baseline.json runs/candidate.json --gate --metric pass`.
 
 A separate command, `evalproof import-dataset`, turns a test set (not results) into a dataset you can run. It reads
-[Google ADK eval sets](#google-adk-eval-sets-as-a-dataset).
+[Google ADK eval sets](#google-adk-eval-sets-as-a-dataset), and, with `evalproof import-dataset auto`
+or a named format, the test cases of promptfoo, DeepEval, Ragas, LangSmith, OpenAI Evals, Inspect,
+Braintrust, Langfuse and Phoenix, and any JSONL or CSV table. Those are in
+[Import test cases from other tools](import-test-cases.md). The commands are
+`evalproof import-dataset promptfoo`, `evalproof import-dataset deepeval`,
+`evalproof import-dataset ragas`, `evalproof import-dataset langsmith`,
+`evalproof import-dataset openai-evals`, `evalproof import-dataset inspect`,
+`evalproof import-dataset braintrust`, `evalproof import-dataset langfuse`,
+`evalproof import-dataset phoenix`, `evalproof import-dataset jsonl` and
+`evalproof import-dataset csv`.
 
 ## What every importer does
 

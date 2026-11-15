@@ -610,7 +610,7 @@ def test_the_command_requires_out_and_a_known_format(tmp_path: Path) -> None:
     with pytest.raises(SystemExit) as bad_format:
         main(["import-dataset", "garak", str(BASIC), "--out", str(tmp_path / "x.jsonl")])
     assert bad_format.value.code == 2
-    assert DATASET_FORMATS == ("adk",)
+    assert "adk" in DATASET_FORMATS
 
 
 def test_the_result_importer_points_an_eval_set_here() -> None:
@@ -619,5 +619,5 @@ def test_the_result_importer_points_an_eval_set_here() -> None:
 
 
 def test_an_unknown_format_is_refused_by_the_function(tmp_path: Path) -> None:
-    with pytest.raises(ImportFormatError, match="unknown dataset format 'csv'"):
-        import_dataset("csv", BASIC)
+    with pytest.raises(ImportFormatError, match="unknown dataset format 'lm-eval'"):
+        import_dataset("lm-eval", BASIC)

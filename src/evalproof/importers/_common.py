@@ -40,6 +40,22 @@ EPOCHS = ("mean", "first", "all", "any", "trials")
 # changing). Using one prints a note once and marks the run (``environment.import_experimental``).
 EXPERIMENTAL_FORMATS = frozenset({"adk", "claude-plugin-eval"})
 
+# The dataset readers (``import-dataset``) whose file shape was written from documentation alone,
+# with no real file to check. promptfoo, jsonl and csv are not in it; ``adk`` is a stable dataset
+# reader even though its run importer is experimental.
+EXPERIMENTAL_DATASET_FORMATS = frozenset(
+    {
+        "deepeval",
+        "ragas",
+        "langsmith",
+        "openai-evals",
+        "inspect",
+        "braintrust",
+        "langfuse",
+        "phoenix",
+    }
+)
+
 _warned: set[str] = set()
 _warn_lock = threading.Lock()
 

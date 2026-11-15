@@ -1,0 +1,4 @@
+[
+  {"id": "lf-1", "input": "Can I get a refund?", "expectedOutput": "Yes, within 30 days of purchase.", "metadata": {"topic": "billing"}},
+  {"id": "lf-2", "input": {"question": "What is the Pro price?"}, "expectedOutput": "Pro costs $8 per month."}
+]

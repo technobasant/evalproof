@@ -12,12 +12,15 @@ import json
 import re
 import shutil
 import subprocess
+import textwrap
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib.resources import files
 from pathlib import Path
 
 from evalproof.config import ConfigError
+from evalproof.dataset import dataset_text
+from evalproof.importers import ImportedDataset, import_cases
 from evalproof.providers import LLM_PROVIDERS, PROFILES, parse_target
 from evalproof.providers.agent_cli import CLAUDE_OAUTH_ENV
 
@@ -368,6 +371,61 @@ def render_gitlab_ci(ci: str, judge: Judge) -> str:
     return fill(template("workflow-gitlab-api-key.yml"), values)
 
 
+# --- the imported suite ------------------------------------------------------------------
+
+
+def render_import_suite(
+    dataset: ImportedDataset, judge: Judge, *, source: str, dataset_path: str = "cases.jsonl"
+) -> str:
+    """A suite for imported cases: exactly the scorers the import needs, and the ``judge`` block
+    only when one of them is an ``llm_judge``. Raises ``ConfigError`` when no scorer fits."""
+    if not dataset.scorers:
+        raise ConfigError(
+            "no scorer fits these cases: they carry no expected answer and no assertion that "
+            "maps to one, so there is nothing to check an answer against. Write the cases "
+            "without a suite and add scorers by hand (docs: guides/import-test-cases)"
+        )
+    blocks = []
+    for scorer in dataset.scorers:
+        checked = dataset.coverage.get(scorer.name)
+        lines = [f"  # checks {checked} of {len(dataset.cases)} case(s)"] if checked else []
+        lines += [f"  - name: {scorer.name}", f"    type: {scorer.type}"]
+        if scorer.params:
+            lines.append(f"    params: {json.dumps(scorer.params)}")
+        blocks.append("\n".join(lines))
+    template_line = (
+        f"  prompt_template: {json.dumps(dataset.prompt_template)}"
+        if dataset.prompt_template
+        else ""
+    )
+    local = judge.provider in ("ollama", "vllm", "lmstudio", "llamacpp")
+    notes = "\n".join(f"# {line}" for note in dataset.notes for line in _wrap(note))
+    return fill(
+        template("suite-import.yaml"),
+        {
+            "SOURCE": source,
+            "FORMAT": dataset.format,
+            "NOTES": f"#\n# Import notes:\n{notes}" if notes else "",
+            "NAME": "imported",
+            "DATASET": json.dumps(dataset_path),
+            "CONCURRENCY": "1" if local else "4",
+            "TARGET": judge.target,
+            "TARGET_NOTE": f"  # {judge.note}" if judge.note else "",
+            "API_KEY_LINE": f"  api_key_env: {judge.api_key_env}" if judge.api_key_env else "",
+            "TEMPLATE_LINE": template_line,
+            "SCORERS": "\n".join(blocks),
+            "METRIC": dataset.gate_metric or dataset.scorers[0].name,
+        },
+        frozenset({"judge"}) if dataset.needs_judge else frozenset(),
+    )
+
+
+def _wrap(note: str, width: int = 94) -> list[str]:
+    """``note`` as comment lines no longer than ``width`` (the first begins with ``-``)."""
+    lines = textwrap.wrap(note, width=width, initial_indent="- ", subsequent_indent="  ")
+    return lines or [note]
+
+
 # --- the agent files ---------------------------------------------------------------------
 
 # The evalproof section of the repository's AGENTS.md sits between these two markers. ``init``
@@ -482,15 +540,24 @@ def build_files(
     pinned: str | None,
     cli_auth: str = "api-key",
     platform: str = "github",
+    imported: tuple[ImportedDataset, str] | None = None,
 ) -> list[tuple[str, str]]:
     """Every file to write, as (path relative to the target directory, content).
+
+    ``imported`` is an import and the name of the file it came from: the cases and the suite's
+    scorers then come from it instead of the three sample cases.
 
     ``AGENTS.md`` is not in the list: it is merged into an existing file, not written whole
     (``plan_agents_md``)."""
     ci_text = render_ci_text(ci, judge, cli_auth, platform)
+    if imported is None:
+        suite_text, cases_text = render_suite(judge), template("cases.jsonl")
+    else:
+        suite_text = render_import_suite(imported[0], judge, source=imported[1])
+        cases_text = dataset_text(imported[0].cases)
     out = [
-        ("evals/suite.yaml", render_suite(judge)),
-        ("evals/cases.jsonl", template("cases.jsonl")),
+        ("evals/suite.yaml", suite_text),
+        ("evals/cases.jsonl", cases_text),
         ("evals/README.md", fill(template("evals-readme.md"), {"CI_TEXT": ci_text})),
         ("evals/.gitignore", template("gitignore")),
     ]
@@ -616,13 +683,24 @@ def init_project(
     platform: str = "github",
     agents_md: bool = True,
     agent_files_only: bool = False,
+    from_file: Path | None = None,
+    from_format: str = "auto",
     emit: Callable[[str], None] = print,
 ) -> int:
     """Write the starter files into ``directory``; returns the exit code (always 0).
 
     ``agents_md`` also puts the evalproof section into the repository's ``AGENTS.md``.
     ``agent_files_only`` writes only the agent files (that section and the skill) and nothing else.
+    ``from_file`` is a file of test cases from another tool (``from_format`` says which, ``auto``
+    reads it off the file): ``evals/cases.jsonl`` is those cases and ``evals/suite.yaml`` has
+    the scorers they need, in place of the three sample cases. Nothing is written when the file
+    cannot be imported.
     """
+    if from_file is not None and agent_files_only:
+        raise ConfigError(
+            "--from imports test cases into a suite, and --agent-files-only writes no suite: "
+            "use one or the other"
+        )
     if agent_files_only:
         return _init_agent_files(
             directory,
@@ -668,12 +746,23 @@ def init_project(
         cli = AGENT_CLIS.get(chosen.provider)
         found = shutil.which(cli.binary) if cli else None
         pinned = cli_version(found) if found else None
-    files_to_write = build_files(chosen, ci, skill, pinned, cli_auth, platform)
+    imported = None
+    notes: list[str] = []
+    if from_file is not None:
+        imp = import_cases(from_format, from_file, warn=notes.append)
+        imported = (replace(imp, notes=[*imp.notes, *notes]), from_file.name)
+    files_to_write = build_files(chosen, ci, skill, pinned, cli_auth, platform, imported)
     root = directory.resolve()
     # Merge into AGENTS.md before writing anything, so damaged markers stop init with no change.
     agents_plan = plan_agents_md(root) if agents_md else None
 
     emit(f"evalproof init: judge {chosen.target} ({chosen.reason})")
+    if imported is not None:
+        dataset, name = imported
+        how = "detected" if dataset.detected else "format"
+        emit(f"imported {len(dataset.cases)} case(s) from {name} ({how}: {dataset.format})")
+        for note in dataset.notes:
+            emit(f"  note: {note}")
     _write_files(root, files_to_write, force, emit)
     if agents_plan:
         write_agents_md(root, agents_plan, emit)

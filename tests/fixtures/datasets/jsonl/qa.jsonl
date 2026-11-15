@@ -1,0 +1,2 @@
+{"qid": "q-1", "question": "Can I get a refund?", "context": "Refunds within 30 days.", "answer": "Yes, within 30 days.", "labels": ["billing", "support"]}
+{"qid": "q-2", "question": "What is the Pro price?", "context": "Pro is $8 per month.", "answer": "Pro costs $8 per month.", "labels": "plans"}

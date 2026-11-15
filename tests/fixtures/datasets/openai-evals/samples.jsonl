@@ -1,0 +1,3 @@
+{"input": [{"role": "system", "content": "Answer with one word."}, {"role": "user", "content": "What is the capital of France?"}], "ideal": "Paris"}
+{"input": [{"role": "system", "content": "Answer with one word."}, {"role": "user", "content": "Name a primary colour."}], "ideal": ["red", "blue", "yellow"]}
+{"input": [{"role": "user", "content": "Reply with the word yes."}], "ideal": "yes"}

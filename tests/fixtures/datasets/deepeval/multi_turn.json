@@ -1,0 +1,4 @@
+[
+  {"scenario": "A customer asks about refunds", "expected_outcome": "The customer learns the 30 day refund window.", "turns": [{"role": "user", "content": "Hi, I bought Pro by mistake."}, {"role": "assistant", "content": "Sorry to hear that. How can I help?"}, {"role": "user", "content": "Can I get a refund?"}]},
+  {"scenario": "A simulated user who wants to cancel", "expected_outcome": "The user is told how to cancel."}
+]

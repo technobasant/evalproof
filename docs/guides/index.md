@@ -16,6 +16,7 @@ Each guide takes one task from start to finish. They are for people who have run
 | [Readiness](readiness.md) | which parts of quality a suite covers and which it leaves untested |
 | [Agent SDK adapters](adapters.md) | build a trace from ADK, LangChain/LangGraph, the Claude Agent SDK or OpenAI Agents |
 | [Import results from other tools](import.md) | gate promptfoo, Inspect, DeepEval, lm-eval, garak, ADK, Claude Code plugin eval, CSV and JSONL results, or turn an ADK eval set into a dataset |
+| [Import test cases from other tools](import-test-cases.md) | turn the test cases you already have in promptfoo, DeepEval, Ragas, LangSmith, OpenAI Evals, Inspect, Braintrust, Langfuse, Phoenix, JSONL or CSV into a dataset and a suite, or start a repository with `init --from` |
 | [From Python](python.md) | the same functions the CLI uses |
 | [In CI](ci.md) | the GitHub Action and the workflows `init` writes |
 | [Troubleshooting](troubleshooting.md) | what an error message means and how to fix it |

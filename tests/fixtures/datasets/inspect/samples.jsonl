@@ -1,0 +1,3 @@
+{"id": 1, "input": "What is the capital of France?", "target": "Paris", "metadata": {"tags": ["geography"], "difficulty": "easy"}}
+{"id": "q2", "input": "Which planet is largest?", "choices": ["Mars", "Jupiter", "Venus"], "target": "B"}
+{"input": "Name a primary colour.", "target": ["red", "blue", "yellow"]}

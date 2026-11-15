@@ -42,7 +42,8 @@ every command from the repository root.
 | Hold latency or cost | Set `gate.max_p95_latency_ms` and `gate.max_cost_usd`. A breach exits 3. Cost needs `pricing` on the target (`input_per_mtok`, `output_per_mtok`, US dollars) or a system that returns `cost_usd` |
 | Handle flaky output | `trials: 5` in the suite or `run --trials 5` (1 to 100). Both runs must use the same number of trials. `gate.aggregate` or `compare --aggregate` picks `mean`, `all` or `any`. The report lists flaky cases and a power line saying what drop the suite can detect; the power line never changes the exit code |
 | Compare several builds | `variants:` in the suite, then `evalproof run evals/suite.yaml --all-variants`. Each variant writes `runs/<name>.json` |
-| Gate results from another tool | `evalproof import FORMAT FILE --out PATH` with FORMAT one of `promptfoo`, `inspect`, `deepeval`, `lm-eval`, `garak`, `adk`, `claude-plugin-eval`, `jsonl`, `csv`. For a test set with no results: `evalproof import-dataset adk FILE --out PATH` |
+| Gate results from another tool | `evalproof import FORMAT FILE --out PATH` with FORMAT one of `promptfoo`, `inspect`, `deepeval`, `lm-eval`, `garak`, `adk`, `claude-plugin-eval`, `jsonl`, `csv`. |
+| Start from test cases another tool holds | `evalproof import-dataset FORMAT FILE --out evals/cases.jsonl --suite-out evals/suite.yaml` with FORMAT `auto` or one of `promptfoo`, `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse`, `phoenix`, `adk`, `jsonl`, `csv`. In a new repository: `evalproof init --from FILE`. No model call. Assertions it cannot express stay on the case under `unmapped` and are counted in one stderr line: read it and tell the human. `promptfoo`, `adk`, `jsonl` and `csv` are stable; the rest are experimental |
 | See what the suite leaves untested | `evalproof readiness evals/suite.yaml [--run FILE] [--require behaviour,regression-gate]`. No model call |
 | Check a committed run file | `evalproof verify evals/runs/latest.json evals/suite.yaml`. No model call. Exit 4 means stale: run the suite again. For a baseline written before evalproof 0.5: `evalproof rehash RUN evals/suite.yaml` |
 | Check that a CLI target is usable | `evalproof doctor evals/suite.yaml`. No model call |
@@ -117,6 +118,10 @@ repository, so do it before drafting anything.
 2. Read what already says what correct looks like: unit tests and fixtures, example inputs and
    outputs in docs, other tools' eval files (the formats `import` and `import-dataset` read),
    and bug reports, issue titles and fix commits. Every fixed bug is a candidate case.
+   If the repo has a promptfoo config or a DeepEval, Ragas, LangSmith, Inspect, OpenAI Evals,
+   Braintrust, Langfuse or Phoenix dataset, import it before drafting anything:
+   `evalproof import-dataset auto FILE --out evals/cases.jsonl --suite-out evals/suite.yaml`.
+   Keep the `unmapped` fields it leaves on cases and report what was not imported.
 3. Run `evalproof readiness evals/suite.yaml`. It lists, per dimension, what is covered, partial,
    missing or out of scope. Work through the gaps that matter for the call sites you found.
 4. Draft cases per gap. Choose the scorer first, then write the case fields it reads.
@@ -236,10 +241,12 @@ With several candidates, `compare --gate` exits with the worst code in the order
 
 Add `--help` to any command for its flags.
 
-- `evalproof init [--dir DIR] [--judge TARGET] [--ci keyless|api-key|none] [--platform github|gitlab] [--cli-auth api-key|oauth-token] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]`:
+- `evalproof init [--dir DIR] [--judge TARGET] [--ci keyless|api-key|none] [--platform github|gitlab] [--cli-auth api-key|oauth-token] [--from FILE] [--from-format FORMAT] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]`:
   write the starter suite, CI workflow, agent skill and this section. Existing files are kept
   unless `--force`; `AGENTS.md` is always merged, never overwritten. `--agent-files-only`
-  refreshes only this section and the skill (experimental).
+  refreshes only this section and the skill (experimental). `--from FILE` writes
+  `evals/cases.jsonl` and the suite from another tool's test cases instead of the sample cases
+  (`--from-format` defaults to `auto`).
 - `evalproof run SUITE [--out FILE] [--limit N] [--trials K] [--system TARGET] [--variant NAME]... [--all-variants] [--gate] [--no-cache] [--cache-only] [--junit FILE] [--markdown FILE] [--quiet] [--show N]`:
   run the suite and write a run file. `--system-prompt-file` and `--label` also override the
   system.
@@ -264,8 +271,11 @@ Add `--help` to any command for its flags.
   turn another tool's results into a run file. `adk` and `claude-plugin-eval` are experimental.
   For `jsonl` and `csv`, `--id-field`, `--metric-field`, `--score-field`, `--passed-field` and
   `--system-field` name the columns.
-- `evalproof import-dataset adk FILE --out PATH`: turn a Google ADK eval set into a dataset
-  (experimental).
+- `evalproof import-dataset FORMAT FILE --out PATH [--suite-out PATH] [--force] [--id-field COLUMN] [--input-field COLUMN] [--reference-field COLUMN] [--tags-field COLUMN]`:
+  turn another tool's test cases into a dataset, and with `--suite-out` into a suite with the
+  scorers they need. FORMAT is `auto` (read off the file) or a tool name. The four field
+  options name the columns of a `jsonl` or `csv` table. `--suite-out` refuses to overwrite a
+  file without `--force`.
 - `evalproof pairwise BASELINE CANDIDATE --suite SUITE [--limit N] [--no-swap] [--no-cache] [--cache-only] [--markdown FILE] [--json FILE]`:
   ask the judge which of two outputs is better, in both orders unless `--no-swap`. Makes judge
   calls.
