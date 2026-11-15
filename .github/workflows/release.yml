@@ -172,8 +172,9 @@ jobs:
   # never fails for want of it. To turn it on:
   #   1. On npmjs.com, publish the package once by hand if it does not exist, then open
   #      the package settings and add a trusted publisher: package evalproof, repository
-  #      technobasant/evalproof, workflow release.yml (no environment).
-  #   2. Set the repository variable NPM_PUBLISH to true.
+  #      technobasant/evalproof, workflow release.yml, environment npm.
+  #   2. Create the repository environment npm, limited to tags matching v*.
+  #   3. Set the repository variable NPM_PUBLISH to true.
   # Trusted publishing needs no token: npm exchanges the job's OIDC identity for a short-lived
   # credential, and attaches a provenance statement.
   npm:
@@ -182,6 +183,9 @@ jobs:
     if: vars.NPM_PUBLISH == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/evalproof
     permissions:
       contents: read
       id-token: write # trusted publishing and provenance
