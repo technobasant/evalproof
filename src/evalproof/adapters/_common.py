@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import threading
+import warnings
 from collections.abc import Mapping
 from typing import Any, TypedDict
 
-from evalproof.models import ToolCall, Trace
+from evalproof.models import ModelUsage, ToolCall, Trace
 
 
 class AgentResult(TypedDict, total=False):
@@ -182,3 +184,74 @@ class Ledger:
         entry.ok = ok
         entry.error = error if not ok else None
         return entry
+
+
+_warned: set[str] = set()
+_warn_lock = threading.Lock()
+
+
+def warn_experimental(key: str, reason: str) -> None:
+    """A ``UserWarning``, once per process per adapter, the first time ``key``'s adapter runs.
+
+    Call it directly from the adapter's public function: ``stacklevel=3`` points the warning at
+    the caller of that function. It is ``warnings.warn`` and not a line on stderr because it runs
+    inside the user's own python target, where it can be filtered, turned into an error
+    (``-W error``) and seen by pytest.
+    """
+    with _warn_lock:
+        if key in _warned:
+            return
+        _warned.add(key)
+    warnings.warn(
+        f"evalproof: the {key} adapter is experimental: {reason}",
+        UserWarning,
+        stacklevel=3,
+    )
+
+
+def final_text(value: Any, fallback: str = "") -> str:
+    """The final output as text: a string as it is, anything else as JSON; ``fallback`` if None."""
+    if value is None:
+        return fallback
+    if isinstance(value, str):
+        return value
+    dump = getattr(value, "model_dump_json", None)
+    if callable(dump):
+        try:
+            return str(dump())
+        except Exception:  # an object that cannot dump itself is serialised below
+            pass
+    return json.dumps(jsonable(value), default=str)
+
+
+def add_usage(
+    usage: dict[str | None, ModelUsage],
+    model: Any,
+    tokens_in: Any = None,
+    tokens_out: Any = None,
+    cached: Any = None,
+) -> None:
+    """Add token counts to the entry for ``model`` (one agent-role entry per model name)."""
+    key = str(model) if model is not None else None
+    entry = usage.setdefault(key, ModelUsage(role="agent", model=key))
+    entry.tokens_in += count(tokens_in)
+    entry.tokens_out += count(tokens_out)
+    entry.cached_tokens += count(cached)
+
+
+def finish(
+    replies: Mapping[int, str],
+    ledger: Ledger,
+    rounds: int,
+    usage: Mapping[str | None, ModelUsage],
+) -> AgentResult:
+    """The ``{"output", "trace"}`` an adapter returns: one response per turn, padded with ``""``
+    up to the last turn that has a reply, and ``output`` the last of them."""
+    responses = [replies.get(i, "") for i in range(max(replies) + 1)] if replies else []
+    trace = Trace(
+        responses=responses,
+        tool_calls=ledger.calls,
+        rounds=rounds or None,
+        usage=list(usage.values()),
+    )
+    return {"output": responses[-1] if responses else "", "trace": trace}

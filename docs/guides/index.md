@@ -15,7 +15,7 @@ Each guide takes one task from start to finish. They are for people who have run
 | [Repeated trials](repeated-trials.md) | run each case several times, and compare several candidates in one table |
 | [Readiness](readiness.md) | which parts of quality a suite covers and which it leaves untested |
 | [Find what is not tested](find-gaps.md) | scan a repository for model calls, agents and tools no suite tests, and draft inputs for them, never answers |
-| [Agent SDK adapters](adapters.md) | build a trace from ADK, LangChain/LangGraph, the Claude Agent SDK or OpenAI Agents |
+| [Agent SDK adapters](adapters.md) | build a trace from ADK, LangChain/LangGraph, the Claude Agent SDK, OpenAI Agents, LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen or Semantic Kernel |
 | [Import results from other tools](import.md) | gate promptfoo, Inspect, DeepEval, lm-eval, garak, ADK, Claude Code plugin eval, CSV and JSONL results, or turn an ADK eval set into a dataset |
 | [Import test cases from other tools](import-test-cases.md) | turn the test cases you already have in promptfoo, DeepEval, Ragas, LangSmith, OpenAI Evals, Inspect, Braintrust, Langfuse, Phoenix, JSONL or CSV into a dataset and a suite, or start a repository with `init --from` |
 | [From Python](python.md) | the same functions the CLI uses |
