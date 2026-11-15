@@ -1,0 +1,41 @@
+{
+  "name": "evalproof",
+  "version": "1.0.0",
+  "description": "Run evalproof, the LLM eval and CI regression gate, with npx. A launcher: evalproof itself is a Python program, installed from PyPI at the matching version.",
+  "keywords": [
+    "evalproof",
+    "llm",
+    "eval",
+    "evaluation",
+    "regression",
+    "ci",
+    "gate",
+    "launcher"
+  ],
+  "homepage": "https://basantbhattarai.com.np/evalproof/",
+  "bugs": {
+    "url": "https://github.com/technobasant/evalproof/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/technobasant/evalproof.git",
+    "directory": "npm"
+  },
+  "license": "Apache-2.0",
+  "author": "Basant Bhattarai",
+  "type": "commonjs",
+  "bin": {
+    "evalproof": "bin/evalproof.js"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test"
+  }
+}

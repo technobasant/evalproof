@@ -37,9 +37,12 @@ evalproof supports Python 3.11 to 3.14, and CI tests all four.
 ## Releasing (maintainer)
 
 1. Set the version in `src/evalproof/_version.py`, the only place it is written, and move
-   the `CHANGELOG.md` entries under it with the date. Update `CITATION.cff`.
+   the `CHANGELOG.md` entries under it with the date. Update `CITATION.cff` and set the same
+   version in `npm/package.json`, the launcher that `npx evalproof` runs: a test fails when the
+   two differ.
 2. Commit, push to `main`, and wait for CI.
 3. Tag `vX.Y.Z` on that commit and publish a GitHub release whose notes are the changelog
    section. The `release` workflow checks the tag against the version, runs the tests,
    builds once, publishes to PyPI with trusted publishing, and attaches the files and their
-   build-provenance attestation to the release.
+   build-provenance attestation to the release. When the repository variable `NPM_PUBLISH` is
+   `true`, it then publishes `npm/` to npm with trusted publishing.

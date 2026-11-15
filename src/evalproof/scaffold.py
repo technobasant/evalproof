@@ -27,6 +27,11 @@ ACTION_REF = "v1.0.0"
 
 CI_MODES = ("keyless", "api-key", "none")
 
+# Where the generated CI lives. GitLab gets a file of its own that the user includes from
+# ``.gitlab-ci.yml``; ``init`` never edits that file.
+PLATFORMS = ("github", "gitlab")
+GITLAB_CI_FILE = ".gitlab-ci.evalproof.yml"
+
 # What the api-key workflow hands a coding-agent CLI: its API key (the default), or, for Claude
 # Code only, the token ``claude setup-token`` prints.
 CLI_AUTHS = ("api-key", "oauth-token")
@@ -248,12 +253,20 @@ def _ci_secret(judge: Judge, cli_auth: str) -> str:
     return CLAUDE_OAUTH_ENV if cli_auth == "oauth-token" else _key_env(judge)
 
 
-def render_ci_text(ci: str, judge: Judge, cli_auth: str = "api-key") -> str:
+def render_ci_text(
+    ci: str, judge: Judge, cli_auth: str = "api-key", platform: str = "github"
+) -> str:
+    gitlab = platform == "gitlab"
+    if gitlab:
+        file = f"`{GITLAB_CI_FILE}` (included from `.gitlab-ci.yml`)"
+        request, base = "merge request", "target branch"
+    else:
+        file, request, base = "`.github/workflows/evalproof.yml`", "pull request", "base branch"
     if ci == "keyless":
         return (
             "Commit `evals/runs/latest.json` with your change. CI makes no model calls: "
-            "`.github/workflows/evalproof.yml` compares that file with the one on the base "
-            "branch and fails the pull request on a regression that is both large enough to "
+            f"{file} compares that file with the one on the {base} "
+            f"and fails the {request} on a regression that is both large enough to "
             "matter and statistically significant (exit 1; exit 3 over a latency or cost "
             "budget; exit 4 when it cannot decide). Before comparing it runs `evalproof verify`, "
             "which fails the job when `latest.json` does not match the suite and the cases in "
@@ -261,11 +274,23 @@ def render_ci_text(ci: str, judge: Judge, cli_auth: str = "api-key") -> str:
             "`evals/` changed but `latest.json` did not."
         )
     if ci == "api-key":
+        secret = _ci_secret(judge, cli_auth)
+        if gitlab:
+            return (
+                "Commit `evals/runs/latest.json` on the main branch to set the baseline. "
+                f"{file} runs the suite on a merge request that changes `evals/` (add the paths "
+                "that hold your prompt to `EVALPROOF_WATCH` in the job) with the "
+                f"`{secret}` CI/CD variable and compares the result with that file; "
+                "it fails on a regression that is both large enough to matter and statistically "
+                "significant (exit 1; exit 3 over a budget; exit 4 when it cannot decide). Merge "
+                "requests from forks get no variables, so the job runs nothing for them. "
+                "Responses are cached between runs."
+            )
         text = (
             "Commit `evals/runs/latest.json` on the main branch to set the baseline. "
-            "`.github/workflows/evalproof.yml` runs the suite on a pull request that changes "
+            f"{file} runs the suite on a pull request that changes "
             "`evals/` (add the paths that hold your prompt to `WATCH` in the workflow) with the "
-            f"`{_ci_secret(judge, cli_auth)}` repository secret and compares the result with "
+            f"`{secret}` repository secret and compares the result with "
             "that file; "
             "it fails on a regression that is both large enough to matter and statistically "
             "significant (exit 1; exit 3 over a budget; exit 4 when it cannot decide). Pull "
@@ -329,23 +354,43 @@ def render_workflow(ci: str, judge: Judge, pinned: str | None, cli_auth: str = "
     return fill(template("workflow-api-key.yml"), values, frozenset(flags))
 
 
+def render_gitlab_ci(ci: str, judge: Judge) -> str:
+    """``.gitlab-ci.evalproof.yml``: the same gate as the GitHub workflow, on merge requests.
+
+    Both variants run in ``python:3.13-slim`` and install evalproof from PyPI at the release
+    this file was written by. A coding-agent CLI judge is refused before this is called
+    (``init_project``): the image has no Node to install the CLI with.
+    """
+    values = {"PIP_VERSION": ACTION_REF.removeprefix("v")}
+    if ci == "keyless":
+        return fill(template("workflow-gitlab-keyless.yml"), values)
+    values["KEY_VAR"] = _key_env(judge)
+    return fill(template("workflow-gitlab-api-key.yml"), values)
+
+
 def build_files(
-    judge: Judge, ci: str, skill: bool, pinned: str | None, cli_auth: str = "api-key"
+    judge: Judge,
+    ci: str,
+    skill: bool,
+    pinned: str | None,
+    cli_auth: str = "api-key",
+    platform: str = "github",
 ) -> list[tuple[str, str]]:
     """Every file to write, as (path relative to the target directory, content)."""
+    ci_text = render_ci_text(ci, judge, cli_auth, platform)
     out = [
         ("evals/suite.yaml", render_suite(judge)),
         ("evals/cases.jsonl", template("cases.jsonl")),
-        (
-            "evals/README.md",
-            fill(template("evals-readme.md"), {"CI_TEXT": render_ci_text(ci, judge, cli_auth)}),
-        ),
+        ("evals/README.md", fill(template("evals-readme.md"), {"CI_TEXT": ci_text})),
         ("evals/.gitignore", template("gitignore")),
     ]
     if ci != "none":
-        out.append(
-            (".github/workflows/evalproof.yml", render_workflow(ci, judge, pinned, cli_auth))
-        )
+        if platform == "gitlab":
+            out.append((GITLAB_CI_FILE, render_gitlab_ci(ci, judge)))
+        else:
+            out.append(
+                (".github/workflows/evalproof.yml", render_workflow(ci, judge, pinned, cli_auth))
+            )
     if skill:
         body = template("SKILL.md")
         # Two copies, not a symlink, so a Windows checkout works.
@@ -364,7 +409,9 @@ def _hosted_key(judge: Judge) -> str | None:
     return profile.api_key_env
 
 
-def requirement_lines(judge: Judge, ci: str, cli_auth: str = "api-key") -> list[str]:
+def requirement_lines(
+    judge: Judge, ci: str, cli_auth: str = "api-key", platform: str = "github"
+) -> list[str]:
     """What the starter suite needs to run, locally and in CI, for the chosen judge.
 
     The same facts as the README's "What it needs to run" table, for the one target ``init``
@@ -394,11 +441,20 @@ def requirement_lines(judge: Judge, ci: str, cli_auth: str = "api-key") -> list[
                 "; a personal Codex login belongs only on trusted private infrastructure, "
                 "never on public repositories or for open source work"
             )
+    elif platform == "gitlab":
+        remote = f"the {_key_env(judge)} CI/CD variable, masked and not protected"
     else:
         remote = f"the {_key_env(judge)} repository secret"
     lines = [f"locally: {local}", f"in CI: {remote}"]
     if ci == "api-key":
-        lines.append("pull requests from forks never receive secrets, so the workflow skips them")
+        if platform == "gitlab":
+            lines.append(
+                "merge requests from forks never receive the variable, so the job skips them"
+            )
+        else:
+            lines.append(
+                "pull requests from forks never receive secrets, so the workflow skips them"
+            )
     return lines
 
 
@@ -410,6 +466,7 @@ def init_project(
     skill: bool = True,
     force: bool = False,
     cli_auth: str = "api-key",
+    platform: str = "github",
     emit: Callable[[str], None] = print,
 ) -> int:
     """Write the starter files into ``directory``; returns the exit code (always 0)."""
@@ -417,6 +474,8 @@ def init_project(
         raise ConfigError(f"--ci must be one of {', '.join(CI_MODES)}, got {ci!r}")
     if cli_auth not in CLI_AUTHS:
         raise ConfigError(f"--cli-auth must be one of {', '.join(CLI_AUTHS)}, got {cli_auth!r}")
+    if platform not in PLATFORMS:
+        raise ConfigError(f"--platform must be one of {', '.join(PLATFORMS)}, got {platform!r}")
     chosen = choose_judge(judge)
     if cli_auth == "oauth-token":
         if ci != "api-key":
@@ -430,6 +489,13 @@ def init_project(
                 f"{chosen.target!r}. Pass --judge claude-code:<model>, or leave --cli-auth out "
                 "to use an API key (Codex and every other target have no token option)."
             )
+    if platform == "gitlab" and ci == "api-key" and chosen.provider in AGENT_CLIS:
+        raise ConfigError(
+            f"--platform gitlab --ci api-key runs in python:3.13-slim, which has no Node to "
+            f"install the {AGENT_CLIS[chosen.provider].label} CLI with, and the judge is "
+            f"{chosen.target!r}. Pass --judge with a hosted API target such as "
+            f"{ANTHROPIC_DEFAULT}, or use --ci keyless."
+        )
     # An api-key workflow needs the key variable and, for a CLI judge, its pinned version.
     pinned = None
     if ci == "api-key":
@@ -437,7 +503,7 @@ def init_project(
         cli = AGENT_CLIS.get(chosen.provider)
         found = shutil.which(cli.binary) if cli else None
         pinned = cli_version(found) if found else None
-    files_to_write = build_files(chosen, ci, skill, pinned, cli_auth)
+    files_to_write = build_files(chosen, ci, skill, pinned, cli_auth, platform)
 
     emit(f"evalproof init: judge {chosen.target} ({chosen.reason})")
     root = directory.resolve()
@@ -467,13 +533,30 @@ def init_project(
     emit("")
     emit("next:")
     emit("  uvx evalproof run evals/suite.yaml --out evals/runs/latest.json")
+    gitlab = platform == "gitlab"
     if ci == "api-key":
         secret = _ci_secret(chosen, cli_auth)
-        emit(f"  add the repository secret {secret}, then commit evals/ and .github/")
+        if gitlab:
+            emit(
+                f"  add the CI/CD variable {secret} (masked, not protected), "
+                f"then commit evals/ and {GITLAB_CI_FILE}"
+            )
+        else:
+            emit(f"  add the repository secret {secret}, then commit evals/ and .github/")
+    elif gitlab and ci == "keyless":
+        emit(
+            f"  commit evals/ (including evals/runs/latest.json) and {GITLAB_CI_FILE} "
+            "with your change"
+        )
     else:
         emit("  commit evals/ (including evals/runs/latest.json) with your change")
+    if gitlab and ci != "none":
+        emit(f"  {GITLAB_CI_FILE} runs only when .gitlab-ci.yml includes it. init never edits")
+        emit("  that file, so add these two lines to it (create it if you have none):")
+        emit("    include:")
+        emit(f"      - local: {GITLAB_CI_FILE}")
     emit("")
     emit("what it needs to run:")
-    for line in requirement_lines(chosen, ci, cli_auth):
+    for line in requirement_lines(chosen, ci, cli_auth, platform):
         emit(f"  {line}")
     return 0
