@@ -14,7 +14,7 @@ Each guide takes one task from start to finish. They are for people who have run
 | [Testing a system in any language](command-target.md) | run a Node.js, Go or shell program as the system, with the case on stdin |
 | [Repeated trials](repeated-trials.md) | run each case several times, and compare several candidates in one table |
 | [Readiness](readiness.md) | which parts of quality a suite covers and which it leaves untested |
-| [Agent SDK adapters](adapters.md) | build a trace from ADK, LangChain/LangGraph, the Claude Agent SDK or OpenAI Agents |
+| [Agent SDK adapters](adapters.md) | build a trace from ADK, LangChain/LangGraph, the Claude Agent SDK, OpenAI Agents, LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen or Semantic Kernel |
 | [Import results from other tools](import.md) | gate promptfoo, Inspect, DeepEval, lm-eval, garak, ADK, Claude Code plugin eval, CSV and JSONL results, or turn an ADK eval set into a dataset |
 | [From Python](python.md) | the same functions the CLI uses |
 | [In CI](ci.md) | the GitHub Action and the workflows `init` writes |

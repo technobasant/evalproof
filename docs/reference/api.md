@@ -70,4 +70,18 @@ Build a trace from what an agent SDK returns.
 
 ::: evalproof.adapters.otel.from_spans
 
+::: evalproof.adapters.llama_index.from_events
+
+::: evalproof.adapters.crewai.from_output
+
+::: evalproof.adapters.pydantic_ai.from_messages
+
+::: evalproof.adapters.dspy.from_prediction
+
+::: evalproof.adapters.haystack.from_messages
+
+::: evalproof.adapters.autogen.from_messages
+
+::: evalproof.adapters.semantic_kernel.from_history
+
 ::: evalproof.adapters.AgentResult
