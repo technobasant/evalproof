@@ -9,6 +9,7 @@ Each guide takes one task from start to finish. They are for people who have run
 | Guide | What it covers |
 |---|---|
 | [Providers](providers.md) | every model target, the key it reads, and logged-in Claude Code and Codex as judge |
+| [Coding agents](coding-agents.md) | the `AGENTS.md` section and the skill `init` writes, so a coding agent can use evalproof in your repository |
 | [Testing agents](testing-agents.md) | traces, the `checks` scorer, several turns and variants |
 | [Testing a system in any language](command-target.md) | run a Node.js, Go or shell program as the system, with the case on stdin |
 | [Repeated trials](repeated-trials.md) | run each case several times, and compare several candidates in one table |

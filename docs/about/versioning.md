@@ -32,6 +32,7 @@ These are not:
 
 * **Anything marked experimental**: the `opencode:`, `cursor:` and `copilot:` providers, the Cursor sandbox, the `adk` and `claude-plugin-eval` importers and the OpenTelemetry adapter. They warn when used, and can change in a minor release until they are declared stable.
 * **What 1.0.0 added on top of that** is experimental too, without a warning, until it has been used in more projects: the `command:` target's input and output, the [JUnit reports](../reference/junit.md) (`--junit`) and the names of their test cases, the `checks` list in the gate's `--json` output, `init --platform gitlab`, the action's `pr-comment` input, the npm launcher and the container image's contents. They can change in a minor release, and the changelog says when.
+* **The coding-agent files** `init` writes: the text of the evalproof section of `AGENTS.md`, the skill's text and `init --agent-files-only`. The markers around the section and the rule that `init` never changes anything outside them are stable.
 * **Human-readable output**: the terminal and Markdown reports can be reworded or rearranged in any release. Read `--json` output or run files from scripts.
 * **The response cache**: a release may change how a cache key is built, which makes cached replies miss once; the changelog says when.
 * **Numbers that come from fixing a statistical bug**: a fix that changes a verdict on the same run files goes into a minor release, listed under "Changed", never a patch.

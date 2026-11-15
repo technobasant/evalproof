@@ -25,6 +25,7 @@ evalproof init: judge claude-code:haiku (claude is on PATH, so evals use your Cl
   wrote          .github/workflows/evalproof.yml
   wrote          .agents/skills/evalproof/SKILL.md
   wrote          .claude/skills/evalproof/SKILL.md
+  wrote          AGENTS.md
 
 next:
   uvx evalproof run evals/suite.yaml --out evals/runs/latest.json
@@ -36,8 +37,12 @@ Ollama, then a hosted Anthropic model with `ANTHROPIC_API_KEY`. It writes `evals
 suite, three sample cases, a README), `.github/workflows/evalproof.yml` (`--ci keyless`, the
 default, makes no model calls in CI; `--ci api-key` runs the suite there; `--ci none` writes
 no workflow) and a skill for coding agents at `.agents/skills/evalproof/SKILL.md` and
-`.claude/skills/evalproof/SKILL.md` (`--no-skill` skips it). It prints one line per file,
-never overwrites one without `--force`, and makes no model call.
+`.claude/skills/evalproof/SKILL.md` (`--no-skill` skips it). It also adds an evalproof section
+to `AGENTS.md`, between two markers, for any coding agent that reads that file
+(`--no-agents-md` skips it; [Coding agents](../guides/coding-agents.md) has the details). It
+prints one line per file, never overwrites one without `--force`, and makes no model call. The
+exception is `AGENTS.md`: `init` creates it, appends the section to your own file or replaces
+only the text between the markers, and never changes anything else in it.
 
 ## 2. Run it
 
