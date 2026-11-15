@@ -59,6 +59,25 @@ removed or renamed.
   correct answers and alone showed a 7.1-point drop of the same size on every model, from
   different cases; a reviewed key, written after reading the answers, removes it. Run files, both
   keys and `measure.py`, which re-scores every stored answer, are in `examples/frontier-study/`.
+- A `command:` system target runs any program once per case, in the suite's directory and
+  without a shell: it reads the same JSON an `http` system is sent on stdin and prints plain text
+  or a JSON result. A non-zero exit is the case's error with the end of stderr, and a timeout
+  kills the program and everything it started. It is not cached, so `--cache-only` refuses it.
+  See [Command targets](https://basantbhattarai.com.np/evalproof/guides/command-target/).
+- JUnit XML reports: `run --junit PATH` writes one test case per case (and trial), failed the
+  same way as the report's "Failed cases"; `compare --gate --junit PATH` writes one test case per
+  gate check, so GitLab, Jenkins and Azure DevOps show a failed gate as failed tests. `--junit`
+  without `--gate` on `compare` is exit 2. See
+  [JUnit reports](https://basantbhattarai.com.np/evalproof/reference/junit/).
+- The gate's `--json` payload lists every check it evaluated in `checks`, passed ones included,
+  each with a stable name (`max_drop: <metric>`, `min_pass_rate: <metric>`, `must_pass`, ...), an
+  outcome (`pass`, `fail` or `error`) and a message.
+- A container image, `ghcr.io/technobasant/evalproof`, for `linux/amd64` and `linux/arm64`, built
+  from the released wheel with a provenance attestation and tagged with the version, the minor
+  version and `latest`. It runs as a non-root user in `/work` and has no agent CLIs.
+- `python -m evalproof` runs the command line.
+- `scripts/test-in-docker.sh` runs the test suite in Linux containers (Python 3.11 to 3.14,
+  Alpine, and `linux/amd64` under emulation) for contributors.
 
 ### Changed
 
@@ -79,6 +98,31 @@ removed or renamed.
 - The cursor isolation tag is `cursor/3` when the sandbox is on and `cursor/2` when it is not, so
   cached replies and compared runs never mix the two. The `doctor` warning about the skills list
   now depends on the sandbox: with it on, it names the blocked folders and the User Rules limit.
+- A rate-limited or failing model call is tried up to six times instead of four, waiting from
+  about 1 second, doubling up to 30, with random jitter so parallel workers do not retry in step.
+  A `Retry-After` header (seconds or a date) is waited instead, up to 60 seconds.
+- The run file name evalproof picks when there is no `--out` replaces characters Windows refuses
+  in a file name (`<>:"/\|?*`) in the suite's name with `-`.
+
+### Fixed
+
+- Two workers saving the same reply to the response cache at once could make one of them fail
+  its case; each now writes its own temporary file, and a cache entry that cannot be written or
+  read is a miss rather than an error.
+- On Windows:
+  - a timed-out agent CLI or `command:` program is ended with everything it started
+    (`taskkill /T`), so a child left running no longer holds the output open;
+  - the length limits for a prompt passed on the command line or in the environment follow
+    Windows' (32,767 characters, 8,191 through a `.cmd` or `.bat` shim), with an error naming
+    the limit;
+  - the cursor sandbox profile and the codex instructions path use `/` separators, and a cursor
+    workspace file named like `/etc/x` or `C:\x` is refused;
+  - temporary agent workspaces are removed with retries while a just-killed child still holds a
+    file;
+  - every file evalproof writes (run files, `--json`, `--junit`, reports, datasets) has LF line
+    endings;
+  - suite files, datasets, prompt and rubric files and run files saved with a UTF-8 byte-order
+    mark, as Notepad and PowerShell write them, are read.
 
 ## [0.8.0] — 2026-11-15
 

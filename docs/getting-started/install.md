@@ -66,7 +66,7 @@ No install step is needed: the composite action
 
 ## Docker
 
-A container image holds evalproof and its four dependencies on Python 3.13, for `linux/amd64` and `linux/arm64`. It is published to the GitHub container registry with each release after 1.0.0, and it installs the same wheel that went to PyPI. Use it where you would rather not install Python packages, or in a CI system that runs containers.
+A container image holds evalproof and its four dependencies on Python 3.13, for `linux/amd64` and `linux/arm64`. It is published to the GitHub container registry with each release from 1.0.0 on, and it installs the same wheel that went to PyPI. Use it where you would rather not install Python packages, or in a CI system that runs containers.
 
 ```bash title="Terminal"
 docker pull ghcr.io/technobasant/evalproof:latest
@@ -89,7 +89,7 @@ docker run --rm -e ANTHROPIC_API_KEY -v "$PWD:/work" \
   ghcr.io/technobasant/evalproof:latest run evals/suite.yaml --out evals/runs/latest.json
 ```
 
-**Pin a version** in CI, as you would with any other installer. Each release has three tags: `1.1.0` (this release only), `1.1` (the newest patch of that minor release) and `latest` (the newest stable release). A pre-release gets only its exact tag.
+**Pin a version** in CI, as you would with any other installer. Each release has three tags: `1.0.0` (this release only), `1.0` (the newest patch of that minor release) and `latest` (the newest stable release). A pre-release gets only its exact tag.
 
 What the image does not have:
 
@@ -97,7 +97,7 @@ What the image does not have:
 * **No packages beyond evalproof's own.** A `python:` system that imports anything else needs an image of its own, built on this one:
 
     ```dockerfile title="Dockerfile"
-    FROM ghcr.io/technobasant/evalproof:1.1.0
+    FROM ghcr.io/technobasant/evalproof:1.0.0
     RUN pip install --no-cache-dir --user your-package
     ```
 
