@@ -4,6 +4,30 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+### Added
+
+- `evalproof init` adds an evalproof section to the repository's `AGENTS.md`, so any coding agent
+  that reads that file knows which command to run for a task, how to read the exit codes, what
+  never to weaken and how each kind of provider and target is set up. The section sits between `<!-- evalproof:begin -->` and
+  `<!-- evalproof:end -->`. A missing file is created, a file without the markers gets the
+  section appended after one blank line, and a file that has them gets only the text between
+  them replaced; everything else in the file stays byte for byte, line endings included. Damaged
+  markers (one without the other, repeated, or in the wrong order) stop `init` with exit 2 and
+  nothing is written. `--force` does not overwrite the file. `--no-agents-md` skips it.
+- `evalproof init --agent-files-only` writes only the agent files (the `AGENTS.md` section and
+  the skill) and no suite or CI workflow. It cannot be combined with `--judge`, `--ci`,
+  `--platform` or `--cli-auth`. Existing skill copies are kept unless `--force` is given.
+- A guide, [Coding agents](https://basantbhattarai.com.np/evalproof/guides/coding-agents/).
+- An `AGENTS.md` at the root of this repository for agents that work on evalproof itself.
+
+The text of the `AGENTS.md` section, the skill's text and `--agent-files-only` are experimental
+and can change in a minor release. The markers and the rule that `init` never changes anything
+outside them are stable.
+
+### Changed
+
+- The skill points to the `AGENTS.md` section for every task other than checking a change.
+
 ## [1.0.0] — 2026-11-15
 
 The first stable release. The public surface (the names in `evalproof.__all__` and

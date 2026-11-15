@@ -368,6 +368,113 @@ def render_gitlab_ci(ci: str, judge: Judge) -> str:
     return fill(template("workflow-gitlab-api-key.yml"), values)
 
 
+# --- the agent files ---------------------------------------------------------------------
+
+# The evalproof section of the repository's AGENTS.md sits between these two markers. ``init``
+# replaces what is between them and never touches the rest of the file.
+AGENTS_FILE = "AGENTS.md"
+AGENTS_BEGIN = "<!-- evalproof:begin -->"
+AGENTS_END = "<!-- evalproof:end -->"
+AGENTS_HEADING = "# Agent instructions"
+
+# Two copies of the skill, not a symlink, so a Windows checkout works.
+SKILL_FILES = (".agents/skills/evalproof/SKILL.md", ".claude/skills/evalproof/SKILL.md")
+
+
+def agents_block() -> str:
+    """The evalproof section, from the begin marker to the end marker, with LF line ends."""
+    text = template(AGENTS_FILE).replace("\r\n", "\n").strip()
+    if not (text.startswith(AGENTS_BEGIN) and text.endswith(AGENTS_END)):
+        raise RuntimeError("templates/AGENTS.md must start and end with the evalproof markers")
+    return text
+
+
+def merge_agents_md(existing: str | None) -> tuple[str, str]:
+    """Put the evalproof section into the text of an AGENTS.md.
+
+    ``existing`` is None for a file that does not exist. Returns the new text and what was done:
+    ``created`` (a heading and the section), ``updated`` (the text between the markers was
+    replaced), ``appended`` (the file had no markers, so the section follows its content after
+    one blank line) or ``unchanged``. Text outside the markers is never changed, byte for byte,
+    and the section uses the newline style the file already has. Damaged markers (one without
+    the other, repeated, or in the wrong order) raise ``ConfigError``: nothing is guessed.
+    """
+    block = agents_block()
+    if not existing:
+        return f"{AGENTS_HEADING}\n\n{block}\n", "created"
+    nl = "\r\n" if existing.count("\r\n") * 2 > existing.count("\n") else "\n"
+    block = block.replace("\n", nl)
+    begins, ends = existing.count(AGENTS_BEGIN), existing.count(AGENTS_END)
+    if begins == 0 and ends == 0:
+        trailing = existing[len(existing.rstrip("\r\n")) :].count("\n")
+        return existing + nl * max(0, 2 - trailing) + block + nl, "appended"
+    if begins == 1 and ends == 1:
+        start, stop = existing.index(AGENTS_BEGIN), existing.index(AGENTS_END)
+        if start < stop:
+            merged = existing[:start] + block + existing[stop + len(AGENTS_END) :]
+            return merged, ("unchanged" if merged == existing else "updated")
+    raise ConfigError(
+        f"{AGENTS_FILE} has damaged evalproof markers: {begins} x {AGENTS_BEGIN} and "
+        f"{ends} x {AGENTS_END}. Each must appear once, the begin marker first. Fix or remove "
+        "them by hand. Nothing was written."
+    )
+
+
+def plan_agents_md(root: Path) -> tuple[str, str]:
+    """The new text of ``root/AGENTS.md`` and what writing it does, without writing."""
+    path = root / AGENTS_FILE
+    existing = None
+    if path.exists():
+        try:
+            existing = path.read_bytes().decode("utf-8")  # bytes, so a CRLF file stays CRLF
+        except (OSError, UnicodeDecodeError) as exc:
+            raise ConfigError(
+                f"cannot edit {AGENTS_FILE}: it is not readable UTF-8 text ({exc})"
+            ) from exc
+    return merge_agents_md(existing)
+
+
+_AGENTS_VERB = {
+    "created": "wrote",
+    "appended": "appended",
+    "updated": "updated",
+    "unchanged": "unchanged",
+}
+
+
+def write_agents_md(root: Path, plan: tuple[str, str], emit: Callable[[str], None]) -> None:
+    """Write what ``plan_agents_md`` returned and say what was done."""
+    text, action = plan
+    if action != "unchanged":
+        root.mkdir(parents=True, exist_ok=True)
+        # newline="": the text already has the file's own line ends, so none are translated.
+        (root / AGENTS_FILE).write_text(text, encoding="utf-8", newline="")
+    emit(f"  {_AGENTS_VERB[action]:<15}{AGENTS_FILE}")
+
+
+def skill_files() -> list[tuple[str, str]]:
+    """The skill, once per place coding agents look for it."""
+    body = template("SKILL.md")
+    return [(rel, body) for rel in SKILL_FILES]
+
+
+def _write_files(
+    root: Path, files: list[tuple[str, str]], force: bool, emit: Callable[[str], None]
+) -> list[str]:
+    """Write each file that is missing (or all with ``force``); returns the ones kept."""
+    kept = []
+    for rel, content in files:
+        path = root / rel
+        if path.exists() and not force:
+            emit(f"  kept (exists)  {rel}")
+            kept.append(rel)
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8", newline="\n")
+        emit(f"  wrote          {rel}")
+    return kept
+
+
 def build_files(
     judge: Judge,
     ci: str,
@@ -376,7 +483,10 @@ def build_files(
     cli_auth: str = "api-key",
     platform: str = "github",
 ) -> list[tuple[str, str]]:
-    """Every file to write, as (path relative to the target directory, content)."""
+    """Every file to write, as (path relative to the target directory, content).
+
+    ``AGENTS.md`` is not in the list: it is merged into an existing file, not written whole
+    (``plan_agents_md``)."""
     ci_text = render_ci_text(ci, judge, cli_auth, platform)
     out = [
         ("evals/suite.yaml", render_suite(judge)),
@@ -392,10 +502,7 @@ def build_files(
                 (".github/workflows/evalproof.yml", render_workflow(ci, judge, pinned, cli_auth))
             )
     if skill:
-        body = template("SKILL.md")
-        # Two copies, not a symlink, so a Windows checkout works.
-        out.append((".agents/skills/evalproof/SKILL.md", body))
-        out.append((".claude/skills/evalproof/SKILL.md", body))
+        out.extend(skill_files())
     return out
 
 
@@ -458,6 +565,46 @@ def requirement_lines(
     return lines
 
 
+def _init_agent_files(
+    directory: Path,
+    *,
+    judge: str | None,
+    ci: str,
+    skill: bool,
+    force: bool,
+    cli_auth: str,
+    platform: str,
+    agents_md: bool,
+    emit: Callable[[str], None],
+) -> int:
+    """``init --agent-files-only``: the AGENTS.md section and the skill, and nothing else."""
+    if judge is not None:
+        raise ConfigError("--agent-files-only writes no suite, so --judge has nothing to set")
+    if ci != "keyless" or platform != "github" or cli_auth != "api-key":
+        raise ConfigError(
+            "--agent-files-only writes no CI workflow, so it cannot be combined with "
+            "--ci, --platform or --cli-auth"
+        )
+    if not agents_md and not skill:
+        raise ConfigError(
+            "--agent-files-only with both --no-agents-md and --no-skill has nothing to write"
+        )
+    root = directory.resolve()
+    agents_plan = plan_agents_md(root) if agents_md else None
+
+    emit("evalproof init: agent files only (no suite, no CI workflow)")
+    files = skill_files() if skill else []
+    kept = _write_files(root, files, force, emit)
+    if agents_plan:
+        write_agents_md(root, agents_plan, emit)
+    for rel, content in files:
+        if rel in kept:
+            on_disk = (root / rel).read_bytes().decode("utf-8", "replace").replace("\r\n", "\n")
+            if on_disk != content:
+                emit(f"note: {rel} differs from this version of evalproof; --force replaces it")
+    return 0
+
+
 def init_project(
     directory: Path,
     *,
@@ -467,9 +614,27 @@ def init_project(
     force: bool = False,
     cli_auth: str = "api-key",
     platform: str = "github",
+    agents_md: bool = True,
+    agent_files_only: bool = False,
     emit: Callable[[str], None] = print,
 ) -> int:
-    """Write the starter files into ``directory``; returns the exit code (always 0)."""
+    """Write the starter files into ``directory``; returns the exit code (always 0).
+
+    ``agents_md`` also puts the evalproof section into the repository's ``AGENTS.md``.
+    ``agent_files_only`` writes only the agent files (that section and the skill) and nothing else.
+    """
+    if agent_files_only:
+        return _init_agent_files(
+            directory,
+            judge=judge,
+            ci=ci,
+            skill=skill,
+            force=force,
+            cli_auth=cli_auth,
+            platform=platform,
+            agents_md=agents_md,
+            emit=emit,
+        )
     if ci not in CI_MODES:
         raise ConfigError(f"--ci must be one of {', '.join(CI_MODES)}, got {ci!r}")
     if cli_auth not in CLI_AUTHS:
@@ -504,17 +669,14 @@ def init_project(
         found = shutil.which(cli.binary) if cli else None
         pinned = cli_version(found) if found else None
     files_to_write = build_files(chosen, ci, skill, pinned, cli_auth, platform)
+    root = directory.resolve()
+    # Merge into AGENTS.md before writing anything, so damaged markers stop init with no change.
+    agents_plan = plan_agents_md(root) if agents_md else None
 
     emit(f"evalproof init: judge {chosen.target} ({chosen.reason})")
-    root = directory.resolve()
-    for rel, content in files_to_write:
-        path = root / rel
-        if path.exists() and not force:
-            emit(f"  kept (exists)  {rel}")
-            continue
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8", newline="\n")
-        emit(f"  wrote          {rel}")
+    _write_files(root, files_to_write, force, emit)
+    if agents_plan:
+        write_agents_md(root, agents_plan, emit)
 
     if chosen.warning:
         emit(f"note: {chosen.warning}")

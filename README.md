@@ -133,9 +133,13 @@ Ollama, then a hosted Anthropic model with `ANTHROPIC_API_KEY`. It writes `evals
 suite, three sample cases, a README), `.github/workflows/evalproof.yml` (`--ci keyless`, the
 default, makes no model calls in CI; `--ci api-key` runs the suite there; `--ci none` writes
 no workflow) and a skill for coding agents at `.agents/skills/evalproof/SKILL.md` and
-`.claude/skills/evalproof/SKILL.md` (`--no-skill` skips it). It prints one line per file,
-never overwrites one without `--force`, and makes no model call. Replace the sample cases
-with your own: the gate needs 20 before it will decide.
+`.claude/skills/evalproof/SKILL.md` (`--no-skill` skips it). It also adds an evalproof section
+to your `AGENTS.md`, between two markers, so any coding agent that reads that file knows which
+command to run for a task, how to read the exit codes and what never to weaken
+(`--no-agents-md` skips it; `--agent-files-only` writes only the section and the skill). Your
+own text in that file is never changed. It prints one line per file, never overwrites one
+without `--force`, and makes no model call. Replace the sample cases with your own: the gate
+needs 20 before it will decide.
 
 The offline example, the retrieval example and the LLM example are on the
 [quickstart page](https://basantbhattarai.com.np/evalproof/getting-started/quickstart/).

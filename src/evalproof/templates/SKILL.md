@@ -14,6 +14,10 @@ enough on its own.
 
 Use `evalproof` if it is installed, otherwise `uvx evalproof`.
 
+This skill covers checking a change. For every other task (adding cases, building or extending
+the suite, choosing models, calibrating the judge, CI setup), read the evalproof section of
+`AGENTS.md`.
+
 ## Check a change
 
 Run these from the repository root, after making the change and before committing it:
