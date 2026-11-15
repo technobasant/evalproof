@@ -1,0 +1,40 @@
+variant codex-baseline
+42 cases × 2 trials = 84 runs
+[1/84] q01 (cached)      [2/84] q01 (cached)      [3/84] q03 (cached)      [4/84] q03 (cached)      [5/84] q05 (cached)      [6/84] q05 (cached)      [7/84] q07 (cached)      [8/84] q07 (cached)      [9/84] q09 (cached)      [10/84] q09      [11/84] q11      [12/84] q11      [13/84] q13      [14/84] q13      [15/84] q15      [16/84] q15      [17/84] q17      [18/84] q17      [19/84] q19      [20/84] q19      [21/84] q21      [22/84] q21      [23/84] q23      [24/84] q23      [25/84] q25      [26/84] q25      [27/84] q27      [28/84] q27      [29/84] q29      [30/84] q29      [31/84] q31      [32/84] q31      [33/84] q33      [34/84] q33      [35/84] q35      [36/84] q35      [37/84] q37      [38/84] q37      [39/84] q39      [40/84] q39      [41/84] q41      [42/84] q41      [43/84] q43      [44/84] q43      [45/84] q45      [46/84] q45      [47/84] q47      [48/84] q47      [49/84] q49      [50/84] q49      [51/84] q51      [52/84] q51      [53/84] q53      [54/84] q53      [55/84] q55      [56/84] q55      [57/84] q57      [58/84] q57      [59/84] q59      [60/84] q59      [61/84] q61      [62/84] q61      [63/84] q63      [64/84] q63      [65/84] q65      [66/84] q65      [67/84] q67      [68/84] q67      [69/84] q69      [70/84] q69      [71/84] q71      [72/84] q71      [73/84] q73      [74/84] q73      [75/84] q75      [76/84] q75      [77/84] q77      [78/84] q77      [79/84] q79      [80/84] q79      [81/84] q81      [82/84] q81      [83/84] q83      [84/84] q83      
+wrote examples/cli-study/runs/support-qa-codex-baseline.json
+## support-qa-cli — `OpenAI GPT-6 Astra (medium effort) + grounded prompt` · variant `codex-baseline`
+
+42 cases × 2 trials = 84 runs · wall 465.0 s · dataset `e70b69691dde56fd`
+
+| Scorer | Decided | Pass rate (95% CI) | pass@2 | pass^2 | Mean | Within-case SD |
+|---|---:|---:|---:|---:|---:|---:|
+| answer_key | 84/84 | 97.6% [94.0%, 100.0%] | 100.0% | 95.2% | 0.976 | — |
+
+Latency p50 6209 ms · p95 8263 ms · errors 0 · cached 9
+variant codex-candidate
+[1/42] q01      [2/42] q03      [3/42] q05      [4/42] q07      [5/42] q09      [6/42] q11      [7/42] q13      [8/42] q15      [9/42] q17      [10/42] q19      [11/42] q21      [12/42] q23      [13/42] q25      [14/42] q27      [15/42] q29      [16/42] q31      [17/42] q33      [18/42] q35      [19/42] q37      [20/42] q39      [21/42] q41      [22/42] q43      [23/42] q45      [24/42] q47      [25/42] q49      [26/42] q51      [27/42] q53      [28/42] q55      [29/42] q57      [30/42] q59      [31/42] q61      [32/42] q63      [33/42] q65      [34/42] q67      [35/42] q69      [36/42] q71      [37/42] q73      [38/42] q75      [39/42] q77      [40/42] q79      [41/42] q81      [42/42] q83      
+wrote examples/cli-study/runs/support-qa-codex-candidate.json
+## support-qa-cli — `OpenAI GPT-6 Astra (medium effort) + friendly prompt` · variant `codex-candidate`
+
+42 cases · wall 272.5 s · dataset `e70b69691dde56fd`
+
+| Scorer | Decided | Pass rate (95% CI) | Mean |
+|---|---:|---:|---:|
+| answer_key | 42/42 | 92.9% [81.0%, 97.5%] | 0.929 |
+
+Latency p50 6448 ms · p95 8617 ms · errors 0 · cached 0
+variant codex
+30 cases × 2 trials = 60 runs
+[1/60] t01      [2/60] t01      [3/60] t03      [4/60] t03      [5/60] t05      [6/60] t05      [7/60] t07      [8/60] t07      [9/60] t09      [10/60] t09      [11/60] t11      [12/60] t11      [13/60] t13      [14/60] t13      [15/60] t15      [16/60] t15      [17/60] t17      [18/60] t17      [19/60] t19      [20/60] t19      [21/60] t21      [22/60] t21      [23/60] t23      [24/60] t23      [25/60] t25      [26/60] t25      [27/60] t27      [28/60] t27      [29/60] t29      [30/60] t29      [31/60] t31      [32/60] t31      [33/60] t33      [34/60] t33      [35/60] t35      [36/60] t35      [37/60] t37      [38/60] t37      [39/60] t39      [40/60] t39      [41/60] t41      [42/60] t41      [43/60] t43      [44/60] t43      [45/60] t45      [46/60] t45      [47/60] t47      [48/60] t47      [49/60] t49      [50/60] t49      [51/60] t51      [52/60] t51      [53/60] t53      [54/60] t53      [55/60] t55      [56/60] t55      [57/60] t57      [58/60] t57      [59/60] t59      [60/60] t59      
+wrote examples/cli-study/runs/ticket-router-codex.json
+## ticket-router-cli — `OpenAI GPT-6 Astra (medium effort)` · variant `codex`
+
+30 cases × 2 trials = 60 runs · wall 367.8 s · dataset `371b97a163bfa5c0`
+
+| Scorer | Decided | Pass rate (95% CI) | pass@2 | pass^2 | Mean | Within-case SD |
+|---|---:|---:|---:|---:|---:|---:|
+| queue | 60/60 | 96.7% [90.0%, 100.0%] | 96.7% | 96.7% | 0.967 | — |
+
+Latency p50 6010 ms · p95 7585 ms · errors 0 · cached 0
+
+All trials identical: the system may be deterministic at these settings, so repeating it shows no flakiness.
