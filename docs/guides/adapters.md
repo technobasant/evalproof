@@ -1,5 +1,5 @@
 ---
-description: Build the trace evalproof's checks read from Google ADK, LangChain or LangGraph, the Claude Agent SDK, OpenAI Agents, plain Python or MCP.
+description: Build the trace evalproof's checks read from Google ADK, LangChain or LangGraph, the Claude Agent SDK, OpenAI Agents, OpenTelemetry spans, plain Python or MCP.
 ---
 
 # Agent SDK adapters
@@ -18,6 +18,9 @@ LangChain human message, a Claude `ResultMessage`), else every call is turn 0. F
 case where each user turn is a separate call to the SDK, pass one item per turn: a list of ADK
 event lists, a list of Claude message lists (one per `query()` call), or a list of OpenAI
 results. The python function gets the later turns as `ctx.turns`.
+
+An agent that already exports OpenTelemetry spans needs no SDK adapter: `otel.from_spans` reads
+them (experimental, see the OpenTelemetry tab below).
 
 ## Choose your SDK
 
@@ -203,6 +206,75 @@ results. The python function gets the later turns as `ctx.turns`.
     Set `ok: false` and `error` on a call that failed, and `turn` (counting from 0) on the calls
     of a multi-turn case. `rounds` is the number of model calls (`r.steps.length`), `responses` one
     reply per turn.
+
+=== "OpenTelemetry spans (experimental)"
+
+    !!! warning "Experimental"
+
+        `otel.from_spans` reads the OpenTelemetry GenAI conventions, which are still in
+        Development status, and it was built from the specifications and not from spans exported
+        by each framework. The first call in a process raises one `UserWarning` saying so. It is a
+        warning and not a line on stderr, because the adapter runs inside your own python target:
+        filter it with `warnings.filterwarnings`, or turn it into an error with `-W error`.
+
+    If the agent already exports spans, `from_spans` builds the trace from them and no SDK
+    objects are needed. It takes a path, an OTLP/JSON object (`resourceSpans`), one span or a
+    list of spans, as OTLP spans or as the Python SDK's `span.to_json()` objects:
+
+    ```python title="agent.py"
+    from evalproof.adapters import otel
+
+
+    def run(question: str) -> dict:
+        run_agent(question)  # your agent, exporting spans to ./spans.jsonl
+        return otel.from_spans("spans.jsonl")
+    ```
+
+    A file can hold one OTLP object, one per line (the collector's `file` exporter with
+    `format: json` and no compression), or several pretty-printed objects in a row (what
+    `ConsoleSpanExporter` prints). The collector's `proto` and zstd forms are binary and are not
+    read. When the spans belong to more than one trace, pass `trace_id="..."` (hex, with or
+    without `0x`); without it `from_spans` raises `ValueError` and lists the ids it found. Spans
+    are ordered by start time.
+
+    | Convention | Tool span | Name, arguments, result, id |
+    |---|---|---|
+    | GenAI semantic conventions, Google ADK schema 2, Vercel `OpenTelemetry` | `gen_ai.operation.name` is `execute_tool` | `gen_ai.tool.name`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`, `gen_ai.tool.call.id` (ADK's `<not specified>` is no id) |
+    | Google ADK schema 1 | the same, with `gcp.vertex.agent.*` | `gen_ai.tool.name`, `gcp.vertex.agent.tool_call_args`, `gcp.vertex.agent.tool_response`, `gen_ai.tool.call.id` |
+    | OpenInference | `openinference.span.kind` is `TOOL` | `tool.name`, `input.value`, `output.value`, `tool.id` |
+    | Vercel `LegacyOpenTelemetry` | `ai.toolCall` | `ai.toolCall.name`, `ai.toolCall.args`, `ai.toolCall.result`, `ai.toolCall.id` |
+
+    When tools run in parallel, ADK writes one more `execute_tool (merged)` span with the tool
+    name `(merged tools)` beside the span of each call. It is not a call and is skipped.
+
+    An `error.type` attribute or an ERROR status makes the call fail (`ok: false`, with the type
+    and the status message as the error). Arguments that are not a JSON object are kept as
+    `{"input": ...}`, and a result that is JSON text is decoded. `rounds` counts the model-call
+    spans (`chat`, `generate_content`, `text_completion`, OpenInference `LLM`, Vercel
+    `doGenerate` and `doStream`, ADK schema 1 `call_llm`). Tokens are summed per model from
+    `gen_ai.usage.input_tokens` and `output_tokens` (or the deprecated `prompt_tokens` and
+    `completion_tokens`), `llm.token_count.prompt` and `completion`, and
+    `ai.usage.promptTokens` and `completionTokens`. The reply is the text of the last model-call
+    span.
+
+    **Content capture is off by default in most of these, and a check on arguments, results or
+    the reply cannot pass without it.** A tool span with no arguments and no result (or the
+    placeholders below) is kept as a call, the adapter raises a `UserWarning` naming the setting
+    to turn on, and the trace carries `meta["content_captured"] = False`. Order and name checks
+    (`tool_called`, `tool_order`) still work.
+
+    | Convention | Setting that captures content |
+    |---|---|
+    | OpenTelemetry GenAI instrumentations | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=SPAN_ONLY` (or `SPAN_AND_EVENT`); the default is `NO_CONTENT`. Some instrumentations also need `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` |
+    | Google ADK schema 2 | the same variable |
+    | Google ADK schema 1 | `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS`; capture is on by default and an off setting writes `"{}"` for the arguments and the response |
+    | OpenInference | unset `OPENINFERENCE_HIDE_INPUTS`, `OPENINFERENCE_HIDE_OUTPUTS`, `OPENINFERENCE_HIDE_INPUT_MESSAGES` and `OPENINFERENCE_HIDE_OUTPUT_MESSAGES`; hidden content is written as `__REDACTED__` |
+    | Vercel AI SDK | the `recordInputs` and `recordOutputs` telemetry settings |
+
+    Limits to know about: every call is turn 0, because no source says where a user turn begins;
+    Google ADK schema 1 puts the reply somewhere this adapter does not read, so `output` is empty
+    there; cached tokens are not mapped; and a trace with no tool spans cannot show that content
+    was off, only that nothing was called.
 
 ## Next steps
 

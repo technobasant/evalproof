@@ -43,8 +43,9 @@ evalproof:
 It is local-first: Ollama is the default, every major hosted provider is one `target:` line
 away ([Providers](https://basantbhattarai.com.np/evalproof/guides/providers/)), a logged-in Claude Code or Codex can be the judge with no API
 key, and every model call is cached by content so re-runs are free and reproducible. Results
-from promptfoo, Inspect, DeepEval and lm-eval can be [imported](https://basantbhattarai.com.np/evalproof/guides/import/)
-and gated without re-running them.
+from promptfoo, Inspect, DeepEval, lm-eval, garak, Google ADK and Claude Code plugin evals can be
+[imported](https://basantbhattarai.com.np/evalproof/guides/import/) and gated without re-running
+them, and a Google ADK eval set can be turned into a dataset.
 
 ## Install
 
@@ -56,14 +57,14 @@ dependencies (httpx, numpy, pydantic, PyYAML); no vendor SDK, no optional extras
 
 ```bash
 uvx evalproof --version
-uvx evalproof@0.7.1 init          # pin a version
+uvx evalproof@0.8.0 init          # pin a version
 ```
 
 **Install the CLI** on your `PATH`, isolated from your projects:
 
 ```bash
 uv tool install evalproof         # or: pipx install evalproof
-evalproof --version               # evalproof 0.7.1
+evalproof --version               # evalproof 0.8.0
 ```
 
 **Add it to a project**, to call it from Python or pin it with the project's other dev tools:
@@ -79,7 +80,7 @@ uv run evalproof --version
 that changed.
 
 **In GitHub Actions**, no install step is needed: the composite action
-`technobasant/evalproof@v0.7.1` runs the evalproof of the tag you pin
+`technobasant/evalproof@v0.8.0` runs the evalproof of the tag you pin
 ([In CI](https://basantbhattarai.com.np/evalproof/guides/ci/)).
 
 ## What it needs to run

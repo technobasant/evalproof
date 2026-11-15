@@ -11,6 +11,24 @@ Two tests with identical vars and description get ``#2``, ``#3`` in testIdx orde
 promptfoo marks as repeats of one test (``repeatGroupId``, or an increasing ``repeatIndex``)
 are one case with several repeats, collapsed by ``--epochs``.
 
+Repeats and tags (promptfoo 0.125.1, ``src/evaluator.ts`` and ``src/redteam/``; no real export
+with a repeat or a red-team row was available, so these two follow the source):
+
+* ``repeatGroupId`` and ``repeatIndex`` are written only when ``--repeat`` is above 1
+  (``evaluator.ts:1409``, ``3166-3168``); ``repeatIndex`` is 0-based (``evaluator.ts:478-479``,
+  ``785-786``). The repeats of a case are sorted by it, so that ``--epochs trials`` numbers trial
+  ``n`` as the ``n``-th repeat promptfoo ran, whatever order the rows were written in; a row with
+  none keeps its place in the file.
+* A red-team test carries ``pluginId`` (``redteam/index.ts:549``, kept by strategies at ``740``),
+  ``strategyId`` (``index.ts:736-739``; not set for the ``retry`` strategy) and ``severity``
+  (``index.ts:556``; ``critical``, ``high``, ``medium``, ``low`` or ``informational``,
+  ``redteam/constants/metadata.ts:468-478``) in its test-case metadata, and promptfoo copies the
+  test's metadata into the row's ``metadata`` (``evaluator.ts:1403-1407``). Each is read from
+  ``metadata``, else from ``testCase.metadata``. A ``pluginId`` tags the case ``safety``,
+  ``redteam`` and ``plugin:<pluginId>``; a ``strategyId`` adds ``strategy:<strategyId>`` and a
+  ``severity`` adds ``severity:<severity>``. ``harmCategory`` is a human label
+  (``redteam/plugins/harmful/common.ts:44-52``) and is not used.
+
 Scores: ``pass`` (the test's verdict), one continuous score per ``namedScores`` key, and a
 binary ``assert:<metric or type>`` per assertion. A system error (``failureReason == 2``) is
 an error row; a failed assertion (``failureReason == 1``) is an ordinary failure.
@@ -35,6 +53,7 @@ from evalproof.importers._common import (
     continuous,
     count_of,
     finite,
+    in_source_order,
     parse_json,
     parse_jsonl,
     pick_system,
@@ -196,8 +215,31 @@ def _samples(rows: list[dict[str, Any]]) -> list[Sample]:
         h, key = _test_key(group[0])
         seen[h] = seen.get(h, 0) + 1
         cid = h if seen[h] == 1 else f"{h}#{seen[h]}"
-        samples.append(Sample(cid, key, [_result(cid, r) for r in group]))
+        repeats = in_source_order([(r.get("repeatIndex"), _result(cid, r)) for r in group])
+        samples.append(Sample(cid, key, repeats, _tags(group[0])))
     return samples
+
+
+def _meta(row: dict[str, Any], key: str) -> str:
+    """A red-team metadata value: the row's ``metadata``, else its ``testCase.metadata``. Only a
+    non-empty string counts."""
+    for source in (row.get("metadata"), as_dict(row.get("testCase")).get("metadata")):
+        value = as_dict(source).get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _tags(row: dict[str, Any]) -> list[str]:
+    """Tags for a red-team case; an ordinary test has none."""
+    tags = []
+    if plugin := _meta(row, "pluginId"):
+        tags += ["safety", "redteam", f"plugin:{plugin}"]
+    if strategy := _meta(row, "strategyId"):
+        tags.append(f"strategy:{strategy}")
+    if severity := _meta(row, "severity"):
+        tags.append(f"severity:{severity}")
+    return tags
 
 
 def _result(case_id: str, row: dict[str, Any]) -> CaseResult:

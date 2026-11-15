@@ -160,7 +160,10 @@ def _quality(cfg: SuiteConfig) -> tuple[str, str]:
     if not judges:
         return MISSING, "no llm_judge scorer"
     calibration = cfg.calibration
-    calibrated = [s for s in judges if calibration and s.name == calibration.judge_scorer]
+    # A rubric set's per-rubric metric ``<scorer>/<id>`` is calibrated through its scorer.
+    calibrated = [
+        s for s in judges if calibration and calibration.judge_scorer.split("/", 1)[0] == s.name
+    ]
     if calibrated:
         assert calibration is not None
         source = (
@@ -213,11 +216,25 @@ def _budgets(cfg: SuiteConfig) -> tuple[str, str]:
     return MISSING, "no max_cost_usd or max_p95_latency_ms in the gate"
 
 
-def _tagged(cases: list[Case], tag: str) -> tuple[str, str]:
+def _tagged(cases: list[Case], tag: str, run: Run | None = None) -> tuple[str, str]:
+    """Covered when a case of the dataset, or a case of the run, carries ``tag``. A run file holds
+    its own tags (an imported run has no dataset to read them from), and evidence names both."""
     n = sum(1 for c in cases if tag in {t.lower() for t in c.tags})
+    in_run: set[str] = set()
+    imported = False
+    if run is not None:
+        in_run = {r.case_id for r in run.results if tag in {t.lower() for t in r.tags}}
+        imported = "imported_from" in run.info.environment
+    parts = []
     if n:
-        return COVERED, f"{_count(n, len(cases))} cases tagged `{tag}`"
-    return MISSING, f"no case is tagged `{tag}`"
+        parts.append(f"{_count(n, len(cases))} cases tagged `{tag}`")
+    if in_run:
+        kind = "imported cases" if imported else "cases"
+        parts.append(f"run: {len(in_run)} {kind} tagged `{tag}`")
+    if parts:
+        return COVERED, "; ".join(parts)
+    where = " in the dataset or the run" if run is not None else ""
+    return MISSING, f"no case is tagged `{tag}`{where}"
 
 
 def _multi_turn(cases: list[Case]) -> tuple[str, str]:
@@ -267,8 +284,8 @@ def assess(
         "regression-gate": _gate(cfg, len(cases)),
         "reliability": _reliability(run.info.trials if run is not None else cfg.trials),
         "cost-latency": _budgets(cfg),
-        "safety": _tagged(cases, "safety"),
-        "robustness": _tagged(cases, "robustness"),
+        "safety": _tagged(cases, "safety", run),
+        "robustness": _tagged(cases, "robustness", run),
         "multi-turn": _multi_turn(cases),
         "load": (OUT_OF_SCOPE, "use a load-testing tool such as k6 or Locust"),
         "production-monitoring": (

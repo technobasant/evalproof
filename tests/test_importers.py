@@ -735,7 +735,17 @@ def test_wide_csv_and_jsonl(tmp_path: Path) -> None:
 
 
 def test_every_format_is_registered() -> None:
-    assert FORMATS == ("promptfoo", "inspect", "deepeval", "lm-eval", "jsonl", "csv")
+    assert FORMATS == (
+        "promptfoo",
+        "inspect",
+        "deepeval",
+        "lm-eval",
+        "garak",
+        "adk",
+        "claude-plugin-eval",
+        "jsonl",
+        "csv",
+    )
 
 
 # --- CLI and end to end --------------------------------------------------------------------

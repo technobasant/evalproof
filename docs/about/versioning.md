@@ -23,8 +23,8 @@ Security fixes go into the latest minor release. While evalproof is below 1.0, t
 
 | Version | Supported |
 |---|---|
-| 0.7.x | yes |
-| < 0.7 | no |
+| 0.8.x | yes |
+| < 0.8 | no |
 
 Report a vulnerability privately, as the [security policy](https://github.com/technobasant/evalproof/blob/main/SECURITY.md) describes. [Security and data handling](security.md) covers what evalproof stores and sends.
 

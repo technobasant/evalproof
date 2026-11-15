@@ -1,5 +1,5 @@
 ---
-description: What to change when you move an evalproof setup from 0.5 to 0.7, release by release, and how run files from older versions behave.
+description: What to change when you move an evalproof setup from 0.5 to 0.8, release by release, and how run files from older versions behave.
 ---
 
 # Upgrading
@@ -16,6 +16,14 @@ evalproof is below 1.0, so a minor release can change behaviour. Read the sectio
 4. Open a pull request. Comparisons now pair on the new run file's hashes.
 
 Steps 2 and 3 matter most when you move from 0.4 or earlier, because older run files lack the hashes that `compare` and `verify` read.
+
+## 0.8
+
+**Changed:** the parameters of an `llm_judge` scorer are checked when the suite loads. A misspelled key, a wrong type, or `rubric` combined with a rubric set used to pass loading and fail only when the scorer was built; now `evalproof run` and `evalproof verify` stop at load with the key named. If a suite that loaded under 0.7 fails now, fix the key the message names.
+
+**Changed, for imported runs:** an imported result now carries its case's tags (garak and promptfoo red-team tags, DeepEval's own), and repeats are ordered by the index the source gave them. Tags are not part of a case's hash, so a 0.8 import still pairs with a 0.7 import of the same file. If you gate with `--epochs trials`, re-import the baseline with 0.8 so trial `n` means the same run on both sides.
+
+**Added, with nothing to change:** the `garak`, `adk` and `claude-plugin-eval` import formats, `evalproof import-dataset adk`, the Inspect tool trace, the OpenTelemetry adapter, rubric sets, `per_rubric_metrics` and the `facts` scorer. See [Importing results](../guides/import.md) and [Configuration](../reference/configuration.md).
 
 ## 0.7
 

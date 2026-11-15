@@ -62,4 +62,6 @@ Build a trace from what an agent SDK returns.
 
 ::: evalproof.adapters.openai_agents.DEFAULT_TOOL_ERROR
 
+::: evalproof.adapters.otel.from_spans
+
 ::: evalproof.adapters.AgentResult

@@ -24,7 +24,7 @@ from evalproof.config import (
     suite_fingerprint,
 )
 from evalproof.dataset import case_hash, content_hash, dataset_hash, load_dataset
-from evalproof.models import Case, CaseResult, Run, RunInfo
+from evalproof.models import Case, CaseResult, Run, RunInfo, Score
 from evalproof.providers import (
     LLM_PROVIDERS,
     ChatResponse,
@@ -34,7 +34,7 @@ from evalproof.providers import (
     parse_target,
 )
 from evalproof.providers.agent_cli import cli_facts
-from evalproof.scorers import Scorer, make_scorer
+from evalproof.scorers import Scorer, make_scorer, score_metrics
 from evalproof.systems import (
     LLMSystem,
     System,
@@ -122,11 +122,14 @@ def environment(
 
 def score_case(case: Case, system: System, scorers: list[Scorer], trial: int = 0) -> CaseResult:
     out = system.run(case, trial=trial)
+    scores: dict[str, Score] = {}
+    for scorer in scorers:
+        scores.update(score_metrics(scorer, case, out))
     return CaseResult(
         case_id=case.id,
         tags=case.tags,
         output=out,
-        scores={s.name: s.score(case, out) for s in scorers},
+        scores=scores,
         case_hash=case_hash(case),
         content_hash=content_hash(case),
         trial=trial,

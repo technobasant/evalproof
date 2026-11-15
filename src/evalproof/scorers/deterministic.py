@@ -225,3 +225,102 @@ class NumericTolerance:
             for x in candidates
         )
         return _binary(ok, None if ok else f"expected {expected}, found {candidates}")
+
+
+def _number(value: Any) -> float | None:
+    """A fact's value as a float: a number, or a numeric string such as ``"1,234"``."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        number = float(value)
+    elif isinstance(value, str):
+        try:
+            number = float(value.strip().replace(",", ""))
+        except ValueError:
+            return None
+    else:
+        return None
+    return number if math.isfinite(number) else None
+
+
+class Facts:
+    """Numbers and phrases an answer must contain. ``field`` lists numbers (or ``{value, rel_tol?,
+    abs_tol?, required?, label?}``), each of which must match some number in the output;
+    ``mention_field`` lists strings that must appear. The value is the share found; the case
+    passes when every required fact and every mention is found."""
+
+    def __init__(
+        self,
+        name: str,
+        field: str = "facts",
+        mention_field: str = "must_mention",
+        rel_tol: float = 0.0,
+        abs_tol: float = 0.0,
+        normalize: bool = True,
+    ) -> None:
+        if rel_tol < 0 or abs_tol < 0:
+            raise ValueError("rel_tol and abs_tol must be >= 0")
+        self.name, self.field, self.mention_field = name, field, mention_field
+        self.rel_tol, self.abs_tol, self.norm = rel_tol, abs_tol, normalize
+
+    def _facts(self, case: Case) -> list[tuple[float, float, float, bool, str]]:
+        """The case's facts as ``(value, rel_tol, abs_tol, required, label)``."""
+        raw = case.field(self.field)
+        if raw is None:
+            return []
+        items = raw if isinstance(raw, list) else [raw]
+        facts = []
+        for item in items:
+            spec = item if isinstance(item, dict) else {"value": item}
+            unknown = [
+                k for k in spec if k not in {"value", "rel_tol", "abs_tol", "required", "label"}
+            ]
+            if unknown:
+                raise ValueError(f"case {case.id!r}: fact has unknown key {str(unknown[0])!r}")
+            value = _number(spec.get("value"))
+            if value is None:
+                raise ValueError(
+                    f"case {case.id!r}: fact value {spec.get('value')!r} is not a number"
+                )
+            tols = []
+            for key, default in (("rel_tol", self.rel_tol), ("abs_tol", self.abs_tol)):
+                tol = spec.get(key, default)
+                if isinstance(tol, bool) or not isinstance(tol, int | float) or tol < 0:
+                    raise ValueError(f"case {case.id!r}: fact {key} must be a number >= 0")
+                tols.append(float(tol))
+            required = spec.get("required", True)
+            if not isinstance(required, bool):
+                raise ValueError(f"case {case.id!r}: fact 'required' must be true or false")
+            label = str(spec.get("label") or f"{value:g}")
+            facts.append((value, tols[0], tols[1], required, label))
+        return facts
+
+    def score(self, case: Case, out: SystemOutput) -> Score:
+        facts = self._facts(case)
+        mentions = _case_list(case, self.mention_field)
+        if not facts and not mentions:
+            return Score(value=None, reason=f"case has no {self.field} or {self.mention_field}")
+        found = [float(n.replace(",", "")) for n in NUMBER.findall(out.output)]
+        missing: list[str] = []
+        matched = 0
+        required_ok = True
+        for value, rel_tol, abs_tol, required, label in facts:
+            if any(math.isclose(x, value, rel_tol=rel_tol, abs_tol=abs_tol) for x in found):
+                matched += 1
+            else:
+                missing.append(label if required else f"{label} (optional)")
+                required_ok = required_ok and not required
+        text = normalize(out.output) if self.norm else out.output
+        for mention in mentions:
+            needle = normalize(mention) if self.norm else mention
+            if needle in text:
+                matched += 1
+            else:
+                missing.append(repr(mention))
+                required_ok = False
+        total = len(facts) + len(mentions)
+        return Score(
+            value=matched / total,
+            passed=required_ok,
+            reason=f"missing: {', '.join(missing)}" if missing else None,
+        )

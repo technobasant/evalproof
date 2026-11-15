@@ -4,7 +4,97 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
-Nothing yet. Changes merged after 0.7.1 are listed here until the next release.
+Nothing yet. Changes merged after 0.8.0 are listed here until the next release.
+
+## [0.8.0] — 2026-11-15
+
+Importers and grading: bring results from garak, Google ADK, Inspect agent logs, promptfoo
+red-team runs and `claude plugin eval` into a run file, turn an ADK eval set into a dataset, and
+grade with rubric sets and the `facts` scorer.
+
+### Added
+
+- Rubric sets for the `llm_judge` scorer. Give it `rubrics` (strings, or `{id, text, weight?,
+  type?}` objects) and, with `case_rubrics: true`, let each case add its own under `rubrics`. The
+  judge grades every rubric on its own, and the score is the weighted fraction that passed;
+  `min_score` sets where a case passes. `mode: batched` (the default) asks about every rubric in
+  one call, `per_rubric` makes one call per rubric. `num_samples` asks the judge several times and
+  a rubric passes by majority (a tie fails); each sample uses its own seed offset. `rubric_types`
+  keeps only the listed types (untyped rubrics always apply). A suite with a single `rubric` or
+  `rubric_file` behaves as before.
+- `per_rubric_metrics: true` on a rubric set also writes one `<scorer>/<id>` metric per base
+  rubric. The gate, `min_pass_rate`, calibration and `compare` accept those names, so a change
+  that breaks one rubric shows up on its own. The extra metrics carry no judge cost.
+- A scorer may define `score_all(case, out)` to write more than one metric. The runner merges the
+  result; every extra name must be `<scorer>/<id>`, so it cannot collide with another scorer.
+- The `facts` scorer: numbers a response must contain (`facts`, each a number or `{value,
+  rel_tol?, abs_tol?, required?, label?}`) and phrases it must mention (`must_mention`). The value
+  is the share found. It is deterministic, so `evalproof verify` re-scores it, and `readiness`
+  counts it as correctness.
+- `readiness` counts case tags stored in a run file (`--run`) as well as the dataset's, so an
+  imported run with `safety` or `robustness` tags is covered without a dataset. The evidence names
+  both sources.
+- `evalproof.adapters.otel.from_spans` (experimental) builds an agent's trace from OpenTelemetry
+  spans, as OTLP/JSON, the collector's file exporter output, the Python SDK's `span.to_json()`
+  objects or a list of spans, for the GenAI semantic conventions (also Google ADK and the Vercel
+  AI SDK; ADK's extra `execute_tool (merged)` span for parallel calls is not a call), OpenInference
+  and the Vercel legacy `ai.toolCall` spans. When the spans were exported
+  with content capture off it warns, names the setting to turn on, and sets
+  `trace.meta["content_captured"] = False`. See the OpenTelemetry tab of the adapters guide.
+- `evalproof import garak` reads the `report.jsonl` a garak scan writes (0.9 and later). Each
+  attempt is a case tagged `safety`, `garak` and `probe:<name>`, its generations are repeats,
+  and each detector is a metric that passes when the score is below the threshold. A report
+  holds no tool calls, so no trace is imported.
+- `evalproof import --threshold N` sets the garak detector score at which an output counts as a
+  hit. Without it the scan's `run.eval_threshold` is used, else 0.5. The run records
+  `environment.threshold` and `environment.threshold_source` (`cli`, `eval_threshold` or
+  `default`). Any other format refuses `--threshold`.
+- `evalproof import adk` (experimental) reads the `*.evalset_result.json` that `adk eval` saves,
+  one case per `eval_id` with its runs as repeats, one metric per ADK metric. Both the current
+  file and the double-encoded form older ADK versions wrote are read.
+- `evalproof import claude-plugin-eval` (experimental) reads the `aggregate-result.json` of
+  `claude plugin eval`, with the with and without arms as two systems. A file marked partial
+  records `environment.partial` and `environment.partial_reason`, and a run that skipped its
+  paid graders records `environment.skipped_paid_graders`.
+- The `adk` and `claude-plugin-eval` importers print `evalproof: the <format> importer is
+  experimental` once and set `environment.import_experimental` to `true`, because they were
+  written from the tool's source or schema and no real result file was available.
+- `evalproof import inspect` imports the tool trace of each sample from its `events`: the
+  calls with their arguments, results, errors and working time, the tokens of each model round
+  and the last reply; the model and tool events of scorers (inside a `scorers` span) are not the
+  agent's and are skipped. `tool_called`, `tool_order` and the other agent checks run on an imported
+  log. Strings Inspect stored as `attachment://` references are resolved. A condensed log has no
+  events, and one warning says so. A case collapsed from several epochs keeps the trace of its
+  first epoch that did not error, and the run records `environment.trace_from` as `first
+  repeat` when that drops another epoch's trace; with `--epochs trials` every trial keeps its own.
+- `evalproof import promptfoo` tags red-team tests from their metadata (`safety`, `redteam`,
+  `plugin:<id>`, `strategy:<id>` and `severity:<level>`) and reads the repeats of a test run
+  with `--repeat` as one case, so `--epochs trials` works on a red-team file.
+- `evalproof import-dataset adk FILE --out cases.jsonl` turns a Google ADK eval set
+  (`*.evalset.json`) or the flat legacy `*.test.json` list (one conversation, so one case) into a
+  dataset that `evalproof run` reads. The first invocation is the case's `input` and the later ones are its `turns`, the
+  last final response is the `reference`, `session_input.state` is the `state`, the tool calls
+  of each invocation become one `tool_order` check with its turn, and `rubrics` are kept for the
+  rubric-set judge. User-simulation (`conversation_scenario`) cases cannot be replayed, so they
+  are skipped under one warning, and a file with no case to import is an error.
+
+### Changed
+
+- The parameters of an `llm_judge` scorer are checked when the suite loads: an unknown key (with
+  a "did you mean" hint), a wrong type, `mode` or `min_score` out of range, rubric-set parameters
+  without `rubrics` or `case_rubrics: true`, and `rubric` or `rubric_file` combined with a rubric
+  set now fail at load. An unknown key used to fail only when the scorer was built.
+- With `num_samples` above 1 and a judge `temperature` of 0, loading the suite warns that the
+  samples will agree.
+- Imported results now store each case's tags on its result, lower-cased and without duplicates
+  (garak and promptfoo red-team tags, and a DeepEval test case's own). Tags label a case and are
+  not part of its hash, so adding one does not unpair two runs.
+- Repeats are ordered by the source's own repeat index (promptfoo `repeatIndex`, Inspect `epoch`,
+  ADK `repetition_index`) instead of the order of the file, so trial `n` is the `n`-th run.
+- Collapsing repeats sums the judge cost of every repeat, and a run that was a system error keeps
+  the judge cost the file reported for it.
+- `evalproof import adk` refused an eval set already; its message now points to
+  `evalproof import-dataset adk`.
 
 ## [0.7.1] — 2026-11-14
 
@@ -565,7 +655,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/technobasant/evalproof/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/technobasant/evalproof/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/technobasant/evalproof/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/technobasant/evalproof/compare/v0.5.2...v0.6.0

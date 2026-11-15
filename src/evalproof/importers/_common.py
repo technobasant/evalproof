@@ -8,7 +8,13 @@ promptfoo and one from Inspect behave the same in ``compare`` and the gate:
 * system errors score as failures on every metric, as they do in native runs;
 * repeats collapse to one result per case (``mean``, ``first``, ``all`` or ``any``), or, with
   ``trials``, stay as the trials of the case (every case needs the same number of repeats);
+  a collapsed case keeps the trace of its first repeat, and ``trials`` keeps each repeat's own;
+* a sample's tags (lower-case) label every result of the case, and never change its hash;
 * the dataset hash is computed the same way.
+
+An importer that has a repeat index (an epoch, a ``repeatIndex``, a repetition number) sorts
+the repeats with ``in_source_order`` before ``build_run``, so that trial ``i`` is the repeat
+the source numbered ``i``.
 """
 
 from __future__ import annotations
@@ -16,6 +22,8 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import sys
+import threading
 import warnings
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -28,6 +36,23 @@ from evalproof.models import CaseResult, Run, RunInfo, Score, SystemOutput
 
 EPOCHS = ("mean", "first", "all", "any", "trials")
 
+# Formats whose importer has no real sample behind it yet (or whose source schema is still
+# changing). Using one prints a note once and marks the run (``environment.import_experimental``).
+EXPERIMENTAL_FORMATS = frozenset({"adk", "claude-plugin-eval"})
+
+_warned: set[str] = set()
+_warn_lock = threading.Lock()
+
+
+def warn_experimental(fmt: str) -> None:
+    """Say once per process that the importer for ``fmt`` is experimental, the way the
+    experimental agent providers do."""
+    with _warn_lock:
+        if fmt in _warned:
+            return
+        _warned.add(fmt)
+    print(f"evalproof: the {fmt} importer is experimental", file=sys.stderr, flush=True)
+
 
 class ImportFormatError(ValueError):
     """The file is not in the format asked for, or cannot be imported as asked."""
@@ -39,22 +64,25 @@ def _default_warn(message: str) -> None:
 
 @dataclass(frozen=True)
 class Options:
-    """What the caller asked for. ``fields`` and ``wide`` apply to ``jsonl`` and ``csv`` only."""
+    """What the caller asked for. ``fields`` and ``wide`` apply to ``jsonl`` and ``csv`` only;
+    ``threshold`` to ``garak`` only."""
 
     system: str | None = None
     epochs: str = "mean"
     fields: Mapping[str, str] = field(default_factory=dict)
     wide: bool = False
     warn: Callable[[str], None] = _default_warn
+    threshold: float | None = None
 
 
 @dataclass
 class Sample:
-    """One case as found in a file: its id, its input, and one result per repeat."""
+    """One case as found in a file: its id, its input, one result per repeat, and its tags."""
 
     case_id: str
     input: Any
     repeats: list[CaseResult]
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -111,6 +139,18 @@ def reject_table_options(opts: Options, fmt: str) -> None:
             f"--id-field, --metric-field, --score-field, --passed-field, --system-field and "
             f"--wide apply to the jsonl and csv formats, not {fmt}"
         )
+    if opts.threshold is not None and fmt != "garak":
+        raise ImportFormatError(f"--threshold applies to the garak format, not {fmt}")
+
+
+def in_source_order(items: Sequence[tuple[Any, CaseResult]]) -> list[CaseResult]:
+    """Repeats sorted by the index the source gave them; one with no integer index takes its
+    position in the file. ``items`` are ``(index, result)`` pairs in file order."""
+    keyed = [
+        (i if isinstance(i, int) and not isinstance(i, bool) else pos, pos, result)
+        for pos, (i, result) in enumerate(items)
+    ]
+    return [result for _, _, result in sorted(keyed, key=lambda k: (k[0], k[1]))]
 
 
 def finite(x: Any) -> float | None:
@@ -214,7 +254,18 @@ def parse_jsonl(text: str, path: Path) -> list[dict[str, Any]]:
 
 
 def _merge_scores(scores: list[Score], epochs: str, repeated: bool) -> Score:
-    """Collapse one metric's scores over a case's repeats into a single score."""
+    """Collapse one metric's scores over a case's repeats into a single score. The judge cost of
+    every repeat stays on it: ``compare`` adds up the judge costs of the scores it finds."""
+    merged = _merge_values(scores, epochs, repeated)
+    judge = sum(s.judge_cost_usd for s in scores)
+    return (
+        merged.model_copy(update={"judge_cost_usd": judge})
+        if judge != merged.judge_cost_usd
+        else merged
+    )
+
+
+def _merge_values(scores: list[Score], epochs: str, repeated: bool) -> Score:
     if len(scores) == 1 and (epochs != "mean" or not repeated):
         return scores[0]
     decided = [s for s in scores if s.value is not None]
@@ -256,7 +307,21 @@ def _merge_output(repeats: list[CaseResult], epochs: str) -> SystemOutput:
         cost_usd=sum(o.cost_usd for o in outputs),
         cached=all(o.cached for o in outputs),
         error=f"{len(errors)} of {len(outputs)} repeats errored: {errors[0]}" if errors else None,
+        trace=(ok or outputs)[0].trace,  # the first repeat's, which is trial 0 once sorted
     )
+
+
+def _drops_traces(sample: Sample, epochs: str) -> bool:
+    """True when collapsing the repeats of ``sample`` throws away a trace: ``trials`` keeps them
+    all, and a lone repeat has nothing to lose."""
+    if epochs == "trials" or len(sample.repeats) < 2:
+        return False
+    kept = (
+        sample.repeats[0]
+        if epochs == "first"
+        else next((r for r in sample.repeats if not r.output.error), sample.repeats[0])
+    )
+    return any(r is not kept and r.output.trace is not None for r in sample.repeats)
 
 
 def _collapse(sample: Sample, epochs: str, repeated: bool) -> CaseResult:
@@ -307,7 +372,14 @@ def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Opt
         for r in sample.repeats:
             if r.output.error:
                 reason = f"system error: {r.output.error[:200]}"
-                r.scores = {n: Score(value=0.0, passed=False, reason=reason) for n in names}
+                # The judge was paid for whatever the run produced, so its cost stays.
+                judged = {n: s.judge_cost_usd for n, s in r.scores.items()}
+                r.scores = {
+                    n: Score(
+                        value=0.0, passed=False, reason=reason, judge_cost_usd=judged.get(n, 0.0)
+                    )
+                    for n in names
+                }
 
     repeated = any(len(s.repeats) > 1 for s in samples)
     trials = 1
@@ -316,8 +388,11 @@ def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Opt
     else:
         results = [_collapse(s, opts.epochs, repeated) for s in samples]
     hashes = {s.case_id: imported_case_hash(s.case_id, s.input) for s in samples}
+    tags = {s.case_id: list(dict.fromkeys(t.lower() for t in s.tags)) for s in samples}
     for result in results:
-        # An imported case carries no tags, so its content hash is its case hash.
+        # Tags label a case and are not part of what the system was asked, so the content hash
+        # is the case hash (built from the id and input alone) whatever the tags are.
+        result.tags = list(tags[result.case_id])
         result.case_hash = result.content_hash = hashes[result.case_id]
 
     environment = {"imported_from": fmt}
@@ -327,6 +402,11 @@ def build_run(fmt: str, path: Path, samples: list[Sample], meta: Meta, opts: Opt
         environment["source_tool_version"] = meta.tool_version
     if repeated:
         environment["epochs"] = opts.epochs
+    if any(_drops_traces(s, opts.epochs) for s in samples):
+        environment["trace_from"] = "first repeat"
+    if fmt in EXPERIMENTAL_FORMATS:
+        warn_experimental(fmt)
+        environment["import_experimental"] = "true"
     environment.update(meta.environment)
 
     info = RunInfo(

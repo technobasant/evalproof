@@ -36,6 +36,7 @@ from evalproof.gate import (
     EXIT_REGRESSION,
     EXIT_USAGE,
 )
+from evalproof.importers import DATASET_FORMATS, EXPERIMENTAL_FORMATS, FORMATS
 from evalproof.models import (
     CaseResult,
     ModelUsage,
@@ -48,6 +49,7 @@ from evalproof.models import (
 )
 from evalproof.scorers import _SIMPLE as SIMPLE_SCORERS
 from evalproof.scorers import ChecksScorer, PythonScorer
+from evalproof.scorers.judge import JUDGE_PARAMS, RUBRIC_MODES, RUBRIC_SET_PARAMS, RubricSetJudge
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
@@ -138,11 +140,36 @@ def test_configuration_page_lists_every_scorer_type_and_parameter() -> None:
             ]
             if not rows:
                 problems.append(f"{scorer_type}.{param} has no parameter row")
-    for param in ("rubric", "rubric_file", "max_retries"):
+    for param in (*JUDGE_PARAMS, *RUBRIC_SET_PARAMS):
         if not any(
             "`llm_judge`" in line and f"| `{param}` |" in line for line in section.splitlines()
         ):
             problems.append(f"llm_judge.{param} has no parameter row")
+    assert not problems, "\n".join(problems)
+
+
+def test_configuration_page_shows_the_rubric_set_defaults_and_modes() -> None:
+    sections = _sections(_page("reference/configuration.md"))
+    assert "Rubric sets" in sections, "configuration.md has no '### Rubric sets' section"
+    text = sections["Scorers"] + sections["Rubric sets"]
+    defaults = inspect.signature(RubricSetJudge.__init__).parameters
+    problems = []
+    for param in RUBRIC_SET_PARAMS:
+        rows = [
+            line
+            for line in text.splitlines()
+            if line.startswith("|") and "`llm_judge`" in line and f"| `{param}` |" in line
+        ]
+        if not rows:
+            problems.append(f"llm_judge.{param} has no row")
+            continue
+        default = defaults[param].default
+        for shown in _default_texts(default):
+            if f"`{shown}`" not in rows[0]:
+                problems.append(f"llm_judge.{param}: the row does not show `{shown}`")
+    for mode in RUBRIC_MODES:
+        if f"`{mode}`" not in text:
+            problems.append(f"mode `{mode}` is not documented")
     assert not problems, "\n".join(problems)
 
 
@@ -156,6 +183,12 @@ def test_configuration_example_loads(tmp_path: Path) -> None:
         (tmp_path / file_name).write_text("text", encoding="utf-8")
     cfg = load_config(tmp_path / "suite.yaml")
     assert cfg.gate is not None and cfg.gate.gated == ["judge"]
+
+
+def test_readiness_page_says_facts_counts_as_correctness_and_run_tags_count() -> None:
+    page = _page("guides/readiness.md")
+    assert "`facts`" in page
+    assert "run" in page.lower() and "imported" in page.lower()
 
 
 # --- commands -----------------------------------------------------------------------------------
@@ -181,8 +214,13 @@ def test_commands_page_lists_every_argument_and_flag(command: str) -> None:
         if isinstance(action, argparse._HelpAction):
             continue
         if not action.option_strings:
-            if _row(section, action.dest.upper()) is None:
+            argument_row = _row(section, action.dest.upper())
+            if argument_row is None:
                 problems.append(f"argument {action.dest} has no row")
+                continue
+            for choice in action.choices or ():
+                if f"`{choice}`" not in argument_row:
+                    problems.append(f"argument {action.dest}: the row does not list `{choice}`")
             continue
         flag = next(o for o in action.option_strings if o.startswith("--"))
         row = _row(section, flag)
@@ -195,6 +233,83 @@ def test_commands_page_lists_every_argument_and_flag(command: str) -> None:
             if f"`{choice}`" not in row:
                 problems.append(f"{flag}: the row does not list the choice `{choice}`")
     assert not problems, "\n".join(problems)
+
+
+def test_the_format_arguments_are_parsed_with_the_importer_choices() -> None:
+    """The FORMAT row check above is only as good as the choices the parser carries."""
+    subcommands = _subcommands()
+    for command, formats in (("import", FORMATS), ("import-dataset", DATASET_FORMATS)):
+        positional = next(a for a in subcommands[command]._actions if a.dest == "format")
+        assert tuple(positional.choices or ()) == tuple(formats), command
+
+
+def test_commands_page_documents_import_threshold_and_what_it_records() -> None:
+    sections = _sections(_page("reference/commands.md"))
+    row = _row(sections["evalproof import"], "--threshold")
+    assert row is not None, "evalproof import has no --threshold row"
+    for text in ("garak", "eval_threshold", "threshold_source", "cli", "default"):
+        assert text in row, f"the --threshold row does not mention {text}"
+
+
+def test_commands_page_documents_import_dataset_and_the_experimental_note() -> None:
+    sections = _sections(_page("reference/commands.md"))
+    dataset = sections["evalproof import-dataset"]
+    assert "--out" in dataset and "import.md#google-adk-eval-sets-as-a-dataset" in dataset
+    assert "conversation_scenario" in dataset or "user-simulation" in dataset
+    assert "environment.import_experimental" in sections["evalproof import"]
+    assert "[`evalproof import-dataset`](#evalproof-import-dataset)" in _page(
+        "reference/commands.md"
+    )
+
+
+def test_import_guide_has_a_section_for_every_importer_and_dataset_format() -> None:
+    page = _page("guides/import.md")
+    sections = _sections(page)
+    for fmt in FORMATS:
+        assert f"`{fmt}`" in page or f"evalproof import {fmt}" in page, f"{fmt} is not in import.md"
+    for fmt in DATASET_FORMATS:
+        assert f"evalproof import-dataset {fmt}" in page, (
+            f"import-dataset {fmt} is not in import.md"
+        )
+    for heading in (
+        "garak",
+        "Google ADK eval history",
+        "Claude Code plugin evals",
+        "Google ADK eval sets as a dataset",
+        "Tool trace",
+        "The threshold",
+    ):
+        assert heading in sections, f"import.md has no '{heading}' section"
+
+
+def test_import_guide_documents_the_experimental_importers_and_what_they_record() -> None:
+    page = _page("guides/import.md")
+    for fmt in sorted(EXPERIMENTAL_FORMATS):
+        assert f"evalproof import {fmt}" in page, f"{fmt} has no import command in import.md"
+    assert "experimental" in page
+    for text in (
+        "environment.import_experimental",
+        "environment.threshold_source",
+        "environment.trace_from",
+        "environment.partial",
+        "skipped_paid_graders",
+    ):
+        assert text in page, f"import.md does not mention {text}"
+
+
+def test_changelog_0_8_0_lists_the_new_importers_and_import_dataset() -> None:
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    section = text.split("## [0.8.0]", 1)[1].split("\n## [", 1)[0]
+    for needle in (
+        "import garak",
+        "import --threshold",
+        "import adk",
+        "import claude-plugin-eval",
+        "import-dataset adk",
+        "environment.import_experimental",
+        "environment.trace_from",
+    ):
+        assert needle in section, f"the 0.8.0 section does not mention {needle}"
 
 
 # --- run file -----------------------------------------------------------------------------------

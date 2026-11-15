@@ -14,12 +14,36 @@ each epoch is a repeat of it. Inspect scorers return their verdict in ``value``:
 A log whose status is not ``success`` (cancelled, errored) is still imported, but its
 status is recorded in ``environment["source_status"]`` and a warning says so: an
 incomplete log can hide a regression behind samples that never ran.
+
+Epochs and trace. Each (id, epoch) is its own sample document; ``epoch`` is 1-based
+(inspect_ai 0.3.289 ``log/_log.py:455``, ``samples/{id}_epoch_{n}.json`` in a ``.eval``), so the
+repeats of a case are sorted by it and trial ``i`` is epoch ``i + 1``. The sample's ``events``
+give the trace (inspect_ai 0.3.289 ``event/_tool.py`` and ``event/_model.py``):
+
+* ``ToolEvent`` (``event == "tool"``, ``_tool.py:27``): ``id`` :33, ``function`` :36, ``arguments``
+  :39, ``result`` :45, ``error`` :51 (a ``ToolCallError``, ``tool/_tool_call.py:93-94``: ``type``,
+  ``message``), ``working_time`` :66 in seconds, ``failed`` :81. A call is ``ok`` when it has
+  neither ``error`` nor ``failed``. The keys are absent, not null, when unset.
+* ``ModelEvent`` (``event == "model"``, ``_model.py:88``): ``model`` :91 and ``output`` :120
+  (``usage.input_tokens``, ``usage.output_tokens``, ``choices[0].message.content``). Each one adds a
+  round and its tokens; the reply of the last one is the trace's response.
+* Event strings longer than 100 characters are stored as ``attachment://<hash>`` and kept in the
+  sample's ``attachments`` (``log/_condense.py:78,473-474,521-525``); they are resolved here. A
+  reference that is not in ``attachments`` stays as it is, with one warning.
+* Events inside a ``span_begin`` of type ``scorers`` or ``scorer``, or a span nested in one (by
+  ``span_id`` and ``parent_id``), are the scorers' (a model-graded scorer calls a model there)
+  and are skipped.
+* A sample with ``events_data`` (``_log.py:589``) or ``input_refs`` (``_model.py:108``) and no
+  ``events`` is the newer condensed log; there is no trace for it and one warning says so.
+
+Every call has ``turn`` 0: a log does not say which user turn a call answered.
 """
 
 from __future__ import annotations
 
 import re
 import zipfile
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -35,12 +59,16 @@ from evalproof.importers._common import (
     continuous,
     count_of,
     finite,
+    in_source_order,
     parse_json,
     read_json,
     reject_table_options,
     text_of,
 )
-from evalproof.models import CaseResult, Run, Score, SystemOutput
+from evalproof.importers._trace import add_usage, build_trace, tool_call
+from evalproof.models import CaseResult, ModelUsage, Run, Score, SystemOutput, ToolCall, Trace
+
+_ATTACHMENT = "attachment://"
 
 FORMAT = "inspect"
 _MEMBER = re.compile(r"samples/(.*)_epoch_(\d+)\.json", re.DOTALL)
@@ -70,13 +98,22 @@ def read(path: Path, opts: Options) -> Run:
         meta.environment["source_status"] = status
         opts.warn(f"the log's status is {status!r}, not 'success': the run may be incomplete")
     skipped: set[str] = set()
-    by_id: dict[str, Sample] = {}
+    told: set[str] = set()
+
+    def tell(key: str, message: str) -> None:
+        if key not in told:
+            told.add(key)
+            opts.warn(message)
+
+    inputs: dict[str, Any] = {}
+    epochs: dict[str, list[tuple[Any, CaseResult]]] = {}
     for raw in log["samples"]:
         cid = str(raw["id"])
-        result = _result(cid, raw, lambda name: _skip(name, skipped, opts))
-        sample = by_id.setdefault(cid, Sample(cid, _stable_input(raw.get("input")), []))
-        sample.repeats.append(result)
-    return build_run(FORMAT, path, list(by_id.values()), meta, opts)
+        result = _result(cid, raw, lambda name: _skip(name, skipped, opts), tell)
+        inputs.setdefault(cid, _stable_input(raw.get("input")))
+        epochs.setdefault(cid, []).append((raw.get("epoch"), result))
+    samples = [Sample(cid, inputs[cid], in_source_order(items)) for cid, items in epochs.items()]
+    return build_run(FORMAT, path, samples, meta, opts)
 
 
 def _stable_input(value: Any) -> Any:
@@ -147,7 +184,107 @@ def _skip(name: str, skipped: set[str], opts: Options) -> None:
         )
 
 
-def _result(cid: str, raw: dict[str, Any], skip: Any) -> CaseResult:
+def _resolve(value: Any, attachments: dict[str, Any], tell: Callable[[str, str], None]) -> Any:
+    """``value`` with every ``attachment://<hash>`` string replaced by the text it stands for."""
+    if isinstance(value, str):
+        if value.startswith(_ATTACHMENT):
+            found = attachments.get(value[len(_ATTACHMENT) :])
+            if isinstance(found, str):
+                return found
+            tell(
+                "attachment",
+                f"an attachment reference ({value[:40]}...) is not in the sample's attachments; "
+                "it is kept as it is",
+            )
+        return value
+    if isinstance(value, list):
+        return [_resolve(v, attachments, tell) for v in value]
+    if isinstance(value, dict):
+        return {k: _resolve(v, attachments, tell) for k, v in value.items()}
+    return value
+
+
+def _scorer_spans(events: list[Any]) -> set[str]:
+    """The ids of the ``scorers`` and ``scorer`` spans and of every span inside them. The model
+    and tool events of a model-graded scorer sit there; they are the grader's, not the agent's."""
+    parent: dict[str, Any] = {}
+    roots: set[str] = set()
+    for event in events:
+        if isinstance(event, dict) and event.get("event") == "span_begin":
+            sid = event.get("id")
+            if isinstance(sid, str):
+                parent[sid] = event.get("parent_id")
+                if event.get("type") in ("scorers", "scorer"):
+                    roots.add(sid)
+    inside: set[str] = set()
+    for sid in parent:
+        seen: set[str] = set()
+        cur: Any = sid
+        while isinstance(cur, str) and cur not in seen:
+            if cur in roots:
+                inside.add(sid)
+                break
+            seen.add(cur)
+            cur = parent.get(cur)
+    return inside
+
+
+def _trace(raw: dict[str, Any], tell: Callable[[str, str], None]) -> Trace | None:
+    """The tool calls and model calls of a sample's ``events``; None when it has none to read."""
+    events = raw.get("events")
+    if not isinstance(events, list) or not events:
+        if raw.get("events_data") is not None or "input_refs" in raw:
+            tell(
+                "condensed",
+                "condensed event log: trace not read (a sample has events_data or input_refs "
+                "and no events); the scores are imported without a trace",
+            )
+        return None
+    attachments = as_dict(raw.get("attachments"))
+    scoring = _scorer_spans(events)
+    calls: list[ToolCall] = []
+    usage: dict[str | None, ModelUsage] = {}
+    rounds = 0
+    reply = ""
+    for event in events:
+        if not isinstance(event, dict) or event.get("span_id") in scoring:
+            continue
+        kind = event.get("event")
+        if kind == "tool":
+            seconds = finite(event.get("working_time"))
+            calls.append(
+                tool_call(
+                    event.get("function"),
+                    _resolve(event.get("arguments"), attachments, tell),
+                    _resolve(event.get("result"), attachments, tell),
+                    id=event.get("id"),
+                    error=_resolve(event.get("error"), attachments, tell),
+                    failed=event.get("failed") is True,
+                    latency_ms=seconds * 1000 if seconds is not None else None,
+                )
+            )
+        elif kind == "model":
+            rounds += 1
+            output = as_dict(_resolve(event.get("output"), attachments, tell))
+            tokens = as_dict(output.get("usage"))
+            model = event.get("model")
+            add_usage(
+                usage,
+                str(model) if model else None,
+                count_of(tokens.get("input_tokens")),
+                count_of(tokens.get("output_tokens")),
+            )
+            reply = _completion(output) or reply
+    if not calls and not rounds:
+        return None
+    return build_trace(
+        calls, responses=[reply] if reply else [], rounds=rounds, usage=usage.values()
+    )
+
+
+def _result(
+    cid: str, raw: dict[str, Any], skip: Any, tell: Callable[[str, str], None]
+) -> CaseResult:
     error = raw.get("error")
     output = as_dict(raw.get("output"))
     usage = as_dict(output.get("usage"))
@@ -180,6 +317,7 @@ def _result(cid: str, raw: dict[str, Any], skip: Any) -> CaseResult:
             error=str(error.get("message") if isinstance(error, dict) else error)
             if error
             else None,
+            trace=_trace(raw, tell),
         ),
         scores=scores,
     )

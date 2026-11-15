@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -106,6 +107,19 @@ def load_dataset(path: str | Path) -> list[Case]:
     if not cases:
         raise DatasetError(f"dataset is empty: {path}")
     return cases
+
+
+def write_dataset(cases: Sequence[Case], path: str | Path) -> Path:
+    """Write ``cases`` as JSONL, one per line, the form ``load_dataset`` reads: each case without
+    its default-valued fields, and with its extra fields (``turns``, ``expect``, ...)."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        json.dumps(case.model_dump(mode="json", exclude_defaults=True), ensure_ascii=False)
+        for case in cases
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
 
 
 def case_hash(case: Case) -> str:

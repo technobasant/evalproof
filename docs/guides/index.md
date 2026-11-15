@@ -13,7 +13,7 @@ Each guide takes one task from start to finish. They are for people who have run
 | [Repeated trials](repeated-trials.md) | run each case several times, and compare several candidates in one table |
 | [Readiness](readiness.md) | which parts of quality a suite covers and which it leaves untested |
 | [Agent SDK adapters](adapters.md) | build a trace from ADK, LangChain/LangGraph, the Claude Agent SDK or OpenAI Agents |
-| [Import results from other tools](import.md) | gate promptfoo, Inspect, DeepEval, lm-eval, CSV and JSONL results |
+| [Import results from other tools](import.md) | gate promptfoo, Inspect, DeepEval, lm-eval, garak, ADK, Claude Code plugin eval, CSV and JSONL results, or turn an ADK eval set into a dataset |
 | [From Python](python.md) | the same functions the CLI uses |
 | [In CI](ci.md) | the GitHub Action and the workflows `init` writes |
 | [Troubleshooting](troubleshooting.md) | what an error message means and how to fix it |
