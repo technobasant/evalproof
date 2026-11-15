@@ -155,6 +155,7 @@ nav:
       - Configuration: reference/configuration.md
       - Run file format: reference/run-file.md
       - Exit codes: reference/exit-codes.md
+      - JUnit test reports: reference/junit.md
       - Concepts: reference/concepts.md
       - API reference: reference/api.md
       - Glossary: glossary.md

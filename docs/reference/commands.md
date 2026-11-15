@@ -71,6 +71,7 @@ evalproof run SUITE [options]
 | `--variant` | string, repeatable | none | run one of the suite's variants and write `runs/<variant>.json`; repeat to run several, one run file each |
 | `--all-variants` | flag | off | run every variant the suite defines, one run file each |
 | `--markdown` | string | none | also append the report to this file |
+| `--junit` | string | none | write a [JUnit XML report](junit.md) to this file: one testsuite per run written, one testcase per case (per trial when the run repeats its cases). With several variants the one file holds every run |
 | `--quiet` | flag | off | print no progress line and no report on stdout (`--markdown` still writes it) |
 | `--show` | int | `10` | list up to N failed cases in the report (default 10; 0 hides the list) |
 | `--gate` | flag | off | apply the suite's absolute checks (`gate.min_pass_rate`, `gate.must_pass`) to this run, with no baseline; exit 1 when one fails |
@@ -170,6 +171,7 @@ evalproof compare BASELINE CANDIDATE [CANDIDATE ...] [options]
 | `--seed` | int | `0` | seed of the bootstrap and the sign-flip test |
 | `--markdown` | string | none | also append the report to this file (for example `$GITHUB_STEP_SUMMARY`) |
 | `--json` | string | none | write the comparison as JSON to this file |
+| `--junit` | string | none | write a [JUnit XML report](junit.md) of the gate's checks to this file, whatever the verdict; one testcase per check. It needs `--gate`: without it the command exits 2 |
 
 ```bash title="Example"
 evalproof compare runs/baseline.json runs/candidate.json --suite evals/suite.yaml --gate

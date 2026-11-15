@@ -319,21 +319,26 @@ def matrix_markdown(
     return "\n".join(lines) + "\n"
 
 
+def case_problem(r: CaseResult) -> tuple[str, list[str]] | None:
+    """What is wrong with one case result, as ``(kind, scorer names)``, or None when nothing is.
+
+    ``kind`` is ``"errored"`` (the system errored), ``"failed"`` (a scorer failed it) or
+    ``"undecided"`` (no scorer failed it, but one could not decide). The run report's failed
+    cases and the JUnit report both read it, so they count the same cases."""
+    failed = [n for n, s in r.scores.items() if s.passed is False]
+    undecided = [n for n, s in r.scores.items() if s.value is None]
+    if r.output.error:
+        return "errored", failed + undecided
+    if failed:
+        return "failed", failed
+    if undecided:
+        return "undecided", undecided
+    return None
+
+
 def _failed_cases(run: Run, max_cases: int) -> list[str]:
     """The ``### Failed cases`` section: cases that errored, failed a scorer or were undecided."""
-
-    def problem(r: CaseResult) -> tuple[str, list[str]] | None:
-        failed = [n for n, s in r.scores.items() if s.passed is False]
-        undecided = [n for n, s in r.scores.items() if s.value is None]
-        if r.output.error:
-            return "errored", failed + undecided
-        if failed:
-            return "failed", failed
-        if undecided:
-            return "undecided", undecided
-        return None
-
-    found = [(r, p) for r in run.results if (p := problem(r)) is not None]
+    found = [(r, p) for r in run.results if (p := case_problem(r)) is not None]
     if not found or max_cases <= 0:
         return []
     repeated = run.trials > 1
