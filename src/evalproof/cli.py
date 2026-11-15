@@ -29,7 +29,7 @@ from evalproof.config import (
     load_config,
 )
 from evalproof.dataset import DatasetError, load_dataset, write_dataset
-from evalproof.doctor import run_doctor
+from evalproof.doctor import CANARY_MODEL, run_cursor_canary, run_doctor
 from evalproof.gate import (
     EXIT_BUDGET,
     EXIT_CANNOT_GATE,
@@ -432,6 +432,14 @@ def cmd_readiness(args: argparse.Namespace) -> int:
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
+    if args.cursor_canary:
+        if args.suite:
+            sys.stderr.write("evalproof: error: --cursor-canary does not take a SUITE\n")
+            return EXIT_USAGE
+        return run_cursor_canary(args.model)
+    if args.model:
+        sys.stderr.write("evalproof: error: --model only applies with --cursor-canary\n")
+        return EXIT_USAGE
     return run_doctor(args.suite)
 
 
@@ -829,10 +837,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="check the coding-agent CLI targets, without calling a model",
         description="Check each coding-agent CLI target (claude-code, codex, and the "
         "experimental opencode, cursor and copilot): binary, version, login and the "
-        "isolation flags. Makes no model call.",
+        "isolation flags. Makes no model call, except with --cursor-canary, which makes one "
+        "real cursor-agent call (it uses your Cursor quota) to see what reaches the prompt.",
     )
     dr.add_argument(
         "suite", nargs="?", help="check the targets this suite uses (default: every CLI found)"
+    )
+    dr.add_argument(
+        "--cursor-canary",
+        action="store_true",
+        help="make ONE real cursor-agent call (uses your Cursor quota; the only doctor check "
+        "that does) with a canary skill in its workspace, and report whether the canary and "
+        "any other skills or user rules reached the prompt; the answer is model-reported, so "
+        "best effort. Exit 0 when only the canary is seen, 1 otherwise, 4 when the call fails",
+    )
+    dr.add_argument(
+        "--model",
+        metavar="MODEL",
+        help=f"the Cursor model for --cursor-canary (default: {CANARY_MODEL})",
     )
     dr.set_defaults(func=cmd_doctor)
 

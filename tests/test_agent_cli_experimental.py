@@ -93,6 +93,9 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for var in ENV_KEYS:
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(experimental, "_warned", set())  # the warning is once per process
+    # The macOS sandbox around cursor-agent is tested in test_cursor_sandbox.py; here the fake
+    # CLI runs directly, so these tests give the same result on macOS and on Linux.
+    monkeypatch.setenv("EVALPROOF_CURSOR_SANDBOX", "off")
 
 
 def ok_reply(name: str, text: str = "OK") -> dict[str, Any]:
@@ -1155,11 +1158,13 @@ def test_doctor_warns_that_cursor_sends_the_skills_list(
     stable_clis: None, cursor: Case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     only_fakes_on_path(tmp_path, monkeypatch)
+    monkeypatch.setattr(experimental, "sandbox_exec_available", lambda: False)
     code, text = doctor()
     block = section(text, "cursor")
     assert code == 0  # a warning, not a failure
     assert "warning: cursor-agent puts the names and descriptions of your skills" in block
     assert "~/.claude/skills" in block and "no option turns this off" in block
+    assert "no sandbox is available here" in block
 
 
 def test_doctor_warns_about_copilot_auto_as_the_judge_only(
