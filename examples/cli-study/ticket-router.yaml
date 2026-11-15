@@ -2,7 +2,7 @@
 # of keyword rules. One exact label per case and no judge, so a repeated run measures pure
 # sampling noise. One variant per model; each writes runs/<variant>.json. See README.md.
 name: ticket-router-cli
-dataset: ../deterministic/cases.jsonl
+dataset: ticket-router.sample.jsonl  # every second case of ../deterministic/cases.jsonl (30 of 60)
 seed: 0
 
 system:

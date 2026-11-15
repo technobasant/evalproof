@@ -2,7 +2,7 @@
 # No judge: the regex answer key is the gate metric.
 # One variant per model and prompt; each writes runs/<variant>.json. See README.md.
 name: support-qa-cli
-dataset: ../support-qa/cases.jsonl
+dataset: support-qa.sample.jsonl  # every second case of ../support-qa/cases.jsonl (42 of 83)
 seed: 0
 
 system:
