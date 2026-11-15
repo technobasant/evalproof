@@ -181,3 +181,20 @@ test('a path without a leading slash is accepted, and a query string is ignored'
 test('serve needs a function', () => {
   assert.throws(() => serve(), /needs a handler function/);
 });
+
+test('a body just over 10 MiB gets a 413 with an error body, not a reset connection', async () => {
+  let called = false;
+  const { url } = await start(() => {
+    called = true;
+    return 'x';
+  });
+  const body = JSON.stringify({ id: 'c1', input: 'x'.repeat(10 * 1024 * 1024) });
+  const res = await post(url, body);
+  assert.equal(res.status, 413);
+  const payload = await res.json();
+  assert.match(payload.error, /too large/);
+  assert.equal(called, false);
+  // the server still answers the next request
+  const next = await post(url, { id: 'c2', input: 'hi' });
+  assert.equal(next.status, 200);
+});

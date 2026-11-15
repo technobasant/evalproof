@@ -15,16 +15,22 @@ function send(res, status, body, headers = {}) {
   res.end(data);
 }
 
-// Reads the whole request body, or rejects with {status: 413} once it passes the limit.
+// Reads the whole request body, or rejects with {status: 413} once it passes the limit. Past the
+// limit it stops buffering and drains the rest of the body (req.resume()) without destroying the
+// socket, so the 413 reaches a client that is still sending instead of a connection reset.
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    let tooLarge = false;
     req.on('data', (chunk) => {
+      if (tooLarge) return;
       size += chunk.length;
       if (size > MAX_BODY_BYTES) {
+        tooLarge = true;
+        chunks.length = 0;
         reject(Object.assign(new Error('request body is too large'), { status: 413 }));
-        req.destroy();
+        req.resume();
         return;
       }
       chunks.push(chunk);

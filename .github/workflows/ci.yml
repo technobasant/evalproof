@@ -209,7 +209,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        node: ["18", "24"]
+        node: ["18", "22", "24"]
         include:
           - os: windows-latest
             node: "24"
