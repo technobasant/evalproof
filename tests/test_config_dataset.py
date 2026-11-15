@@ -31,7 +31,8 @@ def test_load_config_resolves_files(tmp_path: Path) -> None:
     assert cfg.system.system_prompt == "You are helpful."
     assert cfg.system.params.seed == 3 and cfg.system.kind == "ollama"
     assert cfg.resolve("cases.jsonl") == tmp_path / "cases.jsonl"
-    assert cfg.resolve("/abs/x") == Path("/abs/x")
+    # a rooted path without a drive lands on the suite's drive on Windows
+    assert cfg.resolve("/abs/x") == Path(tmp_path.anchor, "abs", "x")
     assert cfg.gate is not None and cfg.gate.alpha == 0.05
 
 

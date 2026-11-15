@@ -191,8 +191,9 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24"
+          node-version: "24" # 24.5.0 or newer bundles npm 11.5.1+, which trusted publishing needs
           registry-url: https://registry.npmjs.org
+          package-manager-cache: false
       - name: The tag must name the npm package version
         env:
           TAG: ${{ github.event.release.tag_name }}
@@ -201,8 +202,6 @@ jobs:
           if [ "$TAG" != "v$version" ]; then
             echo "::error::release tag $TAG does not match npm/package.json version $version"; exit 1
           fi
-      - name: Update npm for trusted publishing
-        run: npm install -g npm@latest # trusted publishing needs npm 11.5.1 or newer
       - name: Publish
         working-directory: npm
         run: npm publish --provenance --access public

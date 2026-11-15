@@ -46,7 +46,7 @@ def test_the_node_tests_pass() -> None:
     node = shutil.which("node")
     assert node is not None
     done = subprocess.run(
-        [node, "--test", str(NPM / "test")],
+        [node, "--test", str(NPM / "test" / "launcher.test.js")],
         cwd=NPM,
         capture_output=True,
         text=True,
