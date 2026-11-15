@@ -33,6 +33,7 @@ from evalproof.config import (
 )
 from evalproof.dataset import DatasetError, load_dataset, write_dataset
 from evalproof.doctor import CANARY_MODEL, run_cursor_canary, run_doctor
+from evalproof.draft import GAP_CHOICES, DraftOptions, emit_warnings, render_result, run_draft
 from evalproof.experimental import experimental_notice
 from evalproof.gate import (
     EXIT_BUDGET,
@@ -520,6 +521,30 @@ def cmd_scan(args: argparse.Namespace) -> int:
         out.write_text(report_json(report), encoding="utf-8", newline="\n")
         sys.stderr.write(f"wrote {out}\n")
     sys.stdout.write(report_json(report) if args.json else render_text(report))
+    return EXIT_PASS
+
+
+def cmd_draft(args: argparse.Namespace) -> int:
+    experimental_notice("draft", "its drafted cases and flags may change in a minor release")
+    options = DraftOptions(
+        scan=Path(args.scan),
+        out=Path(args.out),
+        target=args.target,
+        suite=Path(args.suite) if args.suite else None,
+        per_gap=args.per_gap,
+        max_cases=args.max_cases,
+        from_tests_only=args.from_tests_only,
+        no_cache=args.no_cache,
+        force=args.force,
+        gaps=args.gap or (),
+        tools=args.tool or (),
+        files=args.file or (),
+    )
+    if not options.out.exists() or options.force:
+        _check_writable(options.out, "the drafts file")
+    result = run_draft(options)
+    emit_warnings(result)
+    sys.stdout.write(render_result(result, options.out))
     return EXIT_PASS
 
 
@@ -1138,6 +1163,71 @@ def build_parser() -> argparse.ArgumentParser:
         help="use this suite file instead of looking for suites (may repeat)",
     )
     sc.set_defaults(func=cmd_scan)
+
+    dr = sub.add_parser(
+        "draft",
+        help="draft test inputs for what a scan found untested (inputs only, never answers)",
+        description="Turn the gaps in a scan file (from `evalproof scan --out`) into a separate "
+        "JSONL of draft cases. Cases harvested from pytest files keep the assertion their test "
+        "made and call no model. For tools, multi-turn use, uncovered code and thin suites a "
+        "model writes inputs only, tagged `draft`, with no expected answer: a person adds the "
+        "reference or checks before a draft goes into a dataset. The output is never a suite's "
+        "dataset. Experimental.",
+    )
+    dr.add_argument(
+        "--scan", required=True, metavar="FILE", help="the JSON from `evalproof scan --out`"
+    )
+    dr.add_argument(
+        "--out", required=True, metavar="FILE", help="the JSONL to write (refused if it exists)"
+    )
+    dr.add_argument(
+        "--target",
+        metavar="MODEL",
+        help="the model that writes inputs (default: the suite's judge)",
+    )
+    dr.add_argument("--suite", metavar="SUITE", help="draft for this suite only")
+    dr.add_argument(
+        "--per-gap",
+        type=int,
+        default=3,
+        metavar="N",
+        help="inputs to ask a model for, for each gap (default 3)",
+    )
+    dr.add_argument(
+        "--max-cases",
+        type=int,
+        default=30,
+        metavar="N",
+        help="stop after this many drafts in all (default 30)",
+    )
+    dr.add_argument(
+        "--from-tests-only",
+        action="store_true",
+        help="draft only from pytest files: no model is called",
+    )
+    dr.add_argument(
+        "--no-cache", action="store_true", help="do not read or write the response cache"
+    )
+    dr.add_argument("--force", action="store_true", help="overwrite --out if it exists")
+    dr.add_argument(
+        "--gap",
+        action="append",
+        choices=GAP_CHOICES,
+        metavar="KIND",
+        help="draft only for this kind of gap (may repeat; choices: "
+        + ", ".join(GAP_CHOICES)
+        + ")",
+    )
+    dr.add_argument(
+        "--tool", action="append", metavar="NAME", help="draft only for this tool (may repeat)"
+    )
+    dr.add_argument(
+        "--file",
+        action="append",
+        metavar="PATH",
+        help="draft only for code in this file (may repeat)",
+    )
+    dr.set_defaults(func=cmd_draft)
 
     pw = sub.add_parser("pairwise", help="judge baseline vs candidate outputs head to head")
     pw.add_argument("baseline")
