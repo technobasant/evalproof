@@ -50,7 +50,12 @@ def run(question: str, ctx: RunContext) -> dict:
 
 A tool call belongs to the turn under way (the number of replies recorded so far) unless `turn=`
 says otherwise; pass `ok=False` and an `error` for a call that failed. For an agent built on an
-SDK, the [adapters](adapters.md#agent-sdk-adapters) build the same dict from what the SDK returns.
+SDK, the [adapters](adapters.md#agent-sdk-adapters) build the same dict from what the SDK returns:
+Google ADK, LangChain and LangGraph, the Claude Agent SDK and OpenAI Agents, and, as experimental
+adapters, LlamaIndex (`llama_index.from_events`), CrewAI (`crewai.from_output`), Pydantic AI
+(`pydantic_ai.from_messages`), DSPy (`dspy.from_prediction`), Haystack (`haystack.from_messages`),
+AutoGen (`autogen.from_messages`) and Semantic Kernel (`semantic_kernel.from_history`). Each has a
+`python:` target function on its tab of the adapters page.
 
 **`ctx`.** Declare a parameter named `ctx` and the function is called as `run(input, ctx=ctx)`.
 A `RunContext` has `case_id`, `input`, `turns` (the user turns after the input), `state` (the

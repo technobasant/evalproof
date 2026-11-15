@@ -4,6 +4,7 @@ files alone. Every repository here is built in ``tmp_path``; nothing is imported
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -673,8 +674,10 @@ def test_test_cases_in_other_formats_come_with_the_import_command(tmp_path: Path
         "evalproof import-dataset deepeval data/qa.jsonl --out evals/qa.jsonl"
     )
     assert found["data/rag.jsonl"].framework == "ragas"
+    # Quoted for the shell the command is pasted into: POSIX quotes, or Windows double quotes.
+    quoted = '"data/a b.evalset.json"' if sys.platform == "win32" else "'data/a b.evalset.json'"
     assert found["data/a b.evalset.json"].extra["command"] == (
-        "evalproof import-dataset adk 'data/a b.evalset.json' --out evals/a_b.jsonl"
+        f"evalproof import-dataset adk {quoted} --out evals/a_b.jsonl"
     )
     assert found["promptfooconfig.yaml"].extra["format"] == "promptfoo"
     ambiguous = found["data/both.jsonl"]

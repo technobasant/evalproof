@@ -11,6 +11,8 @@ from __future__ import annotations
 import posixpath
 import re
 import shlex
+import subprocess
+import sys
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
@@ -43,6 +45,13 @@ from evalproof.scan.walk import (
     YAML_SUFFIXES,
     walk,
 )
+
+
+def _arg(value: str) -> str:
+    """``value`` quoted for the shell a suggested command is pasted into: the Windows way
+    (``list2cmdline``) on Windows, as ``evalproof doctor`` does, and POSIX quoting elsewhere."""
+    return subprocess.list2cmdline([value]) if sys.platform == "win32" else shlex.quote(value)
+
 
 DRAFTS_OUT = "evals/drafts.jsonl"
 DEFAULT_MAX_DRAFTS = 30  # what ``evalproof draft --max-cases`` defaults to
@@ -333,9 +342,7 @@ def _dataset_findings(
             detail = f"test cases that fit more than one format ({', '.join(options)})"
             extra: dict[str, Any] = {"format": None, "candidates": options}
         else:
-            command = (
-                f"evalproof import-dataset {fmt} {shlex.quote(rel)} --out evals/{_stem(rel)}.jsonl"
-            )
+            command = f"evalproof import-dataset {fmt} {_arg(rel)} --out evals/{_stem(rel)}.jsonl"
             detail = f"{fmt} test cases, not in an evalproof suite"
             extra = {"format": fmt, "candidates": options, "command": command}
         out.append(Finding("test_cases", rel, 1, fmt, detail, None, extra))
@@ -408,7 +415,7 @@ def _pytest_findings(
                     {
                         "format": "pytest",
                         "imports": imports,
-                        "command": f"evalproof draft --scan {shlex.quote(scan_ref)} "
+                        "command": f"evalproof draft --scan {_arg(scan_ref)} "
                         f"--out {DRAFTS_OUT} --from-tests-only",
                     },
                 )
@@ -428,7 +435,7 @@ def _gaps(
     read, a target whose code is unknown) is listed in the second result with the reason."""
     gaps: list[Gap] = []
     not_computed: dict[str, str] = {}
-    scan_arg = shlex.quote(scan_ref)
+    scan_arg = _arg(scan_ref)
     hint = "" if any(s.judge for s in suites) else " --target MODEL"
     base = f"evalproof draft --scan {scan_arg} --out {DRAFTS_OUT}{hint}"
     unreadable = [s.path for s in suites if suite_cases.get(s.path) is None]
@@ -460,7 +467,7 @@ def _gaps(
                     Gap(
                         "tool_unchecked",
                         f"no check in any suite names the tool `{name}`",
-                        f"{base} --gap tool_unchecked --tool {shlex.quote(name)}",
+                        f"{base} --gap tool_unchecked --tool {_arg(name)}",
                         f.path,
                         f.line,
                         {"tool": name},
@@ -491,7 +498,7 @@ def _gaps(
                         "no suite's target runs this file's model call, agent or tool"
                         if suites
                         else "this file's model call, agent or tool is not in any suite",
-                        f"{base} --gap uncovered_code --file {shlex.quote(path)}",
+                        f"{base} --gap uncovered_code --file {_arg(path)}",
                         path,
                         line,
                     )
@@ -527,9 +534,7 @@ def _gaps(
             message = f"{f.extra['format']} test cases that no evalproof suite uses"
         else:
             message = "test cases that no evalproof suite uses (the format is ambiguous)"
-        suggest = str(
-            f.extra.get("command") or f"evalproof import-dataset <format> {shlex.quote(f.path)}"
-        )
+        suggest = str(f.extra.get("command") or f"evalproof import-dataset <format> {_arg(f.path)}")
         gaps.append(
             Gap(
                 "test_cases_not_imported",
@@ -550,7 +555,7 @@ def _gaps(
                 Gap(
                     "few_cases",
                     f"{s.path} has {s.cases} case(s); its gate wants at least {s.min_cases}",
-                    f"{base} --gap few_cases --suite {shlex.quote(s.path)} --per-gap {need}{room}",
+                    f"{base} --gap few_cases --suite {_arg(s.path)} --per-gap {need}{room}",
                     s.path,
                     1,
                     {"suite": s.path, "cases": s.cases, "min_cases": s.min_cases},

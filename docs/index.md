@@ -88,7 +88,7 @@ is — the effect is worked through with a seeded simulation in
 3. **Compares runs on paired cases**: exact McNemar for pass/fail, paired bootstrap for scores, and a paired permutation test when each case runs several times.
 4. **Gates CI** only when a drop is both larger than your tolerance *and* statistically significant, plus latency and cost budgets, with distinct exit codes.
 5. **Checks the run files it gates**: `verify` proves, with no model call, that a committed run was made with this suite and covers the dataset as it is now.
-6. **Tests agents**: asserts on the tools an agent called and what it said, across several turns, several builds of the same system and repeated trials, with adapters for ADK, LangChain/LangGraph, the Claude Agent SDK and OpenAI Agents ([Testing agents](guides/testing-agents.md#testing-agents)).
+6. **Tests agents**: asserts on the tools an agent called and what it said, across several turns, several builds of the same system and repeated trials, with adapters for ADK, LangChain/LangGraph, the Claude Agent SDK, OpenAI Agents, LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen and Semantic Kernel ([Testing agents](guides/testing-agents.md#testing-agents)).
 
 It is local-first: Ollama is the default, every major hosted provider is one `target:` line
 away ([Providers](guides/providers.md#providers)), a logged-in Claude Code or Codex can be the judge with no API

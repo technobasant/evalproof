@@ -1,14 +1,14 @@
 ---
-description: Build the trace evalproof's checks read from Google ADK, LangChain or LangGraph, the Claude Agent SDK, OpenAI Agents, OpenTelemetry spans, plain Python or MCP.
+description: Build the trace evalproof's checks read from Google ADK, LangChain or LangGraph, the Claude Agent SDK, OpenAI Agents, LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen, Semantic Kernel, OpenTelemetry spans, plain Python or MCP.
 ---
 
 # Agent SDK adapters
 
-An adapter turns what an agent SDK returns into the trace that the `checks` scorer reads. This page is for anyone testing an agent built on Google ADK, LangChain or LangGraph, the Claude Agent SDK, the OpenAI Agents SDK, plain Python or another language.
+An adapter turns what an agent SDK returns into the trace that the `checks` scorer reads. This page is for anyone testing an agent built on Google ADK, LangChain or LangGraph, the Claude Agent SDK, the OpenAI Agents SDK, LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen, Semantic Kernel, plain Python or another language.
 
 A python system (`target: python:agent:run`) returns `{"output", "trace", ...}`, and the `trace`
 is what the `checks` scorer reads: the tools called, their arguments and results, the rounds,
-the tokens. `evalproof.adapters` builds that dict from what four agent SDKs return. The
+the tokens. `evalproof.adapters` builds that dict from what eleven agent SDKs return. The
 adapters import no SDK and read objects or plain dicts, so they work with any version that keeps
 the field names they cite; each module's header gives the package version and file:line of every
 field it reads. Tokens and cost roll up from the trace, so `max_cost_usd` and the budgets see an
@@ -21,6 +21,16 @@ results. The python function gets the later turns as `ctx.turns`.
 
 An agent that already exports OpenTelemetry spans needs no SDK adapter: `otel.from_spans` reads
 them (experimental, see the OpenTelemetry tab below).
+
+!!! warning "Experimental adapters"
+
+    The LlamaIndex, CrewAI, Pydantic AI, DSPy, Haystack, AutoGen and Semantic Kernel adapters are
+    experimental. Their field names were read from each SDK's source and are tested with fake
+    objects of those shapes, and they have not yet been run against a live agent of each
+    framework. Each one raises one `UserWarning` the first time it is called in a process. It is a
+    warning and not a line on stderr, because the adapter runs inside your own python target:
+    filter it with `warnings.filterwarnings`, or turn it into an error with `-W error`. Each tab
+    lists what the adapter leaves out.
 
 ## Choose your SDK
 
@@ -150,6 +160,252 @@ them (experimental, see the OpenTelemetry tab below).
 
     def run(question: str) -> dict:
         return openai_agents.from_result(Runner.run_sync(agent, question))
+    ```
+
+=== "LlamaIndex (experimental)"
+
+    `llama_index.from_events(events)` takes the events `handler.stream_events()` yields for an
+    agent workflow (`FunctionAgent`, `ReActAgent`), a list of event lists for a multi-turn case
+    (one per `agent.run`), or the `AgentChatResponse` of an older agent or chat engine. A call is
+    counted once although its `ToolCall` event and the `AgentOutput` that made it both show it,
+    and a `ToolOutput` with `is_error` marks a failed call. Left out: tokens and cost.
+
+    ```python title="agent.py"
+    import asyncio
+
+    from llama_index.core.agent.workflow import FunctionAgent
+    from llama_index.llms.openai import OpenAI
+
+    from evalproof.adapters import llama_index
+
+
+    def get_weather(city: str) -> str:
+        """Current weather for a city."""
+        return f"{city}: 20 C, clear"
+
+
+    agent = FunctionAgent(
+        tools=[get_weather], llm=OpenAI(model="gpt-5.5"), system_prompt="Answer weather questions."
+    )
+
+
+    async def _events(question: str) -> list:
+        handler = agent.run(question)
+        events = [event async for event in handler.stream_events()]
+        await handler
+        return events
+
+
+    def run(question: str) -> dict:
+        return llama_index.from_events(asyncio.run(_events(question)))
+    ```
+
+=== "CrewAI (experimental)"
+
+    `crewai.from_output(output)` takes the `CrewOutput` that `crew.kickoff(...)` returns (or a
+    list of them, one per turn). The calls come from each task's `messages`, the
+    failed ones from its `tool_failures`, and the tokens from the crew's `token_usage`. Left out:
+    agents whose model does not use native tool calling (their calls are only text in the
+    messages), the model name, and cost.
+
+    ```python title="agent.py"
+    from crewai import Agent, Crew, Task
+    from crewai.tools import tool
+
+    from evalproof.adapters import crewai
+
+
+    @tool("get_weather")
+    def get_weather(city: str) -> str:
+        """Current weather for a city."""
+        return f"{city}: 20 C, clear"
+
+
+    analyst = Agent(
+        role="Weather analyst",
+        goal="Answer weather questions",
+        backstory="You answer from the weather tool.",
+        tools=[get_weather],
+    )
+    task = Task(description="{question}", expected_output="A one-line answer", agent=analyst)
+    crew = Crew(agents=[analyst], tasks=[task])
+
+
+    def run(question: str) -> dict:
+        return crewai.from_output(crew.kickoff(inputs={"question": question}))
+    ```
+
+=== "Pydantic AI (experimental)"
+
+    `pydantic_ai.from_messages(result)` takes the run result (or the list `all_messages()`
+    returns, or the dicts Pydantic AI's own serialisation produces). A tool return whose
+    `outcome` is not `"success"`, or a retry prompt that names a tool, marks a failed call. An
+    agent with structured output also shows its output tool as a call. Left out: tool calls
+    that the model provider ran itself, and cost.
+
+    ```python title="agent.py"
+    from pydantic_ai import Agent
+
+    from evalproof.adapters import pydantic_ai
+
+    agent = Agent("openai:gpt-5.5", system_prompt="Answer weather questions.")
+
+
+    @agent.tool_plain
+    def get_weather(city: str) -> str:
+        """Current weather for a city."""
+        return f"{city}: 20 C, clear"
+
+
+    def run(question: str) -> dict:
+        return pydantic_ai.from_messages(agent.run_sync(question))
+    ```
+
+=== "DSPy (experimental)"
+
+    `dspy_adapter.from_prediction(prediction)` reads the `dspy.ReAct` prediction: the `history` of
+    DSPy 3.5 and the `trajectory` of 3.4 and earlier. The reserved `submit` and `finish` steps are
+    not calls. A tool that raised is a failed call. The tokens come from `get_lm_usage()`, which
+    is filled when usage tracking is on (`track_usage=True`). The reply is the one output field,
+    else all of them as JSON; pass `output_field="answer"` to pick one. Left out: cached tokens
+    and cost. The module is imported under another name because `dspy` is also the SDK.
+
+    ```python title="agent.py"
+    import dspy
+
+    from evalproof.adapters import dspy as dspy_adapter
+
+    dspy.configure(lm=dspy.LM("openai/gpt-5.5"), track_usage=True)
+
+
+    def get_weather(city: str) -> str:
+        """Current weather for a city."""
+        return f"{city}: 20 C, clear"
+
+
+    react = dspy.ReAct("question -> answer", tools=[get_weather])
+
+
+    def run(question: str) -> dict:
+        return dspy_adapter.from_prediction(react(question=question), output_field="answer")
+    ```
+
+=== "Haystack (experimental)"
+
+    `haystack.from_messages(messages)` takes the list of `ChatMessage` objects, or the dict
+    `Agent.run` returns (its `messages`). A `ToolCallResult` with `error` set marks a failed call,
+    and the tokens come from each reply's `meta["usage"]`. Left out: cached tokens, cost, and an
+    `Agent` run read only through `last_message` (pass `messages`).
+
+    ```python title="agent.py"
+    from haystack.components.agents import Agent
+    from haystack.components.generators.chat import OpenAIChatGenerator
+    from haystack.dataclasses import ChatMessage
+    from haystack.tools import Tool
+
+    from evalproof.adapters import haystack
+
+
+    def get_weather(city: str) -> str:
+        return f"{city}: 20 C, clear"
+
+
+    weather = Tool(
+        name="get_weather",
+        description="Current weather for a city.",
+        parameters={
+            "type": "object",
+            "properties": {"city": {"type": "string"}},
+            "required": ["city"],
+        },
+        function=get_weather,
+    )
+    agent = Agent(chat_generator=OpenAIChatGenerator(model="gpt-5.5"), tools=[weather])
+    agent.warm_up()
+
+
+    def run(question: str) -> dict:
+        return haystack.from_messages(agent.run(messages=[ChatMessage.from_user(question)]))
+    ```
+
+=== "AutoGen (experimental)"
+
+    `autogen.from_messages(result)` takes the `TaskResult` that `agent.run(...)` or a team's
+    `run` returns (or its `messages`). Calls come from the `ToolCallRequestEvent` and
+    `ToolCallExecutionEvent` messages, and a result with `is_error` marks a failed call. The
+    usage has no model name, because AutoGen's `RequestUsage` carries none. Left out:
+    cached tokens and cost.
+
+    ```python title="agent.py"
+    import asyncio
+
+    from autogen_agentchat.agents import AssistantAgent
+    from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+    from evalproof.adapters import autogen
+
+
+    async def get_weather(city: str) -> str:
+        """Current weather for a city."""
+        return f"{city}: 20 C, clear"
+
+
+    async def _run(question: str):
+        client = OpenAIChatCompletionClient(model="gpt-5.5")
+        agent = AssistantAgent(
+            "assistant", model_client=client, tools=[get_weather], reflect_on_tool_use=True
+        )
+        try:
+            return await agent.run(task=question)
+        finally:
+            await client.close()
+
+
+    def run(question: str) -> dict:
+        return autogen.from_messages(asyncio.run(_run(question)))
+    ```
+
+=== "Semantic Kernel (experimental)"
+
+    `semantic_kernel.from_history(history)` takes the `ChatHistory` a function-calling run fills
+    (or its `messages`). A `FunctionCallContent` is a call, named as the SDK names it
+    (`<plugin>-<function>`, so a check says `weather-get_weather`), and a `FunctionResultContent`
+    answers it by id. Left out because the SDK shows no field for them: failed calls (every
+    result counts as succeeded) and token usage.
+
+    ```python title="agent.py"
+    import asyncio
+
+    from semantic_kernel import Kernel
+    from semantic_kernel.connectors.ai import FunctionChoiceBehavior
+    from semantic_kernel.connectors.ai.open_ai import (
+        OpenAIChatCompletion,
+        OpenAIChatPromptExecutionSettings,
+    )
+    from semantic_kernel.contents import ChatHistory
+    from semantic_kernel.functions import kernel_function
+
+    from evalproof.adapters import semantic_kernel
+
+
+    class Weather:
+        @kernel_function(name="get_weather", description="Current weather for a city")
+        def get_weather(self, city: str) -> str:
+            return f"{city}: 20 C, clear"
+
+
+    service = OpenAIChatCompletion(ai_model_id="gpt-5.5")
+    kernel = Kernel()
+    kernel.add_service(service)
+    kernel.add_plugin(Weather(), plugin_name="weather")
+    settings = OpenAIChatPromptExecutionSettings(function_choice_behavior=FunctionChoiceBehavior.Auto())
+
+
+    def run(question: str) -> dict:
+        history = ChatHistory()
+        history.add_user_message(question)
+        asyncio.run(service.get_chat_message_content(history, settings, kernel=kernel))
+        return semantic_kernel.from_history(history)
     ```
 
 === "Plain Python or MCP"
