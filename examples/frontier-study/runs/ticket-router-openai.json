@@ -1,12 +1,12 @@
 {
   "info": {
-    "suite": "ticket-router-cli",
+    "suite": "ticket-router-frontier",
     "system": "OpenAI GPT-6 Astra (medium effort)",
     "dataset_path": "ticket-router.sample.jsonl",
     "dataset_hash": "371b97a163bfa5c0",
-    "started_at": "2026-11-15T04:33:45+00:00",
-    "finished_at": "2026-11-15T04:33:45+00:00",
-    "wall_time_s": 0.02,
+    "started_at": "2026-11-15T05:02:10+00:00",
+    "finished_at": "2026-11-15T05:02:10+00:00",
+    "wall_time_s": 0.014,
     "evalproof_version": "0.8.0",
     "seed": 0,
     "environment": {
@@ -15,14 +15,10 @@
       "machine": "arm64",
       "processor": "arm",
       "system_target": "codex:gpt-6-astra",
-      "system_cli": "codex",
-      "system_cli_version": "codex-cli 0.167.2",
-      "system_isolation": "codex/1",
-      "system_sampling": "cli-default",
       "system_model_resolved": "gpt-6-astra"
     },
-    "suite_hash": "37f3f7432c14e888",
-    "variant": "codex",
+    "suite_hash": "a4eb39905d304c38",
+    "variant": "openai",
     "trials": 2
   },
   "results": [

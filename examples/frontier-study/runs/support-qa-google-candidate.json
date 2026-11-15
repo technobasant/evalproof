@@ -1,12 +1,12 @@
 {
   "info": {
-    "suite": "support-qa-cli",
-    "system": "Anthropic Claude Sonnet 5.5 + grounded prompt",
+    "suite": "support-qa-frontier",
+    "system": "Google Gemini 4 Argon Medium + friendly prompt",
     "dataset_path": "support-qa.sample.jsonl",
-    "dataset_hash": "d8153b286d07c1c5",
-    "started_at": "2026-11-15T04:33:46+00:00",
-    "finished_at": "2026-11-15T04:33:46+00:00",
-    "wall_time_s": 0.006,
+    "dataset_hash": "03e03610fbf641ca",
+    "started_at": "2026-11-15T05:02:11+00:00",
+    "finished_at": "2026-11-15T05:02:11+00:00",
+    "wall_time_s": 0.014,
     "evalproof_version": "0.8.0",
     "seed": 0,
     "environment": {
@@ -14,15 +14,11 @@
       "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
       "machine": "arm64",
       "processor": "arm",
-      "system_target": "claude-code:claude-sonnet-5-5",
-      "system_cli": "claude-code",
-      "system_cli_version": "2.1.322 (Claude Code)",
-      "system_isolation": "claude-code/1",
-      "system_sampling": "cli-default",
-      "system_model_resolved": "claude-sonnet-5-5"
+      "system_target": "cursor:gemini-4-argon-medium",
+      "system_model_resolved": "gemini-4-argon-medium"
     },
-    "suite_hash": "022fdad92e70f2d3",
-    "variant": "claude-baseline",
+    "suite_hash": "a2217984b48e263c",
+    "variant": "google-candidate",
     "trials": 1
   },
   "results": [
@@ -32,12 +28,12 @@
         "pricing"
       ],
       "output": {
-        "output": "Quillfox Plus costs $6 per user per month when billed monthly, or $60 per user per year (about $5/month) when billed annually.",
+        "output": "Hi there! Happy to help with that! \n\nQuillfox Plus costs **$6 per user per month** when billed monthly. If you prefer annual billing, it's **$60 per user per year** (which comes out to $5 per user per month!). \n\nWith the Plus plan, you get unlimited notebooks, 10 GB of storage per user, and 90 days of version history. Plus, you can try it out with a **21-day free trial**—no credit card needed! (And if you're a student with a valid `.edu` email address, you can actually get Plus free for a whole year!)\n\nLet me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 2208.515250007622,
-        "tokens_in": 1926,
-        "tokens_out": 47,
-        "cost_usd": 0.00817,
+        "latency_ms": 12550.178000004962,
+        "tokens_in": 8876,
+        "tokens_out": 152,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -68,12 +64,12 @@
         "pricing"
       ],
       "output": {
-        "output": "The Team plan is $11 per user per month when billed monthly, or $110 per user per year if you pay annually. It requires a minimum of 3 seats.",
+        "output": "Hi there! Happy to help!\n\nThe **Team plan** is **$11 per user per month** when billed monthly, or **$110 per user per year** when billed annually (which comes out to about $9.17 per user per month!). \n\nHere are a few helpful details to keep in mind for the Team plan:\n- **Minimum seats:** 3 seats\n- **Free trial:** You can try it out with a 21-day free trial—no credit card needed!\n- **Nonprofit discount:** Eligible nonprofits get 40% off the Team plan.\n\nLet me know if you have any other questions about getting your team set up on Quillfox!",
         "retrieved": [],
-        "latency_ms": 1925.0290830386803,
-        "tokens_in": 1922,
-        "tokens_out": 51,
-        "cost_usd": 0.0029407,
+        "latency_ms": 12537.293499917723,
+        "tokens_in": 8885,
+        "tokens_out": 150,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -104,21 +100,21 @@
         "pricing"
       ],
       "output": {
-        "output": "Enterprise pricing is custom, with a minimum of 50 seats. I don't have specific per-seat rates, so please contact support or the sales team for a quote.",
+        "output": "Hi there! Great question! \n\nQuillfox's **Enterprise plan** uses **custom pricing** and requires a **minimum of 50 seats**. \n\nAlong with custom pricing, the Enterprise plan includes:\n- Unlimited version history\n- Audit log export\n- A dedicated support manager, plus access to phone support and live chat (Monday–Friday, 08:00–18:00 CET)\n- 200 MB maximum attachment size and REST API access (up to 600 requests per minute per workspace)\n- Payment via bank transfer (in addition to credit/debit cards and PayPal)\n\nIf you have fewer than 50 seats, our **Team plan** is $11 per user/month (billed monthly) or $110 per user/year (billed annually) with a minimum of 3 seats!\n\nLet me know if you have any other questions—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 2011.1818329896778,
-        "tokens_in": 1918,
-        "tokens_out": 54,
-        "cost_usd": 0.0029546999999999998,
+        "latency_ms": 13053.887542104349,
+        "tokens_in": 8886,
+        "tokens_out": 205,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
       },
       "scores": {
         "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
+          "value": 0.0,
+          "passed": false,
+          "reason": "rejected by '\\\\$\\\\s?\\\\d'",
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
         },
@@ -130,8 +126,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "754f7891a89cdff8",
-      "content_hash": "a3af8023132867c6",
+      "case_hash": "6eca3d46d7114518",
+      "content_hash": "ea35bfa950de1e98",
       "trial": 0
     },
     {
@@ -140,12 +136,12 @@
         "pricing"
       ],
       "output": {
-        "output": "One user saves $12 per year on Plus by paying annually: monthly billing comes to $72 per year ($6 × 12), while annual billing is $60.",
+        "output": "One user saves **$12 per year** on the Plus plan by paying annually instead of monthly! \n\nHere is how the math breaks down:\n- **Billed monthly:** $6/month × 12 months = **$72 per year**\n- **Billed annually:** **$60 per year**\n- **Total savings:** **$12 per year** (that's like getting two months free!)\n\nPlus also comes with a 21-day free trial (no credit card needed) and a 30-day full refund policy on annual plans, so it's super easy to try it out risk-free. Let me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 2244.2860000301152,
-        "tokens_in": 1933,
-        "tokens_out": 51,
-        "cost_usd": 0.0029847,
+        "latency_ms": 13349.864416057244,
+        "tokens_in": 8891,
+        "tokens_out": 149,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -176,12 +172,12 @@
         "pricing"
       ],
       "output": {
-        "output": "Yes, nonprofits get 40% off the Team plan. There are no other nonprofit discounts listed.",
+        "output": "Yes! Nonprofits get a **40% discount on the Team plan**. \n\nFor reference, the standard price for the Team plan (which has a 3-seat minimum) is $11 per user per month when billed monthly, or $110 per user per year when billed annually. With the 40% nonprofit discount, that comes out to **$6.60 per user/month** (billed monthly) or **$66 per user/year** (billed annually).\n\nWith the Team plan, you also get a 21-day free trial (no credit card required), 50 GB of storage per user, 365 days of version history, an admin console, SAML SSO, and live chat/priority email support.\n\nLet me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 1983.0289580859244,
-        "tokens_in": 1921,
-        "tokens_out": 37,
-        "cost_usd": 0.0027967,
+        "latency_ms": 16566.014582989737,
+        "tokens_in": 8875,
+        "tokens_out": 175,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -212,12 +208,12 @@
         "plans"
       ],
       "output": {
-        "output": "The Team plan has a minimum of 3 seats.",
+        "output": "Hi there! The Team plan has a minimum of **3 seats**. \n\nIt's $11 per user per month when billed monthly, or $110 per user per year when billed annually—and if you need to grow later on, team admins can add extra seats at any time (prorated by the day)! You can also try it out with a 21-day free trial with no credit card required.\n\nLet me know if you have any other questions about the Team plan!",
         "retrieved": [],
-        "latency_ms": 2095.907000009902,
-        "tokens_in": 1925,
-        "tokens_out": 19,
-        "cost_usd": 0.0026327,
+        "latency_ms": 15717.588040977716,
+        "tokens_in": 8886,
+        "tokens_out": 109,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -248,12 +244,12 @@
         "plans"
       ],
       "output": {
-        "output": "The Free plan includes 100 MB of storage.",
+        "output": "The **Free** plan includes **100 MB** of storage! \n\nHere are a few other helpful details about what comes with the Free plan:\n- **Users:** 1 user\n- **Notebooks:** Up to 3 notebooks (with up to 5,000 notes per notebook)\n- **Attachment size limit:** Up to 25 MB per attachment\n- **Version history:** 7 days\n- **Public sharing:** Up to 5 publicly shared notes\n\nIf you ever find yourself needing more space, you can upgrade to **Plus** (10 GB per user) or **Team** (50 GB per user)—and both come with a 21-day free trial with no credit card required! Let me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 1816.8724589049816,
-        "tokens_in": 1920,
-        "tokens_out": 18,
-        "cost_usd": 0.0026027,
+        "latency_ms": 13345.901250024326,
+        "tokens_in": 8868,
+        "tokens_out": 169,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -284,12 +280,12 @@
         "plans"
       ],
       "output": {
-        "output": "Each Team user gets 50 GB of storage.",
+        "output": "Each user on the **Team** plan gets **50 GB of storage**! \n\nAlong with that generous storage space, the Team plan also allows individual file attachments up to **200 MB** each, unlimited notebooks, and 365 days of version history. Let me know if you have any other questions about the Team plan!",
         "retrieved": [],
-        "latency_ms": 2018.2339999591932,
-        "tokens_in": 1918,
-        "tokens_out": 18,
-        "cost_usd": 0.0025946999999999997,
+        "latency_ms": 16077.305207960308,
+        "tokens_in": 8888,
+        "tokens_out": 75,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -320,12 +316,12 @@
         "plans"
       ],
       "output": {
-        "output": "The Free plan keeps 7 days of version history.",
+        "output": "Hi there! Happy to help!\n\nOn the **Free** plan, version history is kept for **7 days**, and you can restore any earlier version of a note within that 7-day window.\n\nIf you ever need a longer window, our **Plus** plan keeps version history for **90 days**, **Team** keeps it for **365 days**, and **Enterprise** includes **unlimited** version history.\n\nLet me know if you have any other questions about Quillfox!",
         "retrieved": [],
-        "latency_ms": 1915.88220896665,
-        "tokens_in": 1920,
-        "tokens_out": 18,
-        "cost_usd": 0.0026027,
+        "latency_ms": 17884.006415959448,
+        "tokens_in": 8885,
+        "tokens_out": 106,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -356,12 +352,12 @@
         "plans"
       ],
       "output": {
-        "output": "The Team plan keeps version history for 365 days, and you can restore any earlier version of a note within that window.",
+        "output": "On the **Team** plan, version history is kept for **365 days**, and you can restore any earlier version of a note within that window!\n\nIf you ever need unlimited version history, that's available on our **Enterprise** plan (while **Free** includes 7 days and **Plus** includes 90 days). Let me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 1989.705792046152,
-        "tokens_in": 1919,
-        "tokens_out": 35,
-        "cost_usd": 0.0027687,
+        "latency_ms": 12253.175208112225,
+        "tokens_in": 8878,
+        "tokens_out": 84,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -392,12 +388,12 @@
         "plans"
       ],
       "output": {
-        "output": "SSO (through SAML) is included in the Team plan ($11 per user per month billed monthly, or $110 per user per year billed annually). Enterprise is the other higher tier, but the facts I have only list SSO under Team, so I can't confirm whether Enterprise includes it, so please contact support if you need that detail.",
+        "output": "Single sign-on (SSO) through SAML is included starting on the **Team plan**! \n\nHere are the quick details for the **Team plan**:\n- **Price:** $11 per user/month (billed monthly) or $110 per user/year (billed annually), with a minimum of 3 seats.\n- **What else is included:** 50 GB of storage per user, 365 days of version history, an admin console, REST API access, and live chat support.\n- **Free trial:** You can try the Team plan free for **21 days** with no credit card required! (And if you're a nonprofit, you can get 40% off.)\n\nNeed 50 or more seats? Our **Enterprise plan** (custom pricing, 50-seat minimum) is also available and adds unlimited version history, audit log export, and a dedicated support manager. Note that our **Free** and **Plus** plans do not include SSO.\n\nLet me know if you have any questions about setting up SSO or starting a trial—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 2278.4012090414762,
-        "tokens_in": 1917,
-        "tokens_out": 104,
-        "cost_usd": 0.0034507,
+        "latency_ms": 15711.68279205449,
+        "tokens_in": 8874,
+        "tokens_out": 241,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -428,12 +424,12 @@
         "plans"
       ],
       "output": {
-        "output": "Yes, the Enterprise plan includes audit log export, along with unlimited version history and a dedicated support manager.",
+        "output": "Yes, it does! The **Enterprise** plan includes **audit log export**. \n\nAlong with audit log export, the Enterprise plan also includes:\n- Unlimited version history\n- A dedicated support manager\n- Phone, live chat, and email support\n- Custom pricing (with a minimum of 50 seats) and the option to pay via bank transfer\n\nLet me know if you have any other questions about Enterprise or anything else at Quillfox—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 2264.7503330372274,
-        "tokens_in": 1921,
-        "tokens_out": 39,
-        "cost_usd": 0.0028167,
+        "latency_ms": 12186.507208971307,
+        "tokens_in": 8881,
+        "tokens_out": 103,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -464,12 +460,12 @@
         "plans"
       ],
       "output": {
-        "output": "Yes, the Free plan includes 7 days of version history, so you can restore any earlier version of a note within that window.",
+        "output": "Yes, it sure does! The **Free plan** includes **7 days of version history**, and you can restore any earlier version of a note within that 7-day window.\n\nIf you ever need a longer lookback window, our paid plans offer even more:\n- **Plus:** 90 days of version history\n- **Team:** 365 days of version history\n- **Enterprise:** Unlimited version history\n\nLet me know if you have any other questions—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 1852.8727079974487,
-        "tokens_in": 1920,
-        "tokens_out": 38,
-        "cost_usd": 0.0028027,
+        "latency_ms": 11464.621333987452,
+        "tokens_in": 8882,
+        "tokens_out": 110,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -500,12 +496,12 @@
         "billing"
       ],
       "output": {
-        "output": "No, you don't need a credit card to start a trial. Both Plus and Team come with a 21-day free trial that can be started without one.",
+        "output": "No, you don't need a credit card at all! Both our **Plus** and **Team** plans come with a **21-day free trial**, and you can jump right in and start exploring Quillfox without entering any payment information. \n\nLet me know if you have any questions about choosing between Plus and Team—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 2318.333458970301,
-        "tokens_in": 1923,
-        "tokens_out": 43,
-        "cost_usd": 0.0028647,
+        "latency_ms": 14656.920042005368,
+        "tokens_in": 8880,
+        "tokens_out": 79,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -536,12 +532,12 @@
         "billing"
       ],
       "output": {
-        "output": "Yes, annual plans can be refunded in full within 30 days of purchase. After that window, the facts I have don't cover refunds, so you'd need to contact support.",
+        "output": "Yes, you can! Annual plans can be refunded in full within **30 days of purchase**. \n\n(Just as a helpful note, monthly plans aren't eligible for refunds, though they can be cancelled at any time and will remain active until the end of your current billing period.)\n\nLet me know if you'd like help with an annual plan refund or have any other questions!",
         "retrieved": [],
-        "latency_ms": 3254.000541055575,
-        "tokens_in": 1920,
-        "tokens_out": 54,
-        "cost_usd": 0.0029627,
+        "latency_ms": 11598.089084029198,
+        "tokens_in": 8879,
+        "tokens_out": 84,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -572,12 +568,12 @@
         "billing"
       ],
       "output": {
-        "output": "A monthly plan stays active until the end of the current billing period after you cancel, and then it stops. Keep in mind that monthly plans aren't refunded, so you won't get money back for the unused part of that period.",
+        "output": "Hi there! Happy to help with this. \n\nYou can cancel a monthly plan at any time, and it will **stay active until the end of your current billing period** (note that monthly plans are not refunded). \n\nOnce your billing period ends and your account moves to the Free plan (1 user, 3 notebooks, 100 MB of storage, and 7 days of version history), none of your data is deleted—if you're over the Free plan limits, any extra notes simply become read-only.\n\nLet me know if there's anything else I can help you with!",
         "retrieved": [],
-        "latency_ms": 2057.045791996643,
-        "tokens_in": 1927,
-        "tokens_out": 67,
-        "cost_usd": 0.0031206999999999997,
+        "latency_ms": 12619.506792048924,
+        "tokens_in": 8882,
+        "tokens_out": 130,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -608,12 +604,12 @@
         "billing"
       ],
       "output": {
-        "output": "No, bank transfer is only available on the Enterprise plan. On Team, you can pay by credit or debit card, or PayPal.",
+        "output": "Hi there! Happy to help with your question about payment methods.\n\nBank transfer isn't available on the Team plan—that payment option is only offered on our Enterprise plan (which has custom pricing and a minimum of 50 seats). \n\nFor the Team plan, you can pay using a **credit card**, **debit card**, or **PayPal**, and you can choose either monthly billing ($11 per user/month) or annual billing ($110 per user/year, with a minimum of 3 seats). You'll also receive emailed invoices on the 1st of each month!\n\nLet me know if you have any other questions about setting up your Team plan!",
         "retrieved": [],
-        "latency_ms": 1886.7175420746207,
-        "tokens_in": 1924,
-        "tokens_out": 44,
-        "cost_usd": 0.0028786999999999997,
+        "latency_ms": 15435.324833029881,
+        "tokens_in": 8890,
+        "tokens_out": 146,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -644,12 +640,12 @@
         "billing"
       ],
       "output": {
-        "output": "Invoices are emailed on the 1st of each month.",
+        "output": "Hi there! Happy to help with that!\n\nInvoices are emailed out on the **1st of each month**.\n\nPlease let me know if you have any other billing questions or if there's anything else I can assist you with!",
         "retrieved": [],
-        "latency_ms": 2089.2419170122594,
-        "tokens_in": 1916,
-        "tokens_out": 19,
-        "cost_usd": 0.0025967,
+        "latency_ms": 11277.016334002838,
+        "tokens_in": 8879,
+        "tokens_out": 52,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -680,21 +676,21 @@
         "limits"
       ],
       "output": {
-        "output": "The maximum attachment size on Plus is 25 MB.",
+        "output": "On the **Plus** plan, the maximum attachment size is **25 MB**! (And you also get 10 GB of total storage per user to keep all your notes and files organized.)\n\nIf you ever need to upload larger files, our **Team** and **Enterprise** plans support attachments up to **200 MB** each. \n\nLet me know if you have any other questions about Plus—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 1888.5237920330837,
-        "tokens_in": 1924,
-        "tokens_out": 21,
-        "cost_usd": 0.0026487,
+        "latency_ms": 17374.856667011045,
+        "tokens_in": 8874,
+        "tokens_out": 97,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
       },
       "scores": {
         "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
+          "value": 0.0,
+          "passed": false,
+          "reason": "rejected by '\\\\b200\\\\s?MB\\\\b'",
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
         },
@@ -706,8 +702,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "ca284a93044c41a5",
-      "content_hash": "d427547d225ca498",
+      "case_hash": "ba3e9c28807ef878",
+      "content_hash": "c8f3e5f0a6c2e531",
       "trial": 0
     },
     {
@@ -716,12 +712,12 @@
         "limits"
       ],
       "output": {
-        "output": "A single notebook can hold up to 5,000 notes.",
+        "output": "A single notebook in Quillfox can hold up to **5,000 notes**! \n\nLet me know if you have any other questions about notebooks, storage, or our plans—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 1807.224916992709,
-        "tokens_in": 1920,
-        "tokens_out": 20,
-        "cost_usd": 0.0026227,
+        "latency_ms": 13117.202832945623,
+        "tokens_in": 8882,
+        "tokens_out": 50,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -752,12 +748,12 @@
         "limits"
       ],
       "output": {
-        "output": "If you downgrade to Free and are over its limits, the extra notes become read-only. Nothing is deleted.",
+        "output": "If you downgrade to the Free plan while you're over its limits (1 user, 3 notebooks, and 100 MB of storage), **nothing is deleted**! Any extra notes simply become **read-only**, so you'll still have full access to view and export them (to Markdown, PDF, or HTML) whenever you need. \n\nFor reference, on the Free plan you'll also have 7 days of version history, a 25 MB maximum attachment size, and the ability to share up to 5 notes publicly.\n\nLet me know if you have any other questions—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 1953.5123750101775,
-        "tokens_in": 1934,
-        "tokens_out": 37,
-        "cost_usd": 0.0028487,
+        "latency_ms": 17112.926749978215,
+        "tokens_in": 8892,
+        "tokens_out": 137,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -788,12 +784,12 @@
         "platforms"
       ],
       "output": {
-        "output": "Quillfox supports macOS 13 or later.",
+        "output": "Quillfox supports **macOS 13 or later** for the desktop app (which also includes offline editing support!). \n\nIf you happen to be on an older version of macOS, you can still access Quillfox directly through the web app whenever you have an internet connection. Let me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 1931.0703329974785,
-        "tokens_in": 1919,
-        "tokens_out": 18,
-        "cost_usd": 0.0025987,
+        "latency_ms": 14022.107915952802,
+        "tokens_in": 8876,
+        "tokens_out": 72,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -824,12 +820,12 @@
         "platforms"
       ],
       "output": {
-        "output": "Quillfox requires Android 12 or later.",
+        "output": "Hi there! Happy to help! \n\nThe Quillfox mobile app requires **Android 12 or later**. \n\nJust a quick tip: if you happen to be on an older Android device, you can still access your notes anytime through the Quillfox web app in your mobile browser (as long as you have an internet connection). \n\nLet me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 1791.188208037056,
-        "tokens_in": 1918,
-        "tokens_out": 17,
-        "cost_usd": 0.0025846999999999997,
+        "latency_ms": 12025.404207990505,
+        "tokens_in": 8891,
+        "tokens_out": 84,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -860,12 +856,12 @@
         "platforms"
       ],
       "output": {
-        "output": "No, the web app needs an internet connection. Offline editing is available in the desktop apps (Windows 11, macOS 13+) and mobile apps (iOS 16+, Android 12+).",
+        "output": "No, the Quillfox web app requires an internet connection to work. \n\nHowever, if you need to edit your notes offline, our desktop and mobile apps support offline editing! They are available for:\n- **Desktop:** Windows 11 and macOS 13 (or later)\n- **Mobile:** iOS 16 (or later) and Android 12 (or later)\n\nOnce you're back online, your changes will automatically sync within 5 seconds. Let me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 2078.6848339485005,
-        "tokens_in": 1916,
-        "tokens_out": 63,
-        "cost_usd": 0.0030367,
+        "latency_ms": 12827.55825005006,
+        "tokens_in": 8881,
+        "tokens_out": 115,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -896,12 +892,12 @@
         "platforms"
       ],
       "output": {
-        "output": "When devices are online, changes sync within 5 seconds. The desktop and mobile apps also support offline editing, but the web app needs a connection to work.",
+        "output": "Hi there! Happy to help!\n\nWhen you're online, changes sync between your devices **within 5 seconds**. \n\nIf you happen to go offline, our desktop and mobile apps also support offline editing—as soon as you reconnect to the internet, your changes will sync right up (note that the web app does require an active connection).\n\nLet me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 2348.093291046098,
-        "tokens_in": 1922,
-        "tokens_out": 49,
-        "cost_usd": 0.0029207,
+        "latency_ms": 12624.261916964315,
+        "tokens_in": 8882,
+        "tokens_out": 86,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -932,12 +928,12 @@
         "platforms"
       ],
       "output": {
-        "output": "Yes, Quillfox supports screen readers on all platforms (Windows, macOS, iOS, Android, and the web).",
+        "output": "Yes, it does! Screen reader support is available across all Quillfox platforms—including our apps for Windows 11, macOS 13 or later, iOS 16 or later, Android 12 or later, and the web. \n\nLet me know if you have any other questions about accessibility or getting started with Quillfox!",
         "retrieved": [],
-        "latency_ms": 2106.9488329812884,
-        "tokens_in": 1922,
-        "tokens_out": 42,
-        "cost_usd": 0.0028507000000000003,
+        "latency_ms": 17329.32395907119,
+        "tokens_in": 8877,
+        "tokens_out": 76,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -968,12 +964,12 @@
         "security"
       ],
       "output": {
-        "output": "Data in Quillfox is encrypted at rest with AES-256 (and in transit with TLS 1.3).",
+        "output": "At Quillfox, your data is encrypted at rest using **AES-256** encryption! (And when your data is in transit, it's protected with **TLS 1.3**.) \n\nPlease let me know if you have any other questions about how we keep your notes secure!",
         "retrieved": [],
-        "latency_ms": 1913.1353750126436,
-        "tokens_in": 1917,
-        "tokens_out": 38,
-        "cost_usd": 0.0027907,
+        "latency_ms": 15737.286790972576,
+        "tokens_in": 8881,
+        "tokens_out": 66,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1004,12 +1000,12 @@
         "security"
       ],
       "output": {
-        "output": "No, Quillfox doesn't support SMS codes for two-factor authentication. You can use an authenticator app or a security key instead.",
+        "output": "Hi there! Thanks for reaching out!\n\nQuillfox does **not** support SMS codes for two-factor authentication. Instead, you can set up two-factor authentication using either an **authenticator app** or a **security key**. \n\nIf you are on our **Team** (or **Enterprise**) plan, we also support **single sign-on (SSO) through SAML**.\n\nLet me know if you have any other questions about keeping your account secure—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 1913.065000087954,
-        "tokens_in": 1925,
-        "tokens_out": 44,
-        "cost_usd": 0.0028827,
+        "latency_ms": 19028.273125062697,
+        "tokens_in": 8884,
+        "tokens_out": 107,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1040,12 +1036,12 @@
         "security"
       ],
       "output": {
-        "output": "Quillfox data is hosted in either Frankfurt (EU) or Virginia (US), depending on the region chosen at signup. The region can't be changed later, and I don't have information on which one your account uses, so please contact support if you need to confirm it.",
+        "output": "Hi there! Happy to help with this!\n\nYour Quillfox data is hosted in either **Frankfurt (EU)** or **Virginia (US)**, depending on the region that was selected when your account was created. Please note that the hosting region is chosen at signup and cannot be changed afterward.\n\nTo keep your notes safe and secure, all of your data is encrypted at rest using **AES-256** and in transit using **TLS 1.3**.\n\nLet me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 2330.807042075321,
-        "tokens_in": 1917,
-        "tokens_out": 81,
-        "cost_usd": 0.0032207,
+        "latency_ms": 21342.52949990332,
+        "tokens_in": 8885,
+        "tokens_out": 110,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1076,12 +1072,12 @@
         "security"
       ],
       "output": {
-        "output": "A deleted Quillfox account can be recovered for 14 days. After that, it's permanently erased within 30 days of deletion.",
+        "output": "Hi there! Happy to help with this!\n\nA deleted Quillfox account can be recovered for **14 days** after deletion. After that recovery window passes, the account and its data are permanently erased within **30 days** of deletion.\n\nLet me know if you need help recovering an account or have any other questions!",
         "retrieved": [],
-        "latency_ms": 1935.918082948774,
-        "tokens_in": 1919,
-        "tokens_out": 43,
-        "cost_usd": 0.0028487,
+        "latency_ms": 15809.744082973339,
+        "tokens_in": 8878,
+        "tokens_out": 71,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1112,12 +1108,12 @@
         "features"
       ],
       "output": {
-        "output": "Quillfox can export notes to Markdown, PDF, and HTML.",
+        "output": "You can export your notes from Quillfox in **Markdown**, **PDF**, and **HTML** formats! \n\nLet me know if you need any help with exporting your notes or have any other questions!",
         "retrieved": [],
-        "latency_ms": 1955.619917018339,
-        "tokens_in": 1916,
-        "tokens_out": 26,
-        "cost_usd": 0.0026667,
+        "latency_ms": 11016.571167041548,
+        "tokens_in": 8880,
+        "tokens_out": 45,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1148,21 +1144,21 @@
         "features"
       ],
       "output": {
-        "output": "The REST API is available on the Team and Enterprise plans, limited to 600 requests per minute per workspace.",
+        "output": "Hi there! Happy to help!\n\nThe REST API is included on our **Team** and **Enterprise** plans (and it's not available on the Free or Plus plans). \n\nHere are a few helpful details if you're looking to get started with it:\n- **Rate limit:** The REST API is limited to **600 requests per minute per workspace**.\n- **Team plan:** $11 per user/month billed monthly, or $110 per user/year billed annually (minimum 3 seats). You can also test it out with our **21-day free trial**—no credit card required!\n- **Enterprise plan:** Custom pricing (minimum 50 seats).\n\nLet me know if you have any other questions about our plans or the API!",
         "retrieved": [],
-        "latency_ms": 1938.8170840684325,
-        "tokens_in": 1919,
-        "tokens_out": 37,
-        "cost_usd": 0.0027887,
+        "latency_ms": 16286.807999946177,
+        "tokens_in": 8876,
+        "tokens_out": 169,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
       },
       "scores": {
         "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
+          "value": 0.0,
+          "passed": false,
+          "reason": "rejected by \"\\\\bplus\\\\b(?!.{0,40}\\\\b(not|doesn't|does not|no)\\\\b)\"",
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
         },
@@ -1174,8 +1170,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "09e41a44b4b8d7d1",
-      "content_hash": "2046c8b9148856e8",
+      "case_hash": "7a69cbf1fabb9259",
+      "content_hash": "020b204e98565688",
       "trial": 0
     },
     {
@@ -1184,12 +1180,12 @@
         "features"
       ],
       "output": {
-        "output": "Quillfox integrates with Slack, Google Drive, and GitHub. There's no Microsoft Teams integration yet.",
+        "output": "Quillfox integrates with **Slack**, **Google Drive**, and **GitHub**! (Please note that we don't have a Microsoft Teams integration yet.)\n\nIf you're looking to build custom connections or workflows, our **Team** and **Enterprise** plans also include access to a **REST API** (up to 600 requests per minute per workspace), as well as **single sign-on (SSO) through SAML**. Plus, on any plan, you can easily import notes from **Evernote** (`.enex` files) and **Markdown**, or export your notes to **Markdown**, **PDF**, and **HTML**.\n\nLet me know if you have any questions about setting these up—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 2091.4311250671744,
-        "tokens_in": 1917,
-        "tokens_out": 43,
-        "cost_usd": 0.0028407000000000003,
+        "latency_ms": 13949.96641704347,
+        "tokens_in": 8869,
+        "tokens_out": 159,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1220,12 +1216,12 @@
         "features"
       ],
       "output": {
-        "output": "Quillfox includes 40 built-in templates.",
+        "output": "Quillfox comes with **40 built-in templates**! \n\nLet me know if you have any other questions about our features—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 1895.244290935807,
-        "tokens_in": 1918,
-        "tokens_out": 18,
-        "cost_usd": 0.0025946999999999997,
+        "latency_ms": 10897.751249955036,
+        "tokens_in": 8873,
+        "tokens_out": 40,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1256,12 +1252,12 @@
         "features"
       ],
       "output": {
-        "output": "Yes, any earlier version of a note can be restored within your plan's version history window: 7 days on Free, 90 days on Plus, 365 days on Team, and unlimited on Enterprise.",
+        "output": "Yes, you can! Any earlier version of a note can be restored as long as it falls within your plan's version history window. \n\nHere is how far back your version history goes depending on your plan:\n- **Free:** 7 days\n- **Plus:** 90 days\n- **Team:** 365 days\n- **Enterprise:** Unlimited version history\n\nLet me know if you have any questions about your plan or need help with anything else!",
         "retrieved": [],
-        "latency_ms": 2472.561499918811,
-        "tokens_in": 1919,
-        "tokens_out": 64,
-        "cost_usd": 0.0030587,
+        "latency_ms": 14554.528416018002,
+        "tokens_in": 8894,
+        "tokens_out": 102,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1292,12 +1288,12 @@
         "support"
       ],
       "output": {
-        "output": "On the Plus plan, email support replies within 1 business day.",
+        "output": "Hi there! On the **Plus** plan, you have access to email support, and our team replies within **1 business day**.\n\nFor comparison, if you ever need even faster turnaround times:\n- **Free:** Email replies within 2 business days.\n- **Team:** Email replies within 4 hours (during business hours), plus access to live chat Monday to Friday, 08:00–18:00 CET.\n- **Enterprise:** Includes live chat, phone support, and a dedicated support manager.\n\nLet me know if you have any other questions about Plus or our other plans—I'm happy to help!",
         "retrieved": [],
-        "latency_ms": 1861.246959073469,
-        "tokens_in": 1921,
-        "tokens_out": 21,
-        "cost_usd": 0.0026367,
+        "latency_ms": 13467.793666059151,
+        "tokens_in": 8882,
+        "tokens_out": 138,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1328,12 +1324,12 @@
         "support"
       ],
       "output": {
-        "output": "Live chat is available on the Team and Enterprise plans, Monday to Friday, 08:00–18:00 CET.",
+        "output": "Hi there! Great question—happy to help!\n\nLive chat support is included on our **Team** and **Enterprise** plans. It's available Monday to Friday from 08:00–18:00 CET.\n\nHere’s a quick overview of how support works across all our plans:\n- **Free & Plus:** Include email support (with replies within 2 business days on Free, and 1 business day on Plus).\n- **Team:** Includes **live chat** plus priority email support (with replies within 4 hours during business hours).\n- **Enterprise:** Includes **live chat**, email support, phone support, and a dedicated support manager.\n\nIf you'd like to try out the Team plan first, you can start a 21-day free trial anytime with no credit card required! Let me know if you have any other questions.",
         "retrieved": [],
-        "latency_ms": 2061.1054999753833,
-        "tokens_in": 1918,
-        "tokens_out": 41,
-        "cost_usd": 0.0028247,
+        "latency_ms": 18342.52499998547,
+        "tokens_in": 8870,
+        "tokens_out": 187,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1364,12 +1360,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on the per-user storage for Enterprise; the details I have only list unlimited version history, audit log export, and a dedicated support manager. Please contact support or your Enterprise account contact to confirm the storage amount.",
+        "output": "Hi there! Happy to help with your question about Quillfox!\n\nOur product information doesn't actually list a specific per-user storage amount for the **Enterprise** plan. Here is what the Enterprise plan details do specify:\n\n* **Pricing & Seats:** Custom pricing with a minimum of 50 seats\n* **Attachment Limit:** Up to 200 MB per attachment\n* **Additional Enterprise Perks:** Unlimited version history, audit log export, a dedicated support manager, REST API access (600 requests/minute per workspace), bank transfer payment options, and phone & live chat support.\n\nFor comparison, the **Team** plan includes **50 GB of storage per user** (along with 10 GB per user on Plus, and 100 MB total on Free). Since Enterprise plans have custom terms, the exact per-user storage allocation would need to be confirmed directly with the sales or account team as part of your custom quote.\n\nPlease let me know if you have any other questions about Enterprise features or any of our other plans!",
         "retrieved": [],
-        "latency_ms": 2361.2093339907005,
-        "tokens_in": 1920,
-        "tokens_out": 74,
-        "cost_usd": 0.0031627,
+        "latency_ms": 14208.137291949242,
+        "tokens_in": 8883,
+        "tokens_out": 223,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1400,12 +1396,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information about an uptime SLA, so I can't say what Quillfox guarantees. Please contact support (email is available on every plan) to get an answer on that.",
+        "output": "Hi there! Thanks for reaching out to Quillfox support!\n\nI don't have information in our product documentation regarding a specific uptime SLA or guarantee. \n\nHere is what I can share about how our service and support work across our plans:\n- **Sync & Offline Access:** Our desktop (Windows 11, macOS 13+) and mobile (iOS 16+, Android 12+) apps support full offline editing, and changes sync within 5 seconds once you're back online. (The web app requires an active connection.)\n- **Data Hosting & Security:** Your data is hosted in either Frankfurt (EU) or Virginia (US)—chosen at signup—and is encrypted at rest with AES-256 and in transit with TLS 1.3.\n- **Enterprise Support:** If your organization is looking into our **Enterprise** plan (custom pricing, 50-seat minimum), it includes a dedicated support manager and phone support, in addition to live chat (Monday–Friday, 08:00–18:00 CET) and email support.\n\nIf you need formal SLA terms for an Enterprise agreement, our sales team or a dedicated support manager would be the best contact to clarify if custom terms are available. Let me know if I can help answer anything else about Quillfox's plans or features!",
         "retrieved": [],
-        "latency_ms": 2225.951125030406,
-        "tokens_in": 1921,
-        "tokens_out": 54,
-        "cost_usd": 0.0029667,
+        "latency_ms": 21298.164875013754,
+        "tokens_in": 8881,
+        "tokens_out": 285,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1436,12 +1432,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on a limit for the number of guests. What I can tell you is that guests can view shared notes without an account. For specifics on guest limits, please contact support.",
+        "output": "Hi there! Thanks for reaching out to Quillfox support!\n\nI don't have the exact limit on the number of guests you can invite to a workspace in the information available to me right now. Here is what I can share about how guest access and sharing work in Quillfox:\n\n- **No account required for guests:** Guests can view shared notes without needing a Quillfox account.\n- **Public note sharing limit on Free:** If you are on the **Free** plan, you can share up to **5 notes** publicly.\n- **Paid plans & seats:** If you need full workspace members rather than view-only guests, **Team** plans require a minimum of 3 seats (and admins can add more seats anytime with daily prorated billing), while **Enterprise** starts at 50 seats.\n\nIf you need the exact cap on workspace guests for your plan, please reach out to our team via **email support** (available on all plans) or **live chat** (available on Team and Enterprise, Monday–Friday, 08:00–18:00 CET) so we can check that specific detail for you!",
         "retrieved": [],
-        "latency_ms": 2232.215292053297,
-        "tokens_in": 1922,
-        "tokens_out": 53,
-        "cost_usd": 0.0029607,
+        "latency_ms": 17959.304708987474,
+        "tokens_in": 8884,
+        "tokens_out": 242,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1472,12 +1468,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on how many people use Quillfox. For that, please contact our support team.",
+        "output": "Hi there! Thanks for reaching out! \n\nI don't have information on the total number of people currently using Quillfox, as user count statistics aren't included in our available product facts. \n\nHowever, if you're asking about how many people can use Quillfox on a specific plan, here is how our seat limits work:\n- **Free:** 1 user\n- **Plus:** Billed per user ($6/month or $60/year), suitable for individuals or multiple users\n- **Team:** Minimum of 3 seats ($11/user/month or $110/user/year), and admins can add more seats at any time\n- **Enterprise:** Minimum of 50 seats with custom pricing\n\nIf you have any questions about our plans, features, or starting a 21-day free trial (no credit card needed!), I'd be happy to help!",
         "retrieved": [],
-        "latency_ms": 1895.1855830382556,
-        "tokens_in": 1919,
-        "tokens_out": 28,
-        "cost_usd": 0.0026987,
+        "latency_ms": 15973.485166905448,
+        "tokens_in": 8881,
+        "tokens_out": 195,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1508,12 +1504,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have Plus pricing in euros. Plus is $6 per user per month billed monthly, or $60 per user per year billed annually. For euro pricing, please contact support.",
+        "output": "Hi there! Thanks for reaching out!\n\nOur Plus plan is priced in US dollars (USD):\n- **$6 USD** per user per month (when billed monthly)\n- **$60 USD** per user per year (when billed annually)\n\nWe don't have separate fixed pricing in euros (EUR) listed in our plan details—if you pay using a credit/debit card or PayPal from a euro-denominated account, the exact amount in euros will depend on your payment provider's exchange rate at the time of billing.\n\nPlus comes with unlimited notebooks, 10 GB of storage per user, and 90 days of version history, and you can also try it out with a **21-day free trial** (no credit card required!). \n\nLet me know if you have any other questions!",
         "retrieved": [],
-        "latency_ms": 2104.1525829350576,
-        "tokens_in": 1918,
-        "tokens_out": 58,
-        "cost_usd": 0.0029947,
+        "latency_ms": 15507.762583903968,
+        "tokens_in": 8871,
+        "tokens_out": 176,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null

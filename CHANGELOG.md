@@ -23,8 +23,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - [MEASUREMENTS.md section 10](https://github.com/technobasant/evalproof/blob/main/MEASUREMENTS.md#10-frontier-models-on-a-sample): the support Q&A
   and ticket-router cases on three hosted frontier models (`claude-sonnet-5-5`, `gpt-6-astra`,
   `gemini-4-argon-medium`), a 42- and 30-case sample, 558 calls. The regex answer key failed 12
-  correct answers and alone reported the same 7.1-point regression on every model; a reviewed
-  key removes it. Run files, the reviewed key and `measure_cli.py` are in `examples/cli-study/`.
+  correct answers and alone showed a 7.1-point drop of the same size on every model, from
+  different cases; a reviewed key, written after reading the answers, removes it. Run files, both
+  keys and `measure.py`, which re-scores every stored answer, are in `examples/frontier-study/`.
 
 ### Changed
 

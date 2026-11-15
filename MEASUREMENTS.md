@@ -5,7 +5,7 @@ one machine. The run files are committed in `examples/support-qa/runs/`, and
 `uv run python examples/support-qa/measure.py` recomputes the calibration, comparison and
 latency tables from them without a model. Sections 1–9 use small local models; section 10
 repeats part of the study on three hosted frontier models, with its own run files and script in
-[`examples/cli-study`](https://github.com/technobasant/evalproof/blob/main/examples/cli-study).
+[`examples/frontier-study`](https://github.com/technobasant/evalproof/blob/main/examples/frontier-study).
 
 ## Setup
 
@@ -284,10 +284,11 @@ Sections 1–9 measure small local models. This section asks whether the same ch
 hosted frontier models, at a size meant to show the effect rather than to rank models: every
 second case of the revised support set (42 of 83) and of the [ticket-router
 set](https://github.com/technobasant/evalproof/blob/main/examples/deterministic) (30 of 60), 558
-calls in all, no judge. `uv run python examples/cli-study/measure_cli.py` recomputes every
-figure below from the committed run files; [the study's
-README](https://github.com/technobasant/evalproof/blob/main/examples/cli-study/README.md) lists
-the files.
+calls in all, no judge. `uv run python examples/frontier-study/measure.py` recomputes every
+figure below from the committed run files and re-scores every stored answer against the
+committed answer keys; [the study's
+README](https://github.com/technobasant/evalproof/blob/main/examples/frontier-study/README.md)
+lists the files and every change made to the key.
 
 | | |
 |---|---|
@@ -295,7 +296,7 @@ the files.
 | Date | 2026-11-15, evalproof 0.8.0 |
 | Sampling | the provider default; temperature and seed cannot be set |
 | Support Q&A | the grounded prompt twice (84 answers per model), the friendly prompt once (42) |
-| Ticket router | one-word queue label with [`prompt.router.md`](https://github.com/technobasant/evalproof/blob/main/examples/cli-study/prompt.router.md), twice (60 answers per model) |
+| Ticket router | one-word queue label with [`prompt.router.md`](https://github.com/technobasant/evalproof/blob/main/examples/frontier-study/prompt.router.md), twice (60 answers per model) |
 | Scoring | the regex answer key as written (`answer_key`), the same key after review (`answer_key_reviewed`, the gate metric), and exact label match for the router |
 
 | Model | Grounded, key as written | Grounded, reviewed key | Friendly, key as written | Friendly, reviewed key | Router | Latency p50 (support / router) |
@@ -307,40 +308,49 @@ the files.
 **What this shows.**
 
 * **Every failure the answer key reported was the key's error.** It failed 12 of the 378 support
-  answers, and a reading of each found all 12 correct: refusals written with a typographic
-  apostrophe ("I don’t have information…") that the key's `'` did not match, and answers that
-  added a true fact about another plan, which a reject pattern took for the wrong answer (q05,
-  q37, q63). The review accepts `’` and rejects only the wrong claim; it flips exactly those 12
-  and no pass, and still fails invented answers ("Enterprise costs $25 per user per month"). It
-  was written after reading the outputs, so it is not blind; both keys are in every run file.
-  A key written against a small model's terse answers fails a frontier model's fuller ones.
-* **The key alone would have reported the same regression on all three models.** With the key as
-  written, the friendly prompt drops every model by 7.1 points (3 of 42 cases, McNemar p = 0.25),
-  more than the gate's 3-point threshold. The gate passed it with a warning only because 42
-  cases cannot separate 3 discordant cases from noise (it detects drops of about 11 points at
-  80% power). With the reviewed key the change is +0.0 on every model and the gate passes. A
-  paired test cannot tell a scorer's error from a regression; only reading the failing answers
-  can, which is what `compare` lists them for.
-* **The friendly prompt that hurt the small model did not hurt these.** On `qwen3:1.7b` it cost
-  6.0 points on the key (section 1). Here every model still declined all five questions the
-  facts do not answer (15 of 15), and the reviewed key finds no regression, though 42 cases
-  cannot rule out a small one: the friendly prompt's 95% interval reaches down to 91.6%. The
-  prompt did change the style: median answer
-  length went from 19.5 to 60 words for `claude-sonnet-5-5`, 13 to 17.5 for `gpt-6-astra` and
-  20 to 75.5 for `gemini-4-argon-medium`.
-* **The text varies between runs; the verdicts did not.** Run twice with the same prompt, 17 to
-  29 of the 42 support answers came back worded differently on each model, yet on the reviewed
-  key and the router no case changed verdict: 0 of 216 case pairs (95% upper bound 1.7%; 5.1%
-  per model). The three verdict changes the key as written showed between runs (q37 on
-  `claude-sonnet-5-5`, q79 and q81 on `gpt-6-astra`) were wording that the key misread, which is
-  how text-level noise turns into a flaky test.
+  answers, and a reading of each against the product facts found all 12 correct: five refusals
+  written with a typographic apostrophe ("I don’t have information…") that the key's `'` did not
+  match, and seven answers that added a true fact about another plan, which a reject pattern
+  took for the wrong answer (q05, q37, q63). The reviewed key accepts `’` and narrows those three
+  patterns to the wrong claim itself; wrong answers written for the purpose ("Enterprise pricing
+  is custom. It typically works out to about $25 per user per month"; "200 MB on Plus") still
+  fail it. It was written after reading the outputs, so it is not blind, and the 100% it gives
+  below is a pass rate on a key fitted to these answers, not evidence that the models make no
+  errors. Both keys are in every run file. A key written against a small model's terse answers
+  failed these models' fuller ones.
+* **The key alone showed a regression of the same size on all three models.** With the key as
+  written, the friendly prompt drops every model by 7.1 points (3 of 42 cases, none the other
+  way, McNemar p = 0.25), more than the gate's 3-point tolerance. The failing cases differ:
+  q05, q37 and q63 for `claude-sonnet-5-5` and `gemini-4-argon-medium`, the three apostrophe
+  refusals for `gpt-6-astra`. The gate warned rather than failed because 3 cases are not
+  significant; on 42 cases the exact test needs at least 6 cases worse and none better, a
+  14.3-point drop, before it can call a drop real. With the reviewed key the change is 0 on every
+  model and the gate passes. A paired test cannot tell a scorer's error from a regression; only
+  reading the failing answers can, which is what `compare` lists them for.
+* **No regression from the friendly prompt was detected here, on 42 cases.** On `qwen3:1.7b` it
+  cost 6.0 points on the key (section 5, p = 0.23, not significant). Here the reviewed key passes every
+  answer, but 42 cases cannot rule out a small drop (the 95% interval for 42 of 42 reaches down
+  to 91.6%), and the five questions the facts do not answer have no reject patterns, so a
+  refusal followed by a guess passes: on q83 `gpt-6-astra` and `gemini-4-argon-medium` declined
+  to give a euro price and then said it would depend on the payment provider's exchange rate,
+  which the facts do not say. The prompt did change the style: median answer length went from
+  19.5 to 60 words for `claude-sonnet-5-5`, 13 to 17.5 for `gpt-6-astra` and 20 to 75.5 for
+  `gemini-4-argon-medium`.
+* **The text varies between runs; the router's verdicts did not.** Run twice with the same
+  prompt, 17 to 29 of the 42 support answers came back worded differently on each model. The
+  router, scored by labels written before the runs, gave the same label on both runs in all 90
+  case pairs (95% upper bound on the change rate 3.3% overall, 9.5% per model). The support
+  verdicts are not evidence either way: the reviewed key was fitted to both runs' answers, so
+  agreement on it holds by construction. The key as written changed its verdict between runs
+  three times (q37 on `claude-sonnet-5-5`, q79 and q81 on `gpt-6-astra`), each time on wording
+  it misread, which is how text-level variation turns into a flaky test.
 * **The router agrees with itself and with the other models.** All three models gave identical
   labels on both runs. The one miss, t53 "Do you have a student discount?", is labelled `other`;
   all three said `billing`, and the router prompt puts prices under billing, so the label is the
   likelier error.
 
-Latency differs by a factor of six, but it includes each provider's client and its own
-instructions, so it describes the models as served here, not their APIs.
+Latency differs by a factor of six, but it includes each provider's serving path, so it
+describes the models as reached here, not their APIs.
 
 ## Limits
 
@@ -356,8 +366,9 @@ instructions, so it describes the models as served here, not their APIs.
   elsewhere.
 * The runs in `runs/` keep the original references, including two (q21, q22) that name a
   plan the product facts do not; section 8 reports the corrected set separately.
-* Section 10 is a sample: 42 support and 30 router cases, two runs, one day. Two of the three
-  models were reached through a client that adds its own instructions ahead of the suite's
-  prompt (for the Google model these included two generic account rules about git commits and
-  pull requests), so the results describe the models as served that way. Its reviewed key was
-  written after the outputs were read, by one reviewer with a model's help.
+* Section 10 is a sample: 42 support and 30 router cases, two runs, one day. For the Anthropic
+  and OpenAI models the suite's prompt replaced the system prompt. For the Google model it could
+  not be set as a system prompt; it was sent at the start of the message, after the serving
+  client's own instructions, which included two unrelated rules about git commits and pull
+  requests. Its reviewed key was written after the outputs were read, by one reviewer with a
+  model's help, and is not a blind measurement.

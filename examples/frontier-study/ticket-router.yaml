@@ -1,7 +1,7 @@
 # Study (2026-11): the 60 ticket-routing cases of ../deterministic, answered by a model instead
 # of keyword rules. One exact label per case and no judge, so a repeated run measures pure
 # sampling noise. One variant per model; each writes runs/<variant>.json. See README.md.
-name: ticket-router-cli
+name: ticket-router-frontier
 dataset: ticket-router.sample.jsonl  # every second case of ../deterministic/cases.jsonl (30 of 60)
 seed: 0
 
@@ -13,13 +13,13 @@ system:
   timeout_s: 300
 
 variants:
-  - name: claude
-  - name: codex
+  - name: anthropic
+  - name: openai
     system:
       target: codex:gpt-6-astra
       label: "OpenAI GPT-6 Astra (medium effort)"
       params: {extra: {reasoning_effort: medium}}
-  - name: gemini
+  - name: google
     system:
       target: cursor:gemini-4-argon-medium
       label: "Google Gemini 4 Argon Medium"

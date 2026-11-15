@@ -5,8 +5,10 @@ description: What the measurements and the method do not show: sample size, gold
 # Limits
 
 * The measurements cover one machine, two small local models, one product domain and
-  83 cases, plus a 42-case sample on three hosted models (MEASUREMENTS §10). They show the
-  method; they are not a benchmark of those models.
+  83 cases, plus a sample of 42 support and 30 router cases on three hosted models
+  ([section 10](measurements.md#10-frontier-models-on-a-sample)), scored by an answer key
+  reviewed after reading their answers. They show the method; they are not a benchmark of
+  those models.
 * Calibration is only as good as its gold labels — [MEASUREMENTS §4](measurements.md)
   shows a regex answer key being wrong more often than the judge. Use human labels when
   the decision matters.

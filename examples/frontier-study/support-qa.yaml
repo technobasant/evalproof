@@ -1,7 +1,7 @@
 # Study (2026-11): the support-qa cases on three frontier models from three providers.
 # No judge: the regex answer key is the gate metric.
 # One variant per model and prompt; each writes runs/<variant>.json. See README.md.
-name: support-qa-cli
+name: support-qa-frontier
 dataset: support-qa.sample.jsonl  # every second case of ../support-qa/cases.jsonl (42 of 83)
 seed: 0
 
@@ -13,27 +13,27 @@ system:
   timeout_s: 300
 
 variants:
-  - name: claude-baseline
-  - name: claude-candidate
+  - name: anthropic-baseline
+  - name: anthropic-candidate
     system:
       label: "Anthropic Claude Sonnet 5.5 + friendly prompt"
       system_prompt_file: ../support-qa/prompt.candidate.md
-  - name: codex-baseline
+  - name: openai-baseline
     system:
       target: codex:gpt-6-astra
       label: "OpenAI GPT-6 Astra (medium effort) + grounded prompt"
       params: {extra: {reasoning_effort: medium}}
-  - name: codex-candidate
+  - name: openai-candidate
     system:
       target: codex:gpt-6-astra
       label: "OpenAI GPT-6 Astra (medium effort) + friendly prompt"
       system_prompt_file: ../support-qa/prompt.candidate.md
       params: {extra: {reasoning_effort: medium}}
-  - name: gemini-baseline
+  - name: google-baseline
     system:
       target: cursor:gemini-4-argon-medium
       label: "Google Gemini 4 Argon Medium + grounded prompt"
-  - name: gemini-candidate
+  - name: google-candidate
     system:
       target: cursor:gemini-4-argon-medium
       label: "Google Gemini 4 Argon Medium + friendly prompt"
@@ -45,8 +45,8 @@ scorers:
     type: regex
     params: {any_of_field: accept, none_of_field: reject}
   # The same key after a hand review of every failure (README.md, "Answer key review"): curly
-  # apostrophes accepted everywhere; q05, q37 and q63 reject only the wrong claim, not any mention
-  # of another plan. It flips the 12 raw-key failures, all correct answers, and no passes.
+  # apostrophes accepted everywhere; q05, q37 and q63 reject the wrong claim instead of any
+  # mention of another plan. Written after reading the outputs; see the README for its limits.
   - name: answer_key_reviewed
     type: regex
     params: {any_of_field: accept_reviewed, none_of_field: reject_reviewed}

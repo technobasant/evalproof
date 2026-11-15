@@ -1,12 +1,12 @@
 {
   "info": {
-    "suite": "support-qa-cli",
-    "system": "Google Gemini 4 Argon Medium + grounded prompt",
+    "suite": "support-qa-frontier",
+    "system": "Anthropic Claude Sonnet 5.5 + grounded prompt",
     "dataset_path": "support-qa.sample.jsonl",
-    "dataset_hash": "d8153b286d07c1c5",
-    "started_at": "2026-11-15T04:33:42+00:00",
-    "finished_at": "2026-11-15T04:33:42+00:00",
-    "wall_time_s": 0.026,
+    "dataset_hash": "03e03610fbf641ca",
+    "started_at": "2026-11-15T05:02:09+00:00",
+    "finished_at": "2026-11-15T05:02:09+00:00",
+    "wall_time_s": 0.024,
     "evalproof_version": "0.8.0",
     "seed": 0,
     "environment": {
@@ -14,15 +14,11 @@
       "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
       "machine": "arm64",
       "processor": "arm",
-      "system_target": "cursor:gemini-4-argon-medium",
-      "system_cli": "cursor",
-      "system_cli_version": "2026.11.13-eacade1",
-      "system_isolation": "cursor/3",
-      "system_sampling": "cli-default",
-      "system_model_resolved": "gemini-4-argon-medium"
+      "system_target": "claude-code:claude-sonnet-5-5",
+      "system_model_resolved": "claude-sonnet-5-5"
     },
-    "suite_hash": "c8bc50b1d23db4e8",
-    "variant": "gemini-baseline",
+    "suite_hash": "b4f1ebdfe1e6e5b1",
+    "variant": "anthropic-baseline",
     "trials": 2
   },
   "results": [
@@ -32,12 +28,12 @@
         "pricing"
       ],
       "output": {
-        "output": "Quillfox Plus costs $6 per user per month when billed monthly, or $60 per user per year when billed annually.",
+        "output": "Quillfox Plus costs $6 per user per month when billed monthly, or $60 per user per year (about $5/month) when billed annually.",
         "retrieved": [],
-        "latency_ms": 13441.788666998036,
-        "tokens_in": 8902,
-        "tokens_out": 31,
-        "cost_usd": 0.0,
+        "latency_ms": 2208.515250007622,
+        "tokens_in": 1926,
+        "tokens_out": 47,
+        "cost_usd": 0.00817,
         "cached": true,
         "error": null,
         "trace": null
@@ -68,12 +64,12 @@
         "pricing"
       ],
       "output": {
-        "output": "Quillfox Plus costs $6 per user per month when billed monthly, or $60 per user per year when billed annually.",
+        "output": "Quillfox Plus costs $6 per user per month when billed monthly, or $60 per user per year (about $5 per month) when billed annually.",
         "retrieved": [],
-        "latency_ms": 15267.212291946635,
-        "tokens_in": 8902,
-        "tokens_out": 31,
-        "cost_usd": 0.0,
+        "latency_ms": 1948.404207942076,
+        "tokens_in": 1926,
+        "tokens_out": 48,
+        "cost_usd": 0.0019985000000000003,
         "cached": true,
         "error": null,
         "trace": null
@@ -104,12 +100,12 @@
         "pricing"
       ],
       "output": {
-        "output": "The Team plan costs $11 per user per month when billed monthly, or $110 per user per year when billed annually, with a minimum of 3 seats.",
+        "output": "The Team plan is $11 per user per month when billed monthly, or $110 per user per year if you pay annually. It requires a minimum of 3 seats.",
         "retrieved": [],
-        "latency_ms": 14905.139458016492,
-        "tokens_in": 8911,
-        "tokens_out": 40,
-        "cost_usd": 0.0,
+        "latency_ms": 1925.0290830386803,
+        "tokens_in": 1922,
+        "tokens_out": 51,
+        "cost_usd": 0.0029407,
         "cached": true,
         "error": null,
         "trace": null
@@ -140,12 +136,12 @@
         "pricing"
       ],
       "output": {
-        "output": "The Team plan is $11 per user per month when billed monthly, or $110 per user per year when billed annually, with a minimum of 3 seats.",
+        "output": "The Team plan is $11 per user per month when billed monthly, or $110 per user per year (about $9.17/month) when billed annually. It requires a minimum of 3 seats.",
         "retrieved": [],
-        "latency_ms": 11814.461916917935,
-        "tokens_in": 8916,
-        "tokens_out": 40,
-        "cost_usd": 0.0,
+        "latency_ms": 1954.4552499428391,
+        "tokens_in": 1922,
+        "tokens_out": 59,
+        "cost_usd": 0.002112,
         "cached": true,
         "error": null,
         "trace": null
@@ -176,12 +172,12 @@
         "pricing"
       ],
       "output": {
-        "output": "The Enterprise plan has custom pricing and requires a minimum of 50 seats. Bank transfer is also available as a payment method exclusively on the Enterprise plan, alongside credit or debit card and PayPal.",
+        "output": "Enterprise pricing is custom, with a minimum of 50 seats. I don't have specific per-seat rates, so please contact support or the sales team for a quote.",
         "retrieved": [],
-        "latency_ms": 13482.268917025067,
-        "tokens_in": 8902,
-        "tokens_out": 44,
-        "cost_usd": 0.0,
+        "latency_ms": 2011.1818329896778,
+        "tokens_in": 1918,
+        "tokens_out": 54,
+        "cost_usd": 0.0029546999999999998,
         "cached": true,
         "error": null,
         "trace": null
@@ -202,8 +198,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "754f7891a89cdff8",
-      "content_hash": "a3af8023132867c6",
+      "case_hash": "6eca3d46d7114518",
+      "content_hash": "ea35bfa950de1e98",
       "trial": 0
     },
     {
@@ -212,12 +208,12 @@
         "pricing"
       ],
       "output": {
-        "output": "The Enterprise plan uses custom pricing and requires a minimum of 50 seats. Please contact support for specific pricing details.",
+        "output": "Enterprise uses custom pricing with a minimum of 50 seats. I don't have specific rates, so please contact support or the sales team for a quote.",
         "retrieved": [],
-        "latency_ms": 13336.551415966824,
-        "tokens_in": 8892,
-        "tokens_out": 28,
-        "cost_usd": 0.0,
+        "latency_ms": 2350.6995419738814,
+        "tokens_in": 1920,
+        "tokens_out": 50,
+        "cost_usd": 0.002014,
         "cached": true,
         "error": null,
         "trace": null
@@ -238,8 +234,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "754f7891a89cdff8",
-      "content_hash": "a3af8023132867c6",
+      "case_hash": "6eca3d46d7114518",
+      "content_hash": "ea35bfa950de1e98",
       "trial": 1
     },
     {
@@ -248,12 +244,12 @@
         "pricing"
       ],
       "output": {
-        "output": "One user saves $12 per year on the Plus plan by paying annually ($60 per year) instead of monthly ($6 per month, or $72 per year).",
+        "output": "One user saves $12 per year on Plus by paying annually: monthly billing comes to $72 per year ($6 × 12), while annual billing is $60.",
         "retrieved": [],
-        "latency_ms": 13138.412749976851,
-        "tokens_in": 8912,
-        "tokens_out": 40,
-        "cost_usd": 0.0,
+        "latency_ms": 2244.2860000301152,
+        "tokens_in": 1933,
+        "tokens_out": 51,
+        "cost_usd": 0.0029847,
         "cached": true,
         "error": null,
         "trace": null
@@ -284,12 +280,12 @@
         "pricing"
       ],
       "output": {
-        "output": "One user saves $12 per year on the Plus plan by paying annually ($60/year) instead of monthly ($6/month, or $72/year).",
+        "output": "One user saves $12 per year on Plus by paying annually: $60 per year versus $72 (12 × $6) when billed monthly.",
         "retrieved": [],
-        "latency_ms": 12659.022375009954,
-        "tokens_in": 8912,
-        "tokens_out": 40,
-        "cost_usd": 0.0,
+        "latency_ms": 2031.539374962449,
+        "tokens_in": 1931,
+        "tokens_out": 45,
+        "cost_usd": 0.0019651,
         "cached": true,
         "error": null,
         "trace": null
@@ -320,552 +316,552 @@
         "pricing"
       ],
       "output": {
-        "output": "Yes, nonprofits receive a 40% discount on the Team plan.",
+        "output": "Yes, nonprofits get 40% off the Team plan. There are no other nonprofit discounts listed.",
         "retrieved": [],
-        "latency_ms": 14035.46008397825,
-        "tokens_in": 8901,
-        "tokens_out": 19,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "b61c54ad2598cd67",
-      "content_hash": "4eabc81962627857",
-      "trial": 0
-    },
-    {
-      "case_id": "q09",
-      "tags": [
-        "pricing"
-      ],
-      "output": {
-        "output": "Yes, nonprofits receive a 40% discount on the Team plan.",
-        "retrieved": [],
-        "latency_ms": 13209.296791930683,
-        "tokens_in": 8896,
-        "tokens_out": 19,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "b61c54ad2598cd67",
-      "content_hash": "4eabc81962627857",
-      "trial": 1
-    },
-    {
-      "case_id": "q11",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "The Team plan has a minimum of 3 seats.",
-        "retrieved": [],
-        "latency_ms": 11381.115666939877,
-        "tokens_in": 8902,
-        "tokens_out": 15,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "f1e73a977c390561",
-      "content_hash": "b025633b400f6c27",
-      "trial": 0
-    },
-    {
-      "case_id": "q11",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "The Team plan has a minimum of 3 seats.",
-        "retrieved": [],
-        "latency_ms": 12944.086832925677,
-        "tokens_in": 8902,
-        "tokens_out": 15,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "f1e73a977c390561",
-      "content_hash": "b025633b400f6c27",
-      "trial": 1
-    },
-    {
-      "case_id": "q13",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "The Free plan includes 100 MB of storage.",
-        "retrieved": [],
-        "latency_ms": 14250.89179200586,
-        "tokens_in": 8909,
-        "tokens_out": 16,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "23f5be3f456474b3",
-      "content_hash": "e455ce6ca48bb765",
-      "trial": 0
-    },
-    {
-      "case_id": "q13",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "The Free plan includes 100 MB of storage.",
-        "retrieved": [],
-        "latency_ms": 11528.21416594088,
-        "tokens_in": 8904,
-        "tokens_out": 16,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "23f5be3f456474b3",
-      "content_hash": "e455ce6ca48bb765",
-      "trial": 1
-    },
-    {
-      "case_id": "q15",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "Each user on the Team plan gets 50 GB of storage.",
-        "retrieved": [],
-        "latency_ms": 11526.703333016485,
-        "tokens_in": 8899,
-        "tokens_out": 127,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "d10c12d850d25a39",
-      "content_hash": "5c6732414212549b",
-      "trial": 0
-    },
-    {
-      "case_id": "q15",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "Each user on the Team plan gets 50 GB of storage.",
-        "retrieved": [],
-        "latency_ms": 12761.614958988503,
-        "tokens_in": 8904,
-        "tokens_out": 18,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "d10c12d850d25a39",
-      "content_hash": "5c6732414212549b",
-      "trial": 1
-    },
-    {
-      "case_id": "q17",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "On the Free plan, version history is kept for 7 days. Any earlier version of a note can be restored within that 7-day window.",
-        "retrieved": [],
-        "latency_ms": 12263.116333982907,
-        "tokens_in": 8901,
-        "tokens_out": 35,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "6f3650f36b0c294a",
-      "content_hash": "4f21d09f39ea3d92",
-      "trial": 0
-    },
-    {
-      "case_id": "q17",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "On the Free plan, version history is kept for 7 days. Any earlier version of a note can be restored within that 7-day window.",
-        "retrieved": [],
-        "latency_ms": 22106.547000003047,
-        "tokens_in": 8906,
-        "tokens_out": 35,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "6f3650f36b0c294a",
-      "content_hash": "4f21d09f39ea3d92",
-      "trial": 1
-    },
-    {
-      "case_id": "q19",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "On the Team plan, version history is kept for 365 days. Any earlier version of a note can be restored within that window.",
-        "retrieved": [],
-        "latency_ms": 12786.231082980521,
-        "tokens_in": 8899,
-        "tokens_out": 33,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "7fae881d6e958851",
-      "content_hash": "5135f7b92583a991",
-      "trial": 0
-    },
-    {
-      "case_id": "q19",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "On the Team plan, version history is kept for 365 days. Any earlier version of a note can be restored within that window.",
-        "retrieved": [],
-        "latency_ms": 10761.53749995865,
-        "tokens_in": 8904,
-        "tokens_out": 33,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "7fae881d6e958851",
-      "content_hash": "5135f7b92583a991",
-      "trial": 1
-    },
-    {
-      "case_id": "q21",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "Single sign-on (SSO) through SAML is included in the Team plan ($11 per user per month billed monthly, or $110 per user per year billed annually, with a minimum of 3 seats).",
-        "retrieved": [],
-        "latency_ms": 12971.225375076756,
-        "tokens_in": 8900,
-        "tokens_out": 50,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "0af4cf777ea86718",
-      "content_hash": "6567eb9bd4cb04b8",
-      "trial": 0
-    },
-    {
-      "case_id": "q21",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "Single sign-on (SSO) through SAML is included on the Team plan ($11 per user per month billed monthly, or $110 per user per year billed annually, with a minimum of 3 seats).",
-        "retrieved": [],
-        "latency_ms": 12414.825084037147,
-        "tokens_in": 8900,
-        "tokens_out": 50,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "0af4cf777ea86718",
-      "content_hash": "6567eb9bd4cb04b8",
-      "trial": 1
-    },
-    {
-      "case_id": "q23",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "Yes, the Enterprise plan includes audit log export. It also comes with custom pricing (for a minimum of 50 seats), unlimited version history, and a dedicated support manager.",
-        "retrieved": [],
-        "latency_ms": 14037.988874944858,
-        "tokens_in": 8897,
-        "tokens_out": 40,
-        "cost_usd": 0.0,
-        "cached": true,
-        "error": null,
-        "trace": null
-      },
-      "scores": {
-        "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        },
-        "answer_key_reviewed": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
-          "judge_tokens": 0,
-          "judge_cost_usd": 0.0
-        }
-      },
-      "case_hash": "d5035b8ef95286cf",
-      "content_hash": "1132a4442d282928",
-      "trial": 0
-    },
-    {
-      "case_id": "q23",
-      "tags": [
-        "plans"
-      ],
-      "output": {
-        "output": "Yes, the Enterprise plan includes audit log export. It also comes with unlimited version history, a dedicated support manager, and requires a minimum of 50 seats.",
-        "retrieved": [],
-        "latency_ms": 11784.777916967869,
-        "tokens_in": 8902,
+        "latency_ms": 1983.0289580859244,
+        "tokens_in": 1921,
         "tokens_out": 37,
-        "cost_usd": 0.0,
+        "cost_usd": 0.0027967,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "b61c54ad2598cd67",
+      "content_hash": "4eabc81962627857",
+      "trial": 0
+    },
+    {
+      "case_id": "q09",
+      "tags": [
+        "pricing"
+      ],
+      "output": {
+        "output": "Yes, nonprofits get 40% off the Team plan. There are no other discounts beyond that and the free year of Plus for students with a valid .edu email.",
+        "retrieved": [],
+        "latency_ms": 2241.758625023067,
+        "tokens_in": 1919,
+        "tokens_out": 52,
+        "cost_usd": 0.0020339,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "b61c54ad2598cd67",
+      "content_hash": "4eabc81962627857",
+      "trial": 1
+    },
+    {
+      "case_id": "q11",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Team plan has a minimum of 3 seats.",
+        "retrieved": [],
+        "latency_ms": 2095.907000009902,
+        "tokens_in": 1925,
+        "tokens_out": 19,
+        "cost_usd": 0.0026327,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "f1e73a977c390561",
+      "content_hash": "b025633b400f6c27",
+      "trial": 0
+    },
+    {
+      "case_id": "q11",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Team plan has a minimum of 3 seats.",
+        "retrieved": [],
+        "latency_ms": 1812.9470830317587,
+        "tokens_in": 1926,
+        "tokens_out": 19,
+        "cost_usd": 0.0017124000000000002,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "f1e73a977c390561",
+      "content_hash": "b025633b400f6c27",
+      "trial": 1
+    },
+    {
+      "case_id": "q13",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Free plan includes 100 MB of storage.",
+        "retrieved": [],
+        "latency_ms": 1816.8724589049816,
+        "tokens_in": 1920,
+        "tokens_out": 18,
+        "cost_usd": 0.0026027,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "23f5be3f456474b3",
+      "content_hash": "e455ce6ca48bb765",
+      "trial": 0
+    },
+    {
+      "case_id": "q13",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Free plan includes 100 MB of storage.",
+        "retrieved": [],
+        "latency_ms": 1757.6272909063846,
+        "tokens_in": 1921,
+        "tokens_out": 18,
+        "cost_usd": 0.0017019000000000001,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "23f5be3f456474b3",
+      "content_hash": "e455ce6ca48bb765",
+      "trial": 1
+    },
+    {
+      "case_id": "q15",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Each Team user gets 50 GB of storage.",
+        "retrieved": [],
+        "latency_ms": 2018.2339999591932,
+        "tokens_in": 1918,
+        "tokens_out": 18,
+        "cost_usd": 0.0025946999999999997,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d10c12d850d25a39",
+      "content_hash": "5c6732414212549b",
+      "trial": 0
+    },
+    {
+      "case_id": "q15",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Each Team user gets 50 GB of storage.",
+        "retrieved": [],
+        "latency_ms": 1781.116124941036,
+        "tokens_in": 1919,
+        "tokens_out": 18,
+        "cost_usd": 0.0016978,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d10c12d850d25a39",
+      "content_hash": "5c6732414212549b",
+      "trial": 1
+    },
+    {
+      "case_id": "q17",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Free plan keeps 7 days of version history.",
+        "retrieved": [],
+        "latency_ms": 1915.88220896665,
+        "tokens_in": 1920,
+        "tokens_out": 18,
+        "cost_usd": 0.0026027,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6f3650f36b0c294a",
+      "content_hash": "4f21d09f39ea3d92",
+      "trial": 0
+    },
+    {
+      "case_id": "q17",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Free plan keeps 7 days of version history.",
+        "retrieved": [],
+        "latency_ms": 1971.011665998958,
+        "tokens_in": 1921,
+        "tokens_out": 18,
+        "cost_usd": 0.0016941,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "6f3650f36b0c294a",
+      "content_hash": "4f21d09f39ea3d92",
+      "trial": 1
+    },
+    {
+      "case_id": "q19",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Team plan keeps version history for 365 days, and you can restore any earlier version of a note within that window.",
+        "retrieved": [],
+        "latency_ms": 1989.705792046152,
+        "tokens_in": 1919,
+        "tokens_out": 35,
+        "cost_usd": 0.0027687,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "7fae881d6e958851",
+      "content_hash": "5135f7b92583a991",
+      "trial": 0
+    },
+    {
+      "case_id": "q19",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Team plan keeps 365 days of version history, and you can restore any earlier version of a note within that window.",
+        "retrieved": [],
+        "latency_ms": 2094.1611250163987,
+        "tokens_in": 1919,
+        "tokens_out": 34,
+        "cost_usd": 0.0018578000000000002,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "7fae881d6e958851",
+      "content_hash": "5135f7b92583a991",
+      "trial": 1
+    },
+    {
+      "case_id": "q21",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "SSO (through SAML) is included in the Team plan ($11 per user per month billed monthly, or $110 per user per year billed annually). Enterprise is the other higher tier, but the facts I have only list SSO under Team, so I can't confirm whether Enterprise includes it, so please contact support if you need that detail.",
+        "retrieved": [],
+        "latency_ms": 2278.4012090414762,
+        "tokens_in": 1917,
+        "tokens_out": 104,
+        "cost_usd": 0.0034507,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "0af4cf777ea86718",
+      "content_hash": "6567eb9bd4cb04b8",
+      "trial": 0
+    },
+    {
+      "case_id": "q21",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "The Team plan includes single sign-on (SSO) through SAML. The facts I have don't say whether Enterprise includes SSO, so for that I'd suggest contacting support.",
+        "retrieved": [],
+        "latency_ms": 2256.5345839830115,
+        "tokens_in": 1917,
+        "tokens_out": 59,
+        "cost_usd": 0.0021037,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "0af4cf777ea86718",
+      "content_hash": "6567eb9bd4cb04b8",
+      "trial": 1
+    },
+    {
+      "case_id": "q23",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Yes, the Enterprise plan includes audit log export, along with unlimited version history and a dedicated support manager.",
+        "retrieved": [],
+        "latency_ms": 2264.7503330372274,
+        "tokens_in": 1921,
+        "tokens_out": 39,
+        "cost_usd": 0.0028167,
+        "cached": true,
+        "error": null,
+        "trace": null
+      },
+      "scores": {
+        "answer_key": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
+        }
+      },
+      "case_hash": "d5035b8ef95286cf",
+      "content_hash": "1132a4442d282928",
+      "trial": 0
+    },
+    {
+      "case_id": "q23",
+      "tags": [
+        "plans"
+      ],
+      "output": {
+        "output": "Yes, the Enterprise plan includes audit log export, along with unlimited version history and a dedicated support manager.",
+        "retrieved": [],
+        "latency_ms": 1987.4262920347974,
+        "tokens_in": 1921,
+        "tokens_out": 39,
+        "cost_usd": 0.001908,
         "cached": true,
         "error": null,
         "trace": null
@@ -896,12 +892,12 @@
         "plans"
       ],
       "output": {
-        "output": "Yes, the Free plan includes 7 days of version history. You can restore any earlier version of a note within that 7-day window.",
+        "output": "Yes, the Free plan includes 7 days of version history, so you can restore any earlier version of a note within that window.",
         "retrieved": [],
-        "latency_ms": 12717.45529200416,
-        "tokens_in": 8903,
-        "tokens_out": 34,
-        "cost_usd": 0.0,
+        "latency_ms": 1852.8727079974487,
+        "tokens_in": 1920,
+        "tokens_out": 38,
+        "cost_usd": 0.0028027,
         "cached": true,
         "error": null,
         "trace": null
@@ -932,12 +928,12 @@
         "plans"
       ],
       "output": {
-        "output": "Yes, the Free plan includes 7 days of version history. You can restore any earlier version of a note within that 7-day window.",
+        "output": "Yes, the Free plan includes 7 days of version history. You can restore any earlier version of a note within that window.",
         "retrieved": [],
-        "latency_ms": 11811.288750031963,
-        "tokens_in": 8903,
-        "tokens_out": 34,
-        "cost_usd": 0.0,
+        "latency_ms": 2032.5121249770746,
+        "tokens_in": 1917,
+        "tokens_out": 37,
+        "cost_usd": 0.0018798,
         "cached": true,
         "error": null,
         "trace": null
@@ -968,12 +964,12 @@
         "billing"
       ],
       "output": {
-        "output": "No, a credit card is not needed to start a 21-day free trial of the Plus or Team plan.",
+        "output": "No, you don't need a credit card to start a trial. Both Plus and Team come with a 21-day free trial that can be started without one.",
         "retrieved": [],
-        "latency_ms": 12387.79283396434,
-        "tokens_in": 8896,
-        "tokens_out": 29,
-        "cost_usd": 0.0,
+        "latency_ms": 2318.333458970301,
+        "tokens_in": 1923,
+        "tokens_out": 43,
+        "cost_usd": 0.0028647,
         "cached": true,
         "error": null,
         "trace": null
@@ -1004,12 +1000,12 @@
         "billing"
       ],
       "output": {
-        "output": "No, a credit card is not needed to start the 21-day free trial for the Plus or Team plan.",
+        "output": "No, you don't need a credit card to start a trial. The Plus and Team plans both come with a 21-day free trial that can be started without one.",
         "retrieved": [],
-        "latency_ms": 31172.226040973328,
-        "tokens_in": 8901,
-        "tokens_out": 29,
-        "cost_usd": 0.0,
+        "latency_ms": 1815.252875094302,
+        "tokens_in": 1922,
+        "tokens_out": 45,
+        "cost_usd": 0.0019681,
         "cached": true,
         "error": null,
         "trace": null
@@ -1040,12 +1036,12 @@
         "billing"
       ],
       "output": {
-        "output": "Yes, annual plans can be refunded in full within 30 days of purchase.",
+        "output": "Yes, annual plans can be refunded in full within 30 days of purchase. After that window, the facts I have don't cover refunds, so you'd need to contact support.",
         "retrieved": [],
-        "latency_ms": 14172.504832968116,
-        "tokens_in": 8910,
-        "tokens_out": 21,
-        "cost_usd": 0.0,
+        "latency_ms": 3254.000541055575,
+        "tokens_in": 1920,
+        "tokens_out": 54,
+        "cost_usd": 0.0029627,
         "cached": true,
         "error": null,
         "trace": null
@@ -1076,12 +1072,12 @@
         "billing"
       ],
       "output": {
-        "output": "Yes, annual plans can be refunded in full within 30 days of purchase.",
+        "output": "Yes, annual plans can be refunded in full within 30 days of purchase. Monthly plans aren't refundable, but you can cancel them anytime and they stay active until the end of the current billing period.",
         "retrieved": [],
-        "latency_ms": 11252.350874943659,
-        "tokens_in": 8910,
-        "tokens_out": 21,
-        "cost_usd": 0.0,
+        "latency_ms": 2051.863291999325,
+        "tokens_in": 1921,
+        "tokens_out": 65,
+        "cost_usd": 0.0021641,
         "cached": true,
         "error": null,
         "trace": null
@@ -1112,12 +1108,12 @@
         "billing"
       ],
       "output": {
-        "output": "Monthly plans can be cancelled at any time and stay active until the end of the current billing period. If you downgrade to Free and exceed its limits, your extra notes become read-only and nothing is deleted.",
+        "output": "A monthly plan stays active until the end of the current billing period after you cancel, and then it stops. Keep in mind that monthly plans aren't refunded, so you won't get money back for the unused part of that period.",
         "retrieved": [],
-        "latency_ms": 13407.330374931917,
-        "tokens_in": 8898,
-        "tokens_out": 46,
-        "cost_usd": 0.0,
+        "latency_ms": 2057.045791996643,
+        "tokens_in": 1927,
+        "tokens_out": 67,
+        "cost_usd": 0.0031206999999999997,
         "cached": true,
         "error": null,
         "trace": null
@@ -1148,12 +1144,12 @@
         "billing"
       ],
       "output": {
-        "output": "Monthly plans can be cancelled at any time and stay active until the end of your current billing period.",
+        "output": "A monthly plan stays active until the end of your current billing period after you cancel, and you can cancel at any time. Monthly plans aren't refunded, so you keep access for the time you've already paid for.",
         "retrieved": [],
-        "latency_ms": 12723.914708010852,
-        "tokens_in": 8908,
-        "tokens_out": 24,
-        "cost_usd": 0.0,
+        "latency_ms": 2295.523834065534,
+        "tokens_in": 1927,
+        "tokens_out": 64,
+        "cost_usd": 0.0021586,
         "cached": true,
         "error": null,
         "trace": null
@@ -1184,12 +1180,12 @@
         "billing"
       ],
       "output": {
-        "output": "No, bank transfer is only available on the Enterprise plan. On the Team plan, you can pay with a credit or debit card, or PayPal.",
+        "output": "No, bank transfer is only available on the Enterprise plan. On Team, you can pay by credit or debit card, or PayPal.",
         "retrieved": [],
-        "latency_ms": 16176.341707934625,
-        "tokens_in": 8896,
-        "tokens_out": 35,
-        "cost_usd": 0.0,
+        "latency_ms": 1886.7175420746207,
+        "tokens_in": 1924,
+        "tokens_out": 44,
+        "cost_usd": 0.0028786999999999997,
         "cached": true,
         "error": null,
         "trace": null
@@ -1220,12 +1216,12 @@
         "billing"
       ],
       "output": {
-        "output": "No, bank transfer is only available on the Enterprise plan. On the Team plan, you can pay with a credit or debit card or via PayPal.",
+        "output": "No, bank transfer is only available on the Enterprise plan. On Team, you can pay by credit or debit card, or PayPal.",
         "retrieved": [],
-        "latency_ms": 11774.856082978658,
-        "tokens_in": 8906,
-        "tokens_out": 35,
-        "cost_usd": 0.0,
+        "latency_ms": 2294.9726250953972,
+        "tokens_in": 1926,
+        "tokens_out": 44,
+        "cost_usd": 0.0019585,
         "cached": true,
         "error": null,
         "trace": null
@@ -1258,10 +1254,10 @@
       "output": {
         "output": "Invoices are emailed on the 1st of each month.",
         "retrieved": [],
-        "latency_ms": 10641.548166051507,
-        "tokens_in": 8905,
-        "tokens_out": 47,
-        "cost_usd": 0.0,
+        "latency_ms": 2089.2419170122594,
+        "tokens_in": 1916,
+        "tokens_out": 19,
+        "cost_usd": 0.0025967,
         "cached": true,
         "error": null,
         "trace": null
@@ -1294,10 +1290,10 @@
       "output": {
         "output": "Invoices are emailed on the 1st of each month.",
         "retrieved": [],
-        "latency_ms": 10573.87987500988,
-        "tokens_in": 8905,
-        "tokens_out": 16,
-        "cost_usd": 0.0,
+        "latency_ms": 2026.0945829795673,
+        "tokens_in": 1915,
+        "tokens_out": 19,
+        "cost_usd": 0.0017035,
         "cached": true,
         "error": null,
         "trace": null
@@ -1328,12 +1324,12 @@
         "limits"
       ],
       "output": {
-        "output": "The maximum attachment size on the Plus plan is 25 MB.",
+        "output": "The maximum attachment size on Plus is 25 MB.",
         "retrieved": [],
-        "latency_ms": 30605.318791000172,
-        "tokens_in": 8905,
-        "tokens_out": 18,
-        "cost_usd": 0.0,
+        "latency_ms": 1888.5237920330837,
+        "tokens_in": 1924,
+        "tokens_out": 21,
+        "cost_usd": 0.0026487,
         "cached": true,
         "error": null,
         "trace": null
@@ -1354,8 +1350,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "ca284a93044c41a5",
-      "content_hash": "d427547d225ca498",
+      "case_hash": "ba3e9c28807ef878",
+      "content_hash": "c8f3e5f0a6c2e531",
       "trial": 0
     },
     {
@@ -1364,21 +1360,21 @@
         "limits"
       ],
       "output": {
-        "output": "The maximum attachment size on the Plus plan is 25 MB.",
+        "output": "The maximum attachment size on Plus is 25 MB (the same as on Free). Team and Enterprise allow up to 200 MB.",
         "retrieved": [],
-        "latency_ms": 13460.919583099894,
-        "tokens_in": 8905,
-        "tokens_out": 18,
-        "cost_usd": 0.0,
+        "latency_ms": 1999.789374996908,
+        "tokens_in": 1923,
+        "tokens_out": 46,
+        "cost_usd": 0.0019782000000000003,
         "cached": true,
         "error": null,
         "trace": null
       },
       "scores": {
         "answer_key": {
-          "value": 1.0,
-          "passed": true,
-          "reason": null,
+          "value": 0.0,
+          "passed": false,
+          "reason": "rejected by '\\\\b200\\\\s?MB\\\\b'",
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
         },
@@ -1390,8 +1386,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "ca284a93044c41a5",
-      "content_hash": "d427547d225ca498",
+      "case_hash": "ba3e9c28807ef878",
+      "content_hash": "c8f3e5f0a6c2e531",
       "trial": 1
     },
     {
@@ -1402,10 +1398,10 @@
       "output": {
         "output": "A single notebook can hold up to 5,000 notes.",
         "retrieved": [],
-        "latency_ms": 10660.266000078991,
-        "tokens_in": 8903,
-        "tokens_out": 19,
-        "cost_usd": 0.0,
+        "latency_ms": 1807.224916992709,
+        "tokens_in": 1920,
+        "tokens_out": 20,
+        "cost_usd": 0.0026227,
         "cached": true,
         "error": null,
         "trace": null
@@ -1438,10 +1434,10 @@
       "output": {
         "output": "A single notebook can hold up to 5,000 notes.",
         "retrieved": [],
-        "latency_ms": 11478.00937492866,
-        "tokens_in": 8898,
-        "tokens_out": 19,
-        "cost_usd": 0.0,
+        "latency_ms": 2008.7236249819398,
+        "tokens_in": 1920,
+        "tokens_out": 20,
+        "cost_usd": 0.0017179,
         "cached": true,
         "error": null,
         "trace": null
@@ -1472,12 +1468,12 @@
         "limits"
       ],
       "output": {
-        "output": "If you downgrade to the Free plan and exceed its limits, your extra notes will become read-only. Nothing is deleted.",
+        "output": "If you downgrade to Free and are over its limits, the extra notes become read-only. Nothing is deleted.",
         "retrieved": [],
-        "latency_ms": 13151.924249948934,
-        "tokens_in": 8913,
-        "tokens_out": 29,
-        "cost_usd": 0.0,
+        "latency_ms": 1953.5123750101775,
+        "tokens_in": 1934,
+        "tokens_out": 37,
+        "cost_usd": 0.0028487,
         "cached": true,
         "error": null,
         "trace": null
@@ -1508,12 +1504,12 @@
         "limits"
       ],
       "output": {
-        "output": "If you downgrade to the Free plan and exceed its limits, your extra notes will become read-only. Nothing will be deleted.",
+        "output": "If you downgrade to Free and you're over its limits, the extra notes become read-only. Nothing is deleted.",
         "retrieved": [],
-        "latency_ms": 12395.332540967502,
-        "tokens_in": 8908,
-        "tokens_out": 30,
-        "cost_usd": 0.0,
+        "latency_ms": 1832.6873329933733,
+        "tokens_in": 1933,
+        "tokens_out": 38,
+        "cost_usd": 0.0018992,
         "cached": true,
         "error": null,
         "trace": null
@@ -1546,10 +1542,10 @@
       "output": {
         "output": "Quillfox supports macOS 13 or later.",
         "retrieved": [],
-        "latency_ms": 10249.021791969426,
-        "tokens_in": 8897,
-        "tokens_out": 16,
-        "cost_usd": 0.0,
+        "latency_ms": 1931.0703329974785,
+        "tokens_in": 1919,
+        "tokens_out": 18,
+        "cost_usd": 0.0025987,
         "cached": true,
         "error": null,
         "trace": null
@@ -1580,12 +1576,12 @@
         "platforms"
       ],
       "output": {
-        "output": "The Quillfox desktop app supports macOS 13 or later. You can also access Quillfox through the web app.",
+        "output": "Quillfox supports macOS 13 or later.",
         "retrieved": [],
-        "latency_ms": 13398.820915957913,
-        "tokens_in": 8887,
-        "tokens_out": 29,
-        "cost_usd": 0.0,
+        "latency_ms": 1732.0105829276145,
+        "tokens_in": 1920,
+        "tokens_out": 18,
+        "cost_usd": 0.0017018,
         "cached": true,
         "error": null,
         "trace": null
@@ -1616,12 +1612,12 @@
         "platforms"
       ],
       "output": {
-        "output": "The Quillfox Android app requires Android 12 or later.",
+        "output": "Quillfox requires Android 12 or later.",
         "retrieved": [],
-        "latency_ms": 11366.434041992761,
-        "tokens_in": 8902,
+        "latency_ms": 1791.188208037056,
+        "tokens_in": 1918,
         "tokens_out": 17,
-        "cost_usd": 0.0,
+        "cost_usd": 0.0025846999999999997,
         "cached": true,
         "error": null,
         "trace": null
@@ -1652,12 +1648,12 @@
         "platforms"
       ],
       "output": {
-        "output": "The Quillfox Android app requires Android 12 or later.",
+        "output": "Quillfox requires Android 12 or later.",
         "retrieved": [],
-        "latency_ms": 10864.961624960415,
-        "tokens_in": 8897,
+        "latency_ms": 1913.103208062239,
+        "tokens_in": 1919,
         "tokens_out": 17,
-        "cost_usd": 0.0,
+        "cost_usd": 0.0016917,
         "cached": true,
         "error": null,
         "trace": null
@@ -1688,12 +1684,12 @@
         "platforms"
       ],
       "output": {
-        "output": "No, the web app requires an internet connection. Offline editing is only supported on the desktop and mobile apps.",
+        "output": "No, the web app needs an internet connection. Offline editing is available in the desktop apps (Windows 11, macOS 13+) and mobile apps (iOS 16+, Android 12+).",
         "retrieved": [],
-        "latency_ms": 15775.86812491063,
-        "tokens_in": 8902,
-        "tokens_out": 26,
-        "cost_usd": 0.0,
+        "latency_ms": 2078.6848339485005,
+        "tokens_in": 1916,
+        "tokens_out": 63,
+        "cost_usd": 0.0030367,
         "cached": true,
         "error": null,
         "trace": null
@@ -1724,12 +1720,12 @@
         "platforms"
       ],
       "output": {
-        "output": "No, the web app requires an internet connection. Offline editing is only supported on the desktop and mobile apps.",
+        "output": "No, the web app needs an internet connection. Offline editing is only available in the desktop apps (Windows 11, macOS 13+) and the mobile apps (iOS 16+, Android 12+).",
         "retrieved": [],
-        "latency_ms": 10420.272042043507,
-        "tokens_in": 8897,
-        "tokens_out": 26,
-        "cost_usd": 0.0,
+        "latency_ms": 1986.0760420560837,
+        "tokens_in": 1915,
+        "tokens_out": 65,
+        "cost_usd": 0.0021596000000000002,
         "cached": true,
         "error": null,
         "trace": null
@@ -1760,12 +1756,12 @@
         "platforms"
       ],
       "output": {
-        "output": "When online, changes sync within 5 seconds. Desktop and mobile apps also support offline editing, while the web app requires an internet connection.",
+        "output": "When devices are online, changes sync within 5 seconds. The desktop and mobile apps also support offline editing, but the web app needs a connection to work.",
         "retrieved": [],
-        "latency_ms": 11857.527832966298,
-        "tokens_in": 8908,
-        "tokens_out": 32,
-        "cost_usd": 0.0,
+        "latency_ms": 2348.093291046098,
+        "tokens_in": 1922,
+        "tokens_out": 49,
+        "cost_usd": 0.0029207,
         "cached": true,
         "error": null,
         "trace": null
@@ -1796,12 +1792,12 @@
         "platforms"
       ],
       "output": {
-        "output": "When you are online, changes sync within 5 seconds.",
+        "output": "When you're online, changes sync within 5 seconds. The desktop and mobile apps also support offline editing, but the web app needs a connection to work.",
         "retrieved": [],
-        "latency_ms": 12373.744833050296,
-        "tokens_in": 8908,
-        "tokens_out": 16,
-        "cost_usd": 0.0,
+        "latency_ms": 2126.8829579930753,
+        "tokens_in": 1922,
+        "tokens_out": 48,
+        "cost_usd": 0.0020020000000000003,
         "cached": true,
         "error": null,
         "trace": null
@@ -1832,12 +1828,12 @@
         "platforms"
       ],
       "output": {
-        "output": "Yes, Quillfox offers screen reader support across all supported platforms.",
+        "output": "Yes, Quillfox supports screen readers on all platforms (Windows, macOS, iOS, Android, and the web).",
         "retrieved": [],
-        "latency_ms": 11781.929624965414,
-        "tokens_in": 8898,
-        "tokens_out": 17,
-        "cost_usd": 0.0,
+        "latency_ms": 2106.9488329812884,
+        "tokens_in": 1922,
+        "tokens_out": 42,
+        "cost_usd": 0.0028507000000000003,
         "cached": true,
         "error": null,
         "trace": null
@@ -1868,12 +1864,12 @@
         "platforms"
       ],
       "output": {
-        "output": "Yes, Quillfox supports screen readers on all platforms.",
+        "output": "Yes, Quillfox supports screen readers on all platforms (Windows, macOS, iOS, Android, and the web), and it's available on every plan.",
         "retrieved": [],
-        "latency_ms": 13810.767290997319,
-        "tokens_in": 8893,
-        "tokens_out": 15,
-        "cost_usd": 0.0,
+        "latency_ms": 2106.820916989818,
+        "tokens_in": 1921,
+        "tokens_out": 51,
+        "cost_usd": 0.0020241,
         "cached": true,
         "error": null,
         "trace": null
@@ -1904,12 +1900,12 @@
         "security"
       ],
       "output": {
-        "output": "Data is encrypted at rest with AES-256.",
+        "output": "Data in Quillfox is encrypted at rest with AES-256 (and in transit with TLS 1.3).",
         "retrieved": [],
-        "latency_ms": 13363.287333981134,
-        "tokens_in": 8907,
-        "tokens_out": 16,
-        "cost_usd": 0.0,
+        "latency_ms": 1913.1353750126436,
+        "tokens_in": 1917,
+        "tokens_out": 38,
+        "cost_usd": 0.0027907,
         "cached": true,
         "error": null,
         "trace": null
@@ -1940,12 +1936,12 @@
         "security"
       ],
       "output": {
-        "output": "Data is encrypted at rest with AES-256.",
+        "output": "Quillfox encrypts data at rest with AES-256 (and uses TLS 1.3 for data in transit).",
         "retrieved": [],
-        "latency_ms": 10756.195207941346,
-        "tokens_in": 8902,
-        "tokens_out": 16,
-        "cost_usd": 0.0,
+        "latency_ms": 1889.6699999459088,
+        "tokens_in": 1918,
+        "tokens_out": 39,
+        "cost_usd": 0.0019037999999999998,
         "cached": true,
         "error": null,
         "trace": null
@@ -1976,12 +1972,12 @@
         "security"
       ],
       "output": {
-        "output": "No, Quillfox does not support SMS codes for two-factor authentication. Instead, two-factor authentication works with an authenticator app or a security key.",
+        "output": "No, Quillfox doesn't support SMS codes for two-factor authentication. You can use an authenticator app or a security key instead.",
         "retrieved": [],
-        "latency_ms": 14372.568499995396,
-        "tokens_in": 8905,
-        "tokens_out": 35,
-        "cost_usd": 0.0,
+        "latency_ms": 1913.065000087954,
+        "tokens_in": 1925,
+        "tokens_out": 44,
+        "cost_usd": 0.0028827,
         "cached": true,
         "error": null,
         "trace": null
@@ -2012,12 +2008,12 @@
         "security"
       ],
       "output": {
-        "output": "No, Quillfox does not support SMS codes for two-factor authentication. Instead, you can use an authenticator app or a security key.",
+        "output": "No, Quillfox doesn't support SMS codes for two-factor authentication. You can use an authenticator app or a security key instead.",
         "retrieved": [],
-        "latency_ms": 14806.31066695787,
-        "tokens_in": 8905,
-        "tokens_out": 32,
-        "cost_usd": 0.0,
+        "latency_ms": 1821.3544170139357,
+        "tokens_in": 1927,
+        "tokens_out": 44,
+        "cost_usd": 0.0019625,
         "cached": true,
         "error": null,
         "trace": null
@@ -2048,12 +2044,12 @@
         "security"
       ],
       "output": {
-        "output": "Your data is hosted in either Frankfurt (EU) or Virginia (US), depending on the region you selected when signing up. Once chosen at signup, the hosting region cannot be changed.",
+        "output": "Quillfox data is hosted in either Frankfurt (EU) or Virginia (US), depending on the region chosen at signup. The region can't be changed later, and I don't have information on which one your account uses, so please contact support if you need to confirm it.",
         "retrieved": [],
-        "latency_ms": 10876.697332947515,
-        "tokens_in": 8896,
-        "tokens_out": 86,
-        "cost_usd": 0.0,
+        "latency_ms": 2330.807042075321,
+        "tokens_in": 1917,
+        "tokens_out": 81,
+        "cost_usd": 0.0032207,
         "cached": true,
         "error": null,
         "trace": null
@@ -2084,12 +2080,12 @@
         "security"
       ],
       "output": {
-        "output": "Your data is hosted in either Frankfurt (EU) or Virginia (US). You choose your hosting region at signup, and it cannot be changed later.",
+        "output": "Quillfox data is hosted in either Frankfurt (EU) or Virginia (US), depending on the region chosen at signup. The region can't be changed later. I don't have information on which region your account was set up with, so please contact support if you need to confirm it.",
         "retrieved": [],
-        "latency_ms": 13035.665333038196,
-        "tokens_in": 8896,
-        "tokens_out": 34,
-        "cost_usd": 0.0,
+        "latency_ms": 2303.37704194244,
+        "tokens_in": 1918,
+        "tokens_out": 82,
+        "cost_usd": 0.0023416,
         "cached": true,
         "error": null,
         "trace": null
@@ -2120,12 +2116,12 @@
         "security"
       ],
       "output": {
-        "output": "A deleted account can be recovered for 14 days, and it is permanently erased within 30 days.",
+        "output": "A deleted Quillfox account can be recovered for 14 days. After that, it's permanently erased within 30 days of deletion.",
         "retrieved": [],
-        "latency_ms": 11175.571458996274,
-        "tokens_in": 8909,
-        "tokens_out": 27,
-        "cost_usd": 0.0,
+        "latency_ms": 1935.918082948774,
+        "tokens_in": 1919,
+        "tokens_out": 43,
+        "cost_usd": 0.0028487,
         "cached": true,
         "error": null,
         "trace": null
@@ -2156,12 +2152,12 @@
         "security"
       ],
       "output": {
-        "output": "Deleted accounts can be recovered for 14 days, after which they are permanently erased within 30 days.",
+        "output": "A deleted account can be recovered for 14 days. After that, it's permanently erased within 30 days of deletion.",
         "retrieved": [],
-        "latency_ms": 16387.85675005056,
-        "tokens_in": 8899,
-        "tokens_out": 27,
-        "cost_usd": 0.0,
+        "latency_ms": 1905.106666032225,
+        "tokens_in": 1922,
+        "tokens_out": 38,
+        "cost_usd": 0.001902,
         "cached": true,
         "error": null,
         "trace": null
@@ -2192,12 +2188,12 @@
         "features"
       ],
       "output": {
-        "output": "Quillfox supports exporting your notes to Markdown, PDF, and HTML formats.",
+        "output": "Quillfox can export notes to Markdown, PDF, and HTML.",
         "retrieved": [],
-        "latency_ms": 11188.636749982834,
-        "tokens_in": 8896,
-        "tokens_out": 20,
-        "cost_usd": 0.0,
+        "latency_ms": 1955.619917018339,
+        "tokens_in": 1916,
+        "tokens_out": 26,
+        "cost_usd": 0.0026667,
         "cached": true,
         "error": null,
         "trace": null
@@ -2228,12 +2224,12 @@
         "features"
       ],
       "output": {
-        "output": "Quillfox supports exporting notes to Markdown, PDF, and HTML formats.",
+        "output": "Quillfox supports exporting notes to Markdown, PDF, and HTML.",
         "retrieved": [],
-        "latency_ms": 11922.904958948493,
-        "tokens_in": 8896,
-        "tokens_out": 19,
-        "cost_usd": 0.0,
+        "latency_ms": 1829.0039169369265,
+        "tokens_in": 1913,
+        "tokens_out": 29,
+        "cost_usd": 0.0017994,
         "cached": true,
         "error": null,
         "trace": null
@@ -2264,12 +2260,12 @@
         "features"
       ],
       "output": {
-        "output": "The REST API is included on the Team and Enterprise plans, with a limit of 600 requests per minute per workspace.",
+        "output": "The REST API is available on the Team and Enterprise plans, limited to 600 requests per minute per workspace.",
         "retrieved": [],
-        "latency_ms": 12902.210583095439,
-        "tokens_in": 8902,
-        "tokens_out": 30,
-        "cost_usd": 0.0,
+        "latency_ms": 1938.8170840684325,
+        "tokens_in": 1919,
+        "tokens_out": 37,
+        "cost_usd": 0.0027887,
         "cached": true,
         "error": null,
         "trace": null
@@ -2290,8 +2286,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "09e41a44b4b8d7d1",
-      "content_hash": "2046c8b9148856e8",
+      "case_hash": "7a69cbf1fabb9259",
+      "content_hash": "020b204e98565688",
       "trial": 0
     },
     {
@@ -2302,10 +2298,10 @@
       "output": {
         "output": "The REST API is included on the Team and Enterprise plans, with a limit of 600 requests per minute per workspace.",
         "retrieved": [],
-        "latency_ms": 10840.062209055759,
-        "tokens_in": 8912,
-        "tokens_out": 30,
-        "cost_usd": 0.0,
+        "latency_ms": 1915.6680840533227,
+        "tokens_in": 1918,
+        "tokens_out": 39,
+        "cost_usd": 0.0019077,
         "cached": true,
         "error": null,
         "trace": null
@@ -2326,8 +2322,8 @@
           "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "09e41a44b4b8d7d1",
-      "content_hash": "2046c8b9148856e8",
+      "case_hash": "7a69cbf1fabb9259",
+      "content_hash": "020b204e98565688",
       "trial": 1
     },
     {
@@ -2336,12 +2332,12 @@
         "features"
       ],
       "output": {
-        "output": "Quillfox offers integrations with Slack, Google Drive, and GitHub, though there is no Microsoft Teams integration yet. Additionally, the Team and Enterprise plans include single sign-on (SSO) through SAML and a REST API.",
+        "output": "Quillfox integrates with Slack, Google Drive, and GitHub. There's no Microsoft Teams integration yet.",
         "retrieved": [],
-        "latency_ms": 11487.009749980643,
-        "tokens_in": 8905,
-        "tokens_out": 51,
-        "cost_usd": 0.0,
+        "latency_ms": 2091.4311250671744,
+        "tokens_in": 1917,
+        "tokens_out": 43,
+        "cost_usd": 0.0028407000000000003,
         "cached": true,
         "error": null,
         "trace": null
@@ -2372,12 +2368,12 @@
         "features"
       ],
       "output": {
-        "output": "Quillfox currently integrates with Slack, Google Drive, and GitHub, though there is no Microsoft Teams integration yet. Additionally, the Team and Enterprise plans include SAML single sign-on (SSO) and a REST API.",
+        "output": "Quillfox integrates with Slack, Google Drive, and GitHub. There's no Microsoft Teams integration yet.",
         "retrieved": [],
-        "latency_ms": 10948.57183296699,
-        "tokens_in": 8895,
-        "tokens_out": 50,
-        "cost_usd": 0.0,
+        "latency_ms": 2127.666541025974,
+        "tokens_in": 1915,
+        "tokens_out": 43,
+        "cost_usd": 0.0019435,
         "cached": true,
         "error": null,
         "trace": null
@@ -2410,10 +2406,10 @@
       "output": {
         "output": "Quillfox includes 40 built-in templates.",
         "retrieved": [],
-        "latency_ms": 11024.61504098028,
-        "tokens_in": 8909,
-        "tokens_out": 57,
-        "cost_usd": 0.0,
+        "latency_ms": 1895.244290935807,
+        "tokens_in": 1918,
+        "tokens_out": 18,
+        "cost_usd": 0.0025946999999999997,
         "cached": true,
         "error": null,
         "trace": null
@@ -2444,12 +2440,12 @@
         "features"
       ],
       "output": {
-        "output": "Quillfox includes 40 built-in templates.",
+        "output": "Quillfox comes with 40 built-in templates.",
         "retrieved": [],
-        "latency_ms": 11637.66383298207,
-        "tokens_in": 8904,
-        "tokens_out": 16,
-        "cost_usd": 0.0,
+        "latency_ms": 1748.9974580239505,
+        "tokens_in": 1918,
+        "tokens_out": 19,
+        "cost_usd": 0.0017077,
         "cached": true,
         "error": null,
         "trace": null
@@ -2480,12 +2476,12 @@
         "features"
       ],
       "output": {
-        "output": "Yes, you can restore any earlier version of a note within your plan's version history window. The version history window is 7 days on Free, 90 days on Plus, 365 days on Team, and unlimited on Enterprise.",
+        "output": "Yes, any earlier version of a note can be restored within your plan's version history window: 7 days on Free, 90 days on Plus, 365 days on Team, and unlimited on Enterprise.",
         "retrieved": [],
-        "latency_ms": 11306.95466697216,
-        "tokens_in": 8905,
-        "tokens_out": 55,
-        "cost_usd": 0.0,
+        "latency_ms": 2472.561499918811,
+        "tokens_in": 1919,
+        "tokens_out": 64,
+        "cost_usd": 0.0030587,
         "cached": true,
         "error": null,
         "trace": null
@@ -2516,12 +2512,12 @@
         "features"
       ],
       "output": {
-        "output": "Yes, you can restore any earlier version of a note within your plan's version history window. Version history lasts for 7 days on Free, 90 days on Plus, 365 days on Team, and is unlimited on Enterprise.",
+        "output": "Yes, you can restore any earlier version of a note as long as it falls within your plan's version history window: 7 days on Free, 90 days on Plus, 365 days on Team, and unlimited on Enterprise.",
         "retrieved": [],
-        "latency_ms": 11519.941583974287,
-        "tokens_in": 8905,
-        "tokens_out": 55,
-        "cost_usd": 0.0,
+        "latency_ms": 2131.353250006214,
+        "tokens_in": 1921,
+        "tokens_out": 70,
+        "cost_usd": 0.0022218999999999997,
         "cached": true,
         "error": null,
         "trace": null
@@ -2554,10 +2550,10 @@
       "output": {
         "output": "On the Plus plan, email support replies within 1 business day.",
         "retrieved": [],
-        "latency_ms": 14547.646999941207,
-        "tokens_in": 8903,
-        "tokens_out": 18,
-        "cost_usd": 0.0,
+        "latency_ms": 1861.246959073469,
+        "tokens_in": 1921,
+        "tokens_out": 21,
+        "cost_usd": 0.0026367,
         "cached": true,
         "error": null,
         "trace": null
@@ -2588,12 +2584,12 @@
         "support"
       ],
       "output": {
-        "output": "On the Plus plan, email support replies within 1 business day.",
+        "output": "Plus email support replies within 1 business day.",
         "retrieved": [],
-        "latency_ms": 12259.791249991395,
-        "tokens_in": 8898,
-        "tokens_out": 18,
-        "cost_usd": 0.0,
+        "latency_ms": 2055.154415895231,
+        "tokens_in": 1920,
+        "tokens_out": 16,
+        "cost_usd": 0.0016779,
         "cached": true,
         "error": null,
         "trace": null
@@ -2624,12 +2620,12 @@
         "support"
       ],
       "output": {
-        "output": "Live chat is included on the Team and Enterprise plans, available Monday to Friday from 08:00 to 18:00 CET.",
+        "output": "Live chat is available on the Team and Enterprise plans, Monday to Friday, 08:00–18:00 CET.",
         "retrieved": [],
-        "latency_ms": 13667.301874957047,
-        "tokens_in": 8901,
-        "tokens_out": 35,
-        "cost_usd": 0.0,
+        "latency_ms": 2061.1054999753833,
+        "tokens_in": 1918,
+        "tokens_out": 41,
+        "cost_usd": 0.0028247,
         "cached": true,
         "error": null,
         "trace": null
@@ -2660,12 +2656,12 @@
         "support"
       ],
       "output": {
-        "output": "Live chat support is included on the Team and Enterprise plans, available Monday to Friday from 08:00–18:00 CET.",
+        "output": "Live chat is available on the Team and Enterprise plans, Monday to Friday, 08:00–18:00 CET.",
         "retrieved": [],
-        "latency_ms": 11125.635958975181,
-        "tokens_in": 8901,
-        "tokens_out": 35,
-        "cost_usd": 0.0,
+        "latency_ms": 1759.5626669935882,
+        "tokens_in": 1917,
+        "tokens_out": 41,
+        "cost_usd": 0.0019276,
         "cached": true,
         "error": null,
         "trace": null
@@ -2696,12 +2692,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on how much storage each Enterprise user gets. Please contact our support team for details on Enterprise storage limits.",
+        "output": "I don't have information on the per-user storage for Enterprise; the details I have only list unlimited version history, audit log export, and a dedicated support manager. Please contact support or your Enterprise account contact to confirm the storage amount.",
         "retrieved": [],
-        "latency_ms": 10897.319999989122,
-        "tokens_in": 8899,
-        "tokens_out": 31,
-        "cost_usd": 0.0,
+        "latency_ms": 2361.2093339907005,
+        "tokens_in": 1920,
+        "tokens_out": 74,
+        "cost_usd": 0.0031627,
         "cached": true,
         "error": null,
         "trace": null
@@ -2732,12 +2728,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on how much storage each Enterprise user gets. Please contact support for details on Enterprise plan storage.",
+        "output": "I don't have information on per-user storage for Enterprise. The facts I have only list storage for Free (100 MB), Plus (10 GB per user), and Team (50 GB per user). For Enterprise details, please contact support.",
         "retrieved": [],
-        "latency_ms": 11694.532708032057,
-        "tokens_in": 8904,
-        "tokens_out": 29,
-        "cost_usd": 0.0,
+        "latency_ms": 2431.898165959865,
+        "tokens_in": 1922,
+        "tokens_out": 73,
+        "cost_usd": 0.0022481,
         "cached": true,
         "error": null,
         "trace": null
@@ -2768,12 +2764,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information about an uptime SLA. Please contact our support team for assistance with this question.",
+        "output": "I don't have information about an uptime SLA, so I can't say what Quillfox guarantees. Please contact support (email is available on every plan) to get an answer on that.",
         "retrieved": [],
-        "latency_ms": 10512.598290923052,
-        "tokens_in": 8892,
-        "tokens_out": 26,
-        "cost_usd": 0.0,
+        "latency_ms": 2225.951125030406,
+        "tokens_in": 1921,
+        "tokens_out": 54,
+        "cost_usd": 0.0029667,
         "cached": true,
         "error": null,
         "trace": null
@@ -2804,12 +2800,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information about an uptime SLA. Please contact Quillfox support for assistance with this question.",
+        "output": "I don't have any information about an uptime SLA, so I can't say what's guaranteed. Please contact support (email is available on every plan) for details.",
         "retrieved": [],
-        "latency_ms": 12017.391750006936,
-        "tokens_in": 8902,
-        "tokens_out": 26,
-        "cost_usd": 0.0,
+        "latency_ms": 2031.0715000377968,
+        "tokens_in": 1923,
+        "tokens_out": 47,
+        "cost_usd": 0.0019921,
         "cached": true,
         "error": null,
         "trace": null
@@ -2840,12 +2836,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on how many guests can be invited to a workspace, though guests can view shared notes without an account (and Free users can share up to 5 notes publicly). Please contact Quillfox support for details on workspace guest limits.",
+        "output": "I don't have information on a limit for the number of guests. What I can tell you is that guests can view shared notes without an account. For specifics on guest limits, please contact support.",
         "retrieved": [],
-        "latency_ms": 13706.021124962717,
-        "tokens_in": 8895,
-        "tokens_out": 55,
-        "cost_usd": 0.0,
+        "latency_ms": 2232.215292053297,
+        "tokens_in": 1922,
+        "tokens_out": 53,
+        "cost_usd": 0.0029607,
         "cached": true,
         "error": null,
         "trace": null
@@ -2876,12 +2872,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on how many guests can be invited to a workspace, though guests can view shared notes without an account. Please contact support for details on guest limits.",
+        "output": "I don't have information on a limit for the number of guests. What I can tell you is that guests can view shared notes without needing an account. For anything more specific, please contact support.",
         "retrieved": [],
-        "latency_ms": 10764.894499909133,
-        "tokens_in": 8900,
-        "tokens_out": 40,
-        "cost_usd": 0.0,
+        "latency_ms": 2091.72504208982,
+        "tokens_in": 1922,
+        "tokens_out": 52,
+        "cost_usd": 0.0020381,
         "cached": true,
         "error": null,
         "trace": null
@@ -2912,12 +2908,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on how many people use Quillfox. Please contact our support team if you'd like to inquire further.",
+        "output": "I don't have information on how many people use Quillfox. For that, please contact our support team.",
         "retrieved": [],
-        "latency_ms": 12377.59754108265,
-        "tokens_in": 8902,
-        "tokens_out": 32,
-        "cost_usd": 0.0,
+        "latency_ms": 1895.1855830382556,
+        "tokens_in": 1919,
+        "tokens_out": 28,
+        "cost_usd": 0.0026987,
         "cached": true,
         "error": null,
         "trace": null
@@ -2948,12 +2944,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on how many people use Quillfox. Please contact our support team for further assistance.",
+        "output": "I don't have information on how many people use Quillfox. For details like that, please contact our support team.",
         "retrieved": [],
-        "latency_ms": 11815.259417053312,
-        "tokens_in": 8892,
-        "tokens_out": 27,
-        "cost_usd": 0.0,
+        "latency_ms": 2111.8736669886857,
+        "tokens_in": 1917,
+        "tokens_out": 30,
+        "cost_usd": 0.0018137,
         "cached": true,
         "error": null,
         "trace": null
@@ -2984,12 +2980,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on pricing in euros—I only have Plus pricing in US dollars ($6 per user per month billed monthly, or $60 per user per year billed annually). Please contact support for assistance with euro pricing.",
+        "output": "I don't have Plus pricing in euros. Plus is $6 per user per month billed monthly, or $60 per user per year billed annually. For euro pricing, please contact support.",
         "retrieved": [],
-        "latency_ms": 11872.302250005305,
-        "tokens_in": 8902,
-        "tokens_out": 52,
-        "cost_usd": 0.0,
+        "latency_ms": 2104.1525829350576,
+        "tokens_in": 1918,
+        "tokens_out": 58,
+        "cost_usd": 0.0029947,
         "cached": true,
         "error": null,
         "trace": null
@@ -3020,12 +3016,12 @@
         "not-covered"
       ],
       "output": {
-        "output": "I don't have information on pricing in euros—I only have the USD pricing for Plus ($6 per user per month billed monthly, or $60 per user per year billed annually). Please contact support for assistance with pricing in other currencies.",
+        "output": "I don't have pricing in euros. Plus is $6 per user per month billed monthly, or $60 per user per year billed annually, so for a euro price please contact support.",
         "retrieved": [],
-        "latency_ms": 12752.166874939576,
-        "tokens_in": 8892,
+        "latency_ms": 2239.6317078964785,
+        "tokens_in": 1918,
         "tokens_out": 54,
-        "cost_usd": 0.0,
+        "cost_usd": 0.0020577,
         "cached": true,
         "error": null,
         "trace": null

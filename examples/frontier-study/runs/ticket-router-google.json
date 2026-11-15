@@ -1,12 +1,12 @@
 {
   "info": {
-    "suite": "ticket-router-cli",
-    "system": "Anthropic Claude Sonnet 5.5",
+    "suite": "ticket-router-frontier",
+    "system": "Google Gemini 4 Argon Medium",
     "dataset_path": "ticket-router.sample.jsonl",
     "dataset_hash": "371b97a163bfa5c0",
-    "started_at": "2026-11-15T04:33:43+00:00",
-    "finished_at": "2026-11-15T04:33:43+00:00",
-    "wall_time_s": 0.014,
+    "started_at": "2026-11-15T05:02:11+00:00",
+    "finished_at": "2026-11-15T05:02:11+00:00",
+    "wall_time_s": 0.011,
     "evalproof_version": "0.8.0",
     "seed": 0,
     "environment": {
@@ -14,15 +14,11 @@
       "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
       "machine": "arm64",
       "processor": "arm",
-      "system_target": "claude-code:claude-sonnet-5-5",
-      "system_cli": "claude-code",
-      "system_cli_version": "2.1.322 (Claude Code)",
-      "system_isolation": "claude-code/1",
-      "system_sampling": "cli-default",
-      "system_model_resolved": "claude-sonnet-5-5"
+      "system_target": "cursor:gemini-4-argon-medium",
+      "system_model_resolved": "gemini-4-argon-medium"
     },
-    "suite_hash": "d01d2b2074615cd7",
-    "variant": "claude",
+    "suite_hash": "789600b2e6250607",
+    "variant": "google",
     "trials": 2
   },
   "results": [
@@ -34,10 +30,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1644.6592080174014,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 10743.479833006859,
+        "tokens_in": 8073,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -63,10 +59,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1912.248833104968,
-        "tokens_in": 769,
-        "tokens_out": 4,
-        "cost_usd": 0.003112,
+        "latency_ms": 11766.269457992166,
+        "tokens_in": 8078,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -92,10 +88,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1757.1014580316842,
-        "tokens_in": 768,
-        "tokens_out": 4,
-        "cost_usd": 0.003108,
+        "latency_ms": 14655.061916913837,
+        "tokens_in": 8074,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -121,10 +117,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1766.9045419897884,
-        "tokens_in": 766,
-        "tokens_out": 4,
-        "cost_usd": 0.0031000000000000003,
+        "latency_ms": 14565.272083040327,
+        "tokens_in": 8084,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -150,10 +146,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1927.8534579789266,
-        "tokens_in": 771,
-        "tokens_out": 4,
-        "cost_usd": 0.0031200000000000004,
+        "latency_ms": 12582.842167001218,
+        "tokens_in": 8080,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -179,10 +175,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1695.9942920366302,
-        "tokens_in": 770,
-        "tokens_out": 4,
-        "cost_usd": 0.0031160000000000003,
+        "latency_ms": 12365.018749958836,
+        "tokens_in": 8086,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -208,10 +204,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1833.8049580343068,
-        "tokens_in": 770,
-        "tokens_out": 4,
-        "cost_usd": 0.0031160000000000003,
+        "latency_ms": 10074.725041980855,
+        "tokens_in": 8090,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -237,10 +233,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1945.3453340101987,
-        "tokens_in": 770,
-        "tokens_out": 4,
-        "cost_usd": 0.0031160000000000003,
+        "latency_ms": 11923.162707942538,
+        "tokens_in": 8090,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -266,10 +262,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1683.1046669976786,
-        "tokens_in": 770,
-        "tokens_out": 4,
-        "cost_usd": 0.0031160000000000003,
+        "latency_ms": 12063.097542035393,
+        "tokens_in": 8080,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -295,10 +291,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1719.7110831039026,
-        "tokens_in": 770,
-        "tokens_out": 4,
-        "cost_usd": 0.0031160000000000003,
+        "latency_ms": 10024.708916898817,
+        "tokens_in": 8085,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -324,10 +320,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1782.5946669327095,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 21096.741250017658,
+        "tokens_in": 8088,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -353,10 +349,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1938.3593330858275,
-        "tokens_in": 769,
-        "tokens_out": 4,
-        "cost_usd": 0.003112,
+        "latency_ms": 15668.063541990705,
+        "tokens_in": 8083,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -382,10 +378,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1938.129625050351,
-        "tokens_in": 765,
-        "tokens_out": 4,
-        "cost_usd": 0.0030960000000000002,
+        "latency_ms": 12881.60954194609,
+        "tokens_in": 8085,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -411,10 +407,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1813.1809579208493,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 11855.341249960475,
+        "tokens_in": 8085,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -440,10 +436,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1904.7352500492707,
-        "tokens_in": 772,
-        "tokens_out": 3,
-        "cost_usd": 0.003114,
+        "latency_ms": 12288.16608292982,
+        "tokens_in": 8086,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -469,10 +465,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 2178.2382080564275,
-        "tokens_in": 769,
-        "tokens_out": 3,
-        "cost_usd": 0.003102,
+        "latency_ms": 15997.749749920331,
+        "tokens_in": 8081,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -498,10 +494,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1896.959290956147,
-        "tokens_in": 766,
-        "tokens_out": 3,
-        "cost_usd": 0.0030900000000000003,
+        "latency_ms": 11601.984167005867,
+        "tokens_in": 8084,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -527,10 +523,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1699.8940838966519,
-        "tokens_in": 765,
-        "tokens_out": 3,
-        "cost_usd": 0.003086,
+        "latency_ms": 15292.218459071591,
+        "tokens_in": 8074,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -556,10 +552,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1154.3890410102904,
-        "tokens_in": 762,
-        "tokens_out": 3,
-        "cost_usd": 0.0030740000000000003,
+        "latency_ms": 12549.137542024255,
+        "tokens_in": 8076,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -585,10 +581,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1893.896707915701,
-        "tokens_in": 763,
-        "tokens_out": 3,
-        "cost_usd": 0.003078,
+        "latency_ms": 11026.109708007425,
+        "tokens_in": 8076,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -614,10 +610,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1912.6135419355705,
-        "tokens_in": 767,
-        "tokens_out": 3,
-        "cost_usd": 0.003094,
+        "latency_ms": 10767.130083986558,
+        "tokens_in": 8077,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -643,10 +639,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1728.0419589951634,
-        "tokens_in": 767,
-        "tokens_out": 3,
-        "cost_usd": 0.003094,
+        "latency_ms": 10346.464416012168,
+        "tokens_in": 8087,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -672,10 +668,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1693.4510840801522,
-        "tokens_in": 773,
-        "tokens_out": 3,
-        "cost_usd": 0.003118,
+        "latency_ms": 25350.4292499274,
+        "tokens_in": 8083,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -701,10 +697,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1868.6612920137122,
-        "tokens_in": 772,
-        "tokens_out": 3,
-        "cost_usd": 0.003114,
+        "latency_ms": 16077.424417017028,
+        "tokens_in": 8078,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -730,10 +726,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1690.6363329617307,
-        "tokens_in": 764,
-        "tokens_out": 3,
-        "cost_usd": 0.003082,
+        "latency_ms": 11693.295000004582,
+        "tokens_in": 8088,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -759,10 +755,10 @@
       "output": {
         "output": "account",
         "retrieved": [],
-        "latency_ms": 1764.6988340420648,
-        "tokens_in": 764,
-        "tokens_out": 3,
-        "cost_usd": 0.003082,
+        "latency_ms": 20078.110083006322,
+        "tokens_in": 8083,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -788,10 +784,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1598.6401250120252,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 25735.180499963462,
+        "tokens_in": 8084,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -817,10 +813,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1659.0621250215918,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 11410.765292006545,
+        "tokens_in": 8079,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -846,10 +842,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1269.3808750482276,
-        "tokens_in": 770,
-        "tokens_out": 4,
-        "cost_usd": 0.0031160000000000003,
+        "latency_ms": 9689.057291019708,
+        "tokens_in": 8079,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -875,10 +871,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1732.7532910276204,
-        "tokens_in": 769,
-        "tokens_out": 4,
-        "cost_usd": 0.003112,
+        "latency_ms": 10774.686499964446,
+        "tokens_in": 8084,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -904,10 +900,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1900.0112920766696,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 10809.903457993641,
+        "tokens_in": 8087,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -933,10 +929,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1742.7454580320045,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 12533.458666061051,
+        "tokens_in": 8082,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -962,10 +958,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1891.1939159734175,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 15266.428167000413,
+        "tokens_in": 8073,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -991,10 +987,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1660.1855830522254,
-        "tokens_in": 766,
-        "tokens_out": 4,
-        "cost_usd": 0.0031000000000000003,
+        "latency_ms": 11780.268457951024,
+        "tokens_in": 8078,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1020,10 +1016,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1786.5203340770677,
-        "tokens_in": 769,
-        "tokens_out": 4,
-        "cost_usd": 0.003112,
+        "latency_ms": 48083.161334041506,
+        "tokens_in": 8084,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1049,10 +1045,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 2088.9498749747872,
-        "tokens_in": 769,
-        "tokens_out": 4,
-        "cost_usd": 0.003112,
+        "latency_ms": 10169.071540934965,
+        "tokens_in": 8079,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1078,10 +1074,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1720.9402089938521,
-        "tokens_in": 767,
-        "tokens_out": 4,
-        "cost_usd": 0.003104,
+        "latency_ms": 13321.273167035542,
+        "tokens_in": 8084,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1107,10 +1103,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1680.575207923539,
-        "tokens_in": 768,
-        "tokens_out": 4,
-        "cost_usd": 0.003108,
+        "latency_ms": 10783.901958027855,
+        "tokens_in": 8089,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1136,10 +1132,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1907.7934169908985,
-        "tokens_in": 769,
-        "tokens_out": 4,
-        "cost_usd": 0.003112,
+        "latency_ms": 11574.63024999015,
+        "tokens_in": 8086,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1165,10 +1161,10 @@
       "output": {
         "output": "technical",
         "retrieved": [],
-        "latency_ms": 1943.5472500044852,
-        "tokens_in": 770,
-        "tokens_out": 4,
-        "cost_usd": 0.0031160000000000003,
+        "latency_ms": 11526.20912506245,
+        "tokens_in": 8076,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1194,10 +1190,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 1676.1062920559198,
-        "tokens_in": 767,
+        "latency_ms": 22549.655625014566,
+        "tokens_in": 8078,
         "tokens_out": 5,
-        "cost_usd": 0.0031139999999999996,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1223,10 +1219,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 1913.4430829435587,
-        "tokens_in": 767,
+        "latency_ms": 13799.638833967037,
+        "tokens_in": 8083,
         "tokens_out": 5,
-        "cost_usd": 0.0031139999999999996,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1252,10 +1248,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 1932.6949160313234,
-        "tokens_in": 768,
+        "latency_ms": 10200.266332947649,
+        "tokens_in": 8085,
         "tokens_out": 5,
-        "cost_usd": 0.0031179999999999997,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1281,10 +1277,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 2707.9227089416236,
-        "tokens_in": 770,
+        "latency_ms": 11434.71658299677,
+        "tokens_in": 8075,
         "tokens_out": 5,
-        "cost_usd": 0.003126,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1310,10 +1306,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 1677.7852500090376,
-        "tokens_in": 767,
+        "latency_ms": 13191.676500020549,
+        "tokens_in": 8075,
         "tokens_out": 5,
-        "cost_usd": 0.0031139999999999996,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1339,10 +1335,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 1910.247040912509,
-        "tokens_in": 765,
+        "latency_ms": 11039.866209030151,
+        "tokens_in": 8075,
         "tokens_out": 5,
-        "cost_usd": 0.003106,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1368,10 +1364,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 2283.44012494199,
-        "tokens_in": 770,
+        "latency_ms": 11935.80308300443,
+        "tokens_in": 8089,
         "tokens_out": 5,
-        "cost_usd": 0.003126,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1397,10 +1393,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 2102.681167074479,
-        "tokens_in": 770,
+        "latency_ms": 16918.244665954262,
+        "tokens_in": 8084,
         "tokens_out": 5,
-        "cost_usd": 0.003126,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1426,10 +1422,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 1866.7858330300078,
-        "tokens_in": 766,
+        "latency_ms": 10988.98866691161,
+        "tokens_in": 8072,
         "tokens_out": 5,
-        "cost_usd": 0.00311,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1455,10 +1451,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 3784.3991660047323,
-        "tokens_in": 767,
+        "latency_ms": 12228.065790957771,
+        "tokens_in": 8077,
         "tokens_out": 5,
-        "cost_usd": 0.0031139999999999996,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1484,10 +1480,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 2000.02349994611,
-        "tokens_in": 768,
+        "latency_ms": 10700.213458039798,
+        "tokens_in": 8083,
         "tokens_out": 5,
-        "cost_usd": 0.0031179999999999997,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1513,10 +1509,10 @@
       "output": {
         "output": "shipping",
         "retrieved": [],
-        "latency_ms": 1641.853249981068,
-        "tokens_in": 768,
+        "latency_ms": 16895.795084070414,
+        "tokens_in": 8078,
         "tokens_out": 5,
-        "cost_usd": 0.0031179999999999997,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1542,10 +1538,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1671.0771670332178,
-        "tokens_in": 763,
-        "tokens_out": 4,
-        "cost_usd": 0.003088,
+        "latency_ms": 14063.458082964644,
+        "tokens_in": 8077,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1571,10 +1567,10 @@
       "output": {
         "output": "billing",
         "retrieved": [],
-        "latency_ms": 1849.4437909685075,
-        "tokens_in": 765,
-        "tokens_out": 4,
-        "cost_usd": 0.0030960000000000002,
+        "latency_ms": 11325.982208945788,
+        "tokens_in": 8077,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1600,10 +1596,10 @@
       "output": {
         "output": "other",
         "retrieved": [],
-        "latency_ms": 2051.7216669395566,
-        "tokens_in": 764,
-        "tokens_out": 3,
-        "cost_usd": 0.003082,
+        "latency_ms": 12146.527832956053,
+        "tokens_in": 8094,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1629,10 +1625,10 @@
       "output": {
         "output": "other",
         "retrieved": [],
-        "latency_ms": 1699.8461249750108,
-        "tokens_in": 763,
-        "tokens_out": 3,
-        "cost_usd": 0.003078,
+        "latency_ms": 10368.926958995871,
+        "tokens_in": 8079,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1658,10 +1654,10 @@
       "output": {
         "output": "other",
         "retrieved": [],
-        "latency_ms": 1735.3599580237642,
-        "tokens_in": 765,
-        "tokens_out": 3,
-        "cost_usd": 0.003086,
+        "latency_ms": 24255.015209084377,
+        "tokens_in": 8082,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1687,10 +1683,10 @@
       "output": {
         "output": "other",
         "retrieved": [],
-        "latency_ms": 1701.839708024636,
-        "tokens_in": 765,
-        "tokens_out": 3,
-        "cost_usd": 0.003086,
+        "latency_ms": 31702.841624966823,
+        "tokens_in": 8082,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1716,10 +1712,10 @@
       "output": {
         "output": "other",
         "retrieved": [],
-        "latency_ms": 1778.971750056371,
-        "tokens_in": 764,
-        "tokens_out": 3,
-        "cost_usd": 0.003082,
+        "latency_ms": 11968.928665970452,
+        "tokens_in": 8077,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
@@ -1745,10 +1741,10 @@
       "output": {
         "output": "other",
         "retrieved": [],
-        "latency_ms": 1726.257708040066,
-        "tokens_in": 766,
-        "tokens_out": 3,
-        "cost_usd": 0.0030900000000000003,
+        "latency_ms": 11629.918207996525,
+        "tokens_in": 8082,
+        "tokens_out": 5,
+        "cost_usd": 0.0,
         "cached": true,
         "error": null,
         "trace": null
