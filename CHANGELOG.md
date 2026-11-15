@@ -4,6 +4,43 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-11-15
+
+### Added
+
+- `evalproof import-dataset` reads the test cases you already have in another tool and writes an
+  evalproof dataset: promptfoo (a `promptfooconfig.yaml`, or its tests as YAML, JSON, JSONL or
+  CSV), DeepEval, Ragas, LangSmith, OpenAI Evals, Inspect, Braintrust, Langfuse, Phoenix, ADK, and
+  any JSONL or CSV table (`--id-field`, `--input-field`, `--reference-field`, `--tags-field`).
+  `auto` reads the format off the file and says which it chose; an ambiguous or unknown file
+  exits 2.
+- What the source expected becomes a case field and a scorer. promptfoo's `equals`,
+  `contains`/`icontains` (and their `-any`/`-all` forms), `starts-with`, `regex`, the `not-`
+  forms, `is-json` with a schema, `llm-rubric`, `g-eval`, `model-graded-closedqa` and
+  `factuality` map to `exact_match`, `contains`, `regex`, `checks`, `json_schema` and per-case
+  rubrics. A free-text expected answer becomes the case's `reference`, graded by `llm_judge`.
+  An assertion with no counterpart (`javascript`, `python`, `similar`, `latency`, `cost`, ...)
+  is never dropped silently: it stays on the case under `unmapped`, and one line counts them by
+  type.
+- Imported cases keep the source's id, or get `<format>-` and a hash of the input and the expected
+  answer, so reordering the file never changes an id. They are tagged `imported` and
+  `from:<format>`.
+- `import-dataset --suite-out FILE` also writes a suite with exactly the scorers those cases
+  need, a `judge` block only when one of them is a judge, and a `prompt_template` when the input
+  is an object of variables. The gate is set on the scorer that checks the most cases. It
+  refuses to overwrite a file without `--force`, and writes nothing when no scorer fits.
+- `evalproof init --from FILE` (`--from-format`, default `auto`) starts a repository from those
+  cases instead of the three sample cases.
+- A guide, [Import test cases](https://basantbhattarai.com.np/evalproof/guides/import-test-cases/).
+
+The `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse` and
+`phoenix` dataset formats are experimental: they were written from each tool's documented fields
+and have not yet been checked against files exported by each tool.
+
+### Changed
+
+- `import-dataset adk` also accepts `--suite-out`. The dataset it writes is unchanged.
+
 ## [1.1.0] — 2026-11-15
 
 ### Added
@@ -814,7 +851,8 @@ First release.
 - Two examples: an offline ticket router (CI's gate contract) and a product support
   assistant judged by a local model, with measurements.
 
-[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/technobasant/evalproof/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/technobasant/evalproof/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/technobasant/evalproof/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/technobasant/evalproof/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/technobasant/evalproof/compare/v0.7.1...v0.8.0

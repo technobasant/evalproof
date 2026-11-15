@@ -15,7 +15,7 @@
 #   prebuilt  install the wheel(s) already in ./dist. The release workflow uses this, so the
 #             image holds the exact files that were published to PyPI:
 #               uv build --wheel && docker build --build-arg WHEEL_SOURCE=prebuilt \
-#                 --build-arg VERSION=1.1.0 -t evalproof .
+#                 --build-arg VERSION=1.2.0 -t evalproof .
 #
 # Either way the final stage installs the wheel with its dependencies from PyPI, so a build
 # needs the network. VERSION and REVISION only fill in the image labels.
