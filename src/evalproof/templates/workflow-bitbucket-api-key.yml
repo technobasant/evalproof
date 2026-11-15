@@ -1,0 +1,101 @@
+# Written by `evalproof init --platform bitbucket --ci api-key`.
+#
+#@@IF snippet
+# bitbucket-pipelines.yml already exists, and `evalproof init` never edits it, so this is a
+# snippet: merge it into that file by hand. Keep your own `image` and `clone` if you have them
+# (the steps need Python with pip, and `clone: depth: full`), add the cache under your own
+# `definitions: caches:`, and put each step below under your own `pull-requests: '**':` and
+# `branches: main:` list: a pattern can appear only once in a file.
+#
+#@@END
+# CI runs the suite itself with an API key kept in a secured repository variable, then compares
+# the new run with evals/runs/latest.json on the destination branch. Every case is a model call,
+# so the pull-request step only runs the suite when something you watch changed (see
+# EVALPROOF_WATCH below). The step itself starts on every pull request, so a required pipeline
+# never waits for a run that was filtered out; when nothing changed it says so and stops.
+#
+# The key: add a repository variable named @@KEY_VAR@@ under Repository settings > Pipelines >
+# Repository variables, and mark it Secured. A repository variable is an environment variable
+# in the steps, so nothing below names it.
+#
+# Variables Bitbucket sets for every step (see
+# https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/):
+#   BITBUCKET_PR_DESTINATION_BRANCH  the branch the pull request targets; pull-request pipelines
+#                                    only, which is why the first step lives under `pull-requests`
+#   BITBUCKET_PR_ID                  the pull request's number; pull-request pipelines only
+#   BITBUCKET_BRANCH                 the branch being built; branch pipelines only
+#   BITBUCKET_CLONE_DIR              where the repository is cloned; every pipeline
+# A pull-request pipeline builds the source branch with the destination branch merged in, and
+# Bitbucket does not start one for a pull request from a fork, so a fork never reaches the key
+# (https://support.atlassian.com/bitbucket-cloud/docs/pipeline-start-conditions/).
+#
+# Responses are cached between runs (the cache holds evals/.evalproof/cache, the suite's
+# cache_dir). A changed prompt or case is a different request, so it is never answered from an
+# old response.
+#
+# The `branches: main:` step runs the suite on every push to main and keeps the run as an
+# artifact (evalproof-run.json): download it and commit it as evals/runs/latest.json to refresh
+# the baseline. Change `main` to your default branch, or delete the step to run nothing there.
+image: python:3.13-slim # an image with git skips the git install below
+
+clone:
+  depth: full # the destination branch has to be in the clone (the default is the last 50 commits)
+
+definitions:
+  caches:
+    evalproof-responses: evals/.evalproof/cache # relative to the clone directory
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: evalproof run and gate
+          caches:
+            - evalproof-responses
+          script:
+            - |
+              set -eu
+              export PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore
+              # Space-separated paths whose change should re-run the suite: the suite and the
+              # cases, plus whatever holds your system prompt or retrieval logic. Add yours.
+              # Run files under evals/runs/ never count: CI makes the run itself.
+              EVALPROOF_WATCH="evals/"
+              command -v git > /dev/null || { apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null; }
+              target="$BITBUCKET_PR_DESTINATION_BRANCH"
+              git fetch --quiet origin "+refs/heads/$target:refs/remotes/origin/$target"
+
+              # Check whether anything watched changed.
+              set -f
+              changed="$(git diff --name-only "origin/$target...HEAD" -- $EVALPROOF_WATCH ':(exclude)evals/runs/')"
+              set +f
+              if [ -z "$changed" ]; then
+                echo "evalproof: notice: nothing in $EVALPROOF_WATCH changed in this pull request, so the suite was not run."
+                exit 0
+              fi
+
+              # Take the baseline from the destination branch.
+              baseline="${TMPDIR:-/tmp}/evalproof-baseline.json"
+              candidate="${TMPDIR:-/tmp}/evalproof-candidate.json"
+              if ! git cat-file -e "origin/$target:evals/runs/latest.json" 2>/dev/null; then
+                echo "evalproof: notice: $target has no evals/runs/latest.json yet, so there is nothing to compare with. Run the suite, commit the file, and later pull requests are gated."
+                exit 0
+              fi
+              git show "origin/$target:evals/runs/latest.json" > "$baseline"
+
+              python -m pip install --quiet "evalproof==@@PIP_VERSION@@"
+              evalproof run evals/suite.yaml --out "$candidate" --quiet
+              evalproof compare "$baseline" "$candidate" --suite evals/suite.yaml --gate
+  branches:
+    main:
+      - step:
+          name: evalproof run on main
+          caches:
+            - evalproof-responses
+          script:
+            - |
+              set -eu
+              export PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore
+              python -m pip install --quiet "evalproof==@@PIP_VERSION@@"
+              evalproof run evals/suite.yaml --out evalproof-run.json --quiet
+          artifacts:
+            - evalproof-run.json

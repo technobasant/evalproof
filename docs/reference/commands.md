@@ -21,18 +21,19 @@ Every `evalproof` subcommand, its arguments and every flag with its type and def
 | [`evalproof rehash`](#evalproof-rehash) | add per-case hashes to a run file written before evalproof 0.5, without calling a model |
 | [`evalproof doctor`](#evalproof-doctor) | check the coding-agent CLI targets and a command target, without calling a model |
 | [`evalproof readiness`](#evalproof-readiness) | report which parts of quality a suite covers and which it leaves untested |
+| [`evalproof hook`](#evalproof-hook) | install or remove a git pre-push hook that runs `evalproof verify` |
 | [`evalproof pairwise`](#evalproof-pairwise) | judge baseline vs candidate outputs head to head |
 
 ## evalproof init
 
-Writes a starter suite, a CI workflow and an agent skill into a repository. It makes no model call. `--ci keyless` (the default) writes a workflow that compares committed run files; `--ci api-key` writes one that runs the suite with a secret; `--ci none` writes no workflow. `--platform github` (the default) writes `.github/workflows/evalproof.yml`; `--platform gitlab` writes `.gitlab-ci.evalproof.yml` and prints the two `include:` lines to add to your `.gitlab-ci.yml`, which `init` never edits. Files that already exist are kept unless you pass `--force`.
+Writes a starter suite, a CI workflow and an agent skill into a repository. It makes no model call. `--ci keyless` (the default) writes a workflow that compares committed run files; `--ci api-key` writes one that runs the suite with a secret; `--ci none` writes no workflow. `--platform github` (the default) writes `.github/workflows/evalproof.yml`; `--platform gitlab` writes `.gitlab-ci.evalproof.yml` and prints the two `include:` lines to add to your `.gitlab-ci.yml`, which `init` never edits. `--platform bitbucket` (experimental) writes `bitbucket-pipelines.yml`, or, when that file already exists and was not written by `init`, `evals/bitbucket-pipelines.snippet.yml` for you to merge by hand. Files that already exist are kept unless you pass `--force`.
 
 It also adds an evalproof section to the repository's `AGENTS.md`, so any coding agent that reads that file knows how to use evalproof. That file is merged, never overwritten, with or without `--force`: a missing file is created, a file without the section gets it appended after one blank line, and a file that has it gets only the text between the `<!-- evalproof:begin -->` and `<!-- evalproof:end -->` markers replaced. Every byte outside the markers stays as it was, including the file's line endings. If the markers are damaged (one without the other, repeated, or in the wrong order), `init` stops with exit 2 and writes nothing. `--agent-files-only` writes the section and the skill and nothing else. [Coding agents](../guides/coding-agents.md) has the details.
 
 `--from FILE` starts from test cases you already have in another tool: `evals/cases.jsonl` is those cases and `evals/suite.yaml` has the scorers they need, in place of the sample cases. Everything else `init` writes is unchanged. The file is read before anything is written, so a file that cannot be imported (exit 2) leaves the directory as it was. See [Import test cases from other tools](../guides/import-test-cases.md#start-a-repository-from-existing-cases).
 
 ```bash title="Terminal"
-evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab}] [--cli-auth {api-key,oauth-token}] [--from FILE] [--from-format FORMAT] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]
+evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab,bitbucket}] [--cli-auth {api-key,oauth-token}] [--from FILE] [--from-format FORMAT] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]
 ```
 
 | Flag | Type | Default | What it does |
@@ -40,7 +41,7 @@ evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--pla
 | `--dir` | string | `.` | where to write; the default is the current directory |
 | `--judge` | string | none | model for the judge and the system, for example `claude-code:haiku` |
 | `--ci` | one of `keyless`, `api-key`, `none` | `keyless` | `keyless`: CI compares committed run files, with no model calls; `api-key`: CI runs the suite with a secret; `none`: no workflow |
-| `--platform` | one of `github`, `gitlab` | `github` | where CI runs: `github` writes `.github/workflows/evalproof.yml`; `gitlab` writes `.gitlab-ci.evalproof.yml`, which you include from `.gitlab-ci.yml` (never edited). `gitlab` with `--ci api-key` refuses a coding-agent CLI judge ([In CI](../guides/ci.md#gitlab-ci)) |
+| `--platform` | one of `github`, `gitlab`, `bitbucket` | `github` | where CI runs: `github` writes `.github/workflows/evalproof.yml`; `gitlab` writes `.gitlab-ci.evalproof.yml`, which you include from `.gitlab-ci.yml` (never edited); `bitbucket` (experimental) writes `bitbucket-pipelines.yml`, or `evals/bitbucket-pipelines.snippet.yml` when a `bitbucket-pipelines.yml` that `init` did not write exists (not even `--force` replaces it). `gitlab` and `bitbucket` with `--ci api-key` refuse a coding-agent CLI judge ([In CI](../guides/ci.md#gitlab-ci)) |
 | `--cli-auth` | one of `api-key`, `oauth-token` | `api-key` | with `--ci api-key` and a coding-agent CLI judge, what the workflow passes the CLI: its API key (`api-key`), or `oauth-token`: `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, for `claude-code` in your own repository and CI only |
 | `--from` | string | none | a file of test cases from another tool, imported into `evals/cases.jsonl` and a suite with the scorers they need, instead of the sample cases. It cannot be combined with `--agent-files-only` (exit 2) |
 | `--from-format` | one of `auto`, `promptfoo`, `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse`, `phoenix`, `adk`, `jsonl`, `csv` | `auto` | the tool the `--from` file is from; `auto` reads it off the file. `jsonl` and `csv` need an `input` column here, as `init` has no field options: use `import-dataset` for other columns |
@@ -70,7 +71,9 @@ evalproof run SUITE [options]
 | Flag | Type | Default | What it does |
 |---|---|---|---|
 | `--out` | string | none | where to write the run (with `--variant`, only when exactly one variant runs) |
-| `--limit` | int | none | run only the first N cases of the dataset |
+| `--limit` | int | none | run only the first N cases of the dataset (after `--tags` and `--exclude-tags` have chosen them) |
+| `--tags` | string, repeatable | none | run only the cases that carry at least one of these tags; comma-separated, and the option may repeat (`--tags smoke,edge` is `--tags smoke --tags edge`); tags match exactly, with case. Chosen before `--limit`. The filter is recorded in the run file as `info.tag_filter`, and `verify` applies it again; `compare` warns when two runs used different filters. A filter that selects no case is an error (exit 2) that lists the dataset's tags. No suite key sets it |
+| `--exclude-tags` | string, repeatable | none | run no case that carries any of these tags, with the same syntax; wins over `--tags` for a case that carries both |
 | `--no-cache` | flag | off | do not read or write the response cache |
 | `--cache-only` | flag | off | re-score or rebuild a run from the cache: every model call, the judge's included, is answered from the response cache, and a miss is an error (exit 2), never a model call, which stops the run (with several variants, the runs finished before the miss are written); the run records `cache_only: "true"` in its `environment`; not with `--no-cache`, and a `python`, `http` or `command` system is refused because it is not cached |
 | `--trials` | int, 1 to 100 | none | run each case K times (1 to 100), overriding the suite's trials |
@@ -89,7 +92,9 @@ evalproof run SUITE [options]
 evalproof run evals/suite.yaml --out runs/candidate.json --trials 3
 ```
 
-Exit 0. With `--gate`: 1 when an absolute check fails, 4 when the gate cannot apply one. Exit 2 for a configuration error and when every case errored. See [Exit codes](exit-codes.md). See also: [Concepts](concepts.md#run), [Repeated trials](../guides/repeated-trials.md#repeated-trials), [Testing agents](../guides/testing-agents.md#variants-one-suite-several-builds).
+To run a smoke subset while you iterate: `evalproof run evals/suite.yaml --tags smoke --exclude-tags slow --out runs/smoke.json`.
+
+Exit 0. With `--gate`: 1 when an absolute check fails, 4 when the gate cannot apply one. Exit 2 for a configuration error, when every case errored, and when `--tags` and `--exclude-tags` select no case. See [Exit codes](exit-codes.md). See also: [Concepts](concepts.md#run), [Repeated trials](../guides/repeated-trials.md#repeated-trials), [Testing agents](../guides/testing-agents.md#variants-one-suite-several-builds).
 
 ## evalproof import
 
@@ -157,6 +162,8 @@ The cases that cannot be replayed (ADK user-simulation cases) are skipped with o
 ## evalproof compare
 
 Compares each candidate with the baseline on the cases both runs share. With `--gate` the result becomes an exit code. Several candidates give one table, and `--gate` then corrects the p-values for all candidates and gated metrics at once and exits with the worst code (2, then 4, 1, 3, 0). Gate settings come from `--suite`; every flag below overrides the suite's `gate` block. Without `--gate` a comparison of two runs that cannot be compared is a usage error (exit 2).
+
+Runs made with different tag filters (`run --tags`, `--exclude-tags`) are compared on the cases both hold, and the report warns that the filters differ; with `--gate` they cannot be gated (exit 4), because a filter does not show in the diff and the gate would decide on a subset of the cases.
 
 ```bash title="Terminal"
 evalproof compare BASELINE CANDIDATE [CANDIDATE ...] [options]
@@ -249,6 +256,8 @@ Exit 0, or 2 for a usage error.
 ## evalproof verify
 
 Checks, with no model call, that a run file was made with this suite, covers exactly the dataset's cases as they are now, and has the scores its deterministic scorers give the stored outputs.
+
+A run made with `--tags` or `--exclude-tags` records that filter, and `verify` checks it against the cases the same filter selects from the dataset now: a case that matches but is missing from the run, a case in the run that the filter does not select, and a case that gained or lost a tag all fail it.
 
 ```bash title="Terminal"
 evalproof verify RUN SUITE [--markdown FILE]
@@ -343,6 +352,34 @@ evalproof readiness evals/suite.yaml --require correctness,gate
 
 Exit 0, or 1 when a `--require`d dimension is not covered, 2 for a usage error.
 
+## evalproof hook
+
+Installs, or removes, a git `pre-push` hook that runs [`evalproof verify`](#evalproof-verify) on a committed run file before every push. A run file that no longer matches the suite or its dataset stops the push; no model is called. The hook is a POSIX `sh` script, which Git for Windows runs with its own `sh`.
+
+`install` finds the hooks folder with `git rev-parse --git-path hooks`, so it follows `core.hooksPath` and, in a linked worktree, writes to the folder the worktrees share. The script starts with the line `# evalproof pre-push hook` and the evalproof version. Running `install` again updates a hook that has that line. A `pre-push` hook without it is never replaced unless you pass `--force`, and `uninstall` removes only a hook that has it.
+
+The hook runs `evalproof` from the `PATH`, and otherwise `uvx evalproof@VERSION` for the version that wrote it. It skips with a message, and does not stop the push, when the suite or the run file does not exist, or when neither `evalproof` nor `uvx` is available. Otherwise it passes `verify`'s exit code through and adds one line on how to refresh the run or push with `git push --no-verify`. Git runs a hook from the repository root, so `--suite` and `--run` are stored relative to it.
+
+```bash title="Terminal"
+evalproof hook {install,uninstall} [--suite SUITE] [--run RUN] [--force]
+```
+
+| Argument | Required | What it is |
+|---|---|---|
+| `ACTION` | yes | `install` writes the hook; `uninstall` removes it |
+
+| Flag | Type | Default | What it does |
+|---|---|---|---|
+| `--suite` | string | `evals/suite.yaml` | the suite the hook verifies against; `install` only |
+| `--run` | string | `evals/runs/latest.json` | the committed run file the hook verifies; `install` only |
+| `--force` | flag | off | install over a `pre-push` hook that evalproof did not write; `install` only |
+
+```bash title="Example"
+evalproof hook install
+```
+
+Exit 0, or 2 for a usage error: outside a git repository, a `pre-push` hook that evalproof did not write (`install` without `--force`, and `uninstall`), or git missing. `uninstall` with no hook in place says so and exits 0. See also: [Check before every push](../guides/ci.md#check-before-every-push).
+
 ## evalproof pairwise
 
 Asks the suite's judge which of two outputs is better for each case, in both orders unless `--no-swap` is set.
@@ -359,7 +396,9 @@ evalproof pairwise BASELINE CANDIDATE --suite SUITE [options]
 | Flag | Type | Default | What it does |
 |---|---|---|---|
 | `--suite` | string, required | none | the suite whose `judge` compares the outputs |
-| `--limit` | int | none | compare only the first N shared cases, in case-id order |
+| `--limit` | int | none | compare only the first N shared cases, in case-id order (after `--tags` and `--exclude-tags` have chosen them) |
+| `--tags` | string, repeatable | none | judge only the cases that carry at least one of these tags, read from the suite's dataset; comma-separated, and the option may repeat |
+| `--exclude-tags` | string, repeatable | none | judge no case that carries any of these tags; wins over `--tags`. A filter that selects no case in the dataset is an error (exit 2) |
 | `--no-swap` | flag | off | judge each pair in one order only (by default each pair is judged in both orders) |
 | `--no-cache` | flag | off | do not read or write the response cache |
 | `--cache-only` | flag | off | answer every judge call from the response cache; a miss is an error (exit 2), never a model call; not with `--no-cache` |

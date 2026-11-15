@@ -4,7 +4,9 @@ A keyless CI job compares a run file the pull request carries. Nothing it runs p
 file, so this checks what can be checked without a model call: the run was made with the
 suite's system, judge, scorers and seed (``suite_hash``), and it scored exactly the dataset's
 cases as they are now (``case_hash`` per case, tags included, because ``must_pass`` reads them
-from the run file). The deterministic scores are checked too: each stored output is scored
+from the run file). A run made with ``--tags`` or ``--exclude-tags`` records that filter, and is
+checked against the cases the same filter selects from the dataset now. The deterministic scores
+are checked too: each stored output is scored
 again with the suite's scorers that need no model, and a score that differs was edited by hand
 or made by another scorer version. Model-judged scores and the stored outputs themselves still
 cannot be checked; that needs the run to be made in CI (``--ci api-key``) or the file to be
@@ -18,7 +20,7 @@ from dataclasses import dataclass, field
 
 from evalproof.config import SuiteConfig, suite_fingerprint
 from evalproof.dataset import case_hash, load_dataset
-from evalproof.models import Case, Run, Score
+from evalproof.models import Case, Run, Score, TagFilter
 from evalproof.scorers import Scorer, is_deterministic, make_scorer
 
 SHOW = 10  # ids listed per problem
@@ -27,7 +29,8 @@ SHOW = 10  # ids listed per problem
 @dataclass
 class Verification:
     ok: bool
-    cases: int  # cases in the suite's dataset
+    cases: int  # cases the run should hold: the dataset's, or those its tag filter selects
+    tag_filter: TagFilter | None = None  # the run's own, when it has one
     problems: list[str] = field(default_factory=list)
     rescored: list[str] = field(default_factory=list)  # scorers whose stored scores were re-checked
     not_rescored: list[str] = field(default_factory=list)  # scorers that need a model call
@@ -111,8 +114,15 @@ def verify_run(run: Run, cfg: SuiteConfig) -> Verification:
             f"(run `{run.info.suite_hash}`, suite `{expected}`): run the suite again"
         )
 
-    dataset = {c.id: c for c in load_dataset(cfg.resolve(cfg.dataset))}
+    everything = load_dataset(cfg.resolve(cfg.dataset))
+    dataset = {c.id: c for c in everything}
     cases = {cid: case_hash(c) for cid, c in dataset.items()}
+    # A run made with a tag filter holds the cases the filter selects, so that is what it is
+    # checked against: the same filter, applied to the dataset as it is now.
+    tag_filter = run.info.tag_filter
+    wanted = {c.id for c in tag_filter.apply(everything)} if tag_filter else set(dataset)
+    if tag_filter and not wanted:
+        problems.append(f"the run's tag filter ({tag_filter.describe()}) selects no case any more")
     if len(run.results) != len({(r.case_id, r.trial) for r in run.results}):
         problems.append(
             "the run has duplicate case ids"
@@ -124,10 +134,12 @@ def verify_run(run: Run, cfg: SuiteConfig) -> Verification:
     for r in run.results:
         scored.setdefault(r.case_id, set()).add(r.case_hash)
         trials_of.setdefault(r.case_id, set()).add(r.trial)
-    missing = sorted(set(cases) - set(scored))
+    missing = sorted(wanted - set(scored))
     extra = sorted(set(scored) - set(cases))
-    # Every trial of a case is checked: one edited or stale trial makes the case changed.
+    # Every trial of a case is checked: one edited or stale trial makes the case changed. A case
+    # that gained or lost a tag the filter looks at is changed as well (its hash holds the tags).
     changed = sorted(cid for cid in set(cases) & set(scored) if scored[cid] != {cases[cid]})
+    outside = sorted(set(scored) & (set(cases) - wanted) - set(changed))
     expected_trials = list(range(run.trials))
     wrong_trials = [
         f"`{cid}` has trials {sorted(found)}, expected "
@@ -154,11 +166,17 @@ def verify_run(run: Run, cfg: SuiteConfig) -> Verification:
             f"{len(changed)} case(s) changed since the run was made (content or tags), or have "
             f"no case hash: {_ids(changed)}"
         )
+    if outside and tag_filter:
+        problems.append(
+            f"{len(outside)} case(s) in the run are outside the run's tag filter "
+            f"({tag_filter.describe()}): {_ids(outside)}"
+        )
     rescored, rescore_problems = _rescore(run, cfg, dataset, cases)
     problems += rescore_problems
     return Verification(
         ok=not problems,
-        cases=len(cases),
+        cases=len(wanted),
+        tag_filter=tag_filter,
         problems=problems,
         rescored=rescored,
         not_rescored=[sc.name for sc in cfg.scorers if not is_deterministic(sc)],
@@ -168,9 +186,14 @@ def verify_run(run: Run, cfg: SuiteConfig) -> Verification:
 def verify_markdown(result: Verification, run_path: str, suite_path: str) -> str:
     lines = ["## evalproof verify", ""]
     if result.ok:
+        which = (
+            f"the {result.cases} cases its tag filter ({result.tag_filter.describe()}) selects"
+            if result.tag_filter
+            else f"all {result.cases} cases"
+        )
         verdict = (
             f"✅ `{run_path}` matches `{suite_path}`: the same system, judge, scorers and seed, "
-            f"and all {result.cases} cases as they are now"
+            f"and {which} as they are now"
         )
         if result.rescored:
             verdict += f"; re-scored the stored outputs with {', '.join(result.rescored)}."

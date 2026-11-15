@@ -162,6 +162,37 @@ class CaseResult(BaseModel):
     trial: int = 0
 
 
+class TagFilter(BaseModel):
+    """Which cases a run was limited to by their tags (``evalproof run --tags`` and
+    ``--exclude-tags``). A case is selected when it carries at least one of ``include`` (any tag
+    qualifies when ``include`` is empty) and none of ``exclude``. Tags match exactly, with case.
+
+    Both lists are kept sorted and without duplicates, so two runs made with the same filter
+    carry equal filters however the options were written."""
+
+    include: list[str] = Field(default_factory=list)
+    exclude: list[str] = Field(default_factory=list)
+
+    def selects(self, case: Case) -> bool:
+        tags = set(case.tags)
+        if self.include and tags.isdisjoint(self.include):
+            return False
+        return tags.isdisjoint(self.exclude)
+
+    def apply(self, cases: list[Case]) -> list[Case]:
+        """The cases the filter selects, in their original order."""
+        return [case for case in cases if self.selects(case)]
+
+    def describe(self) -> str:
+        """The filter as the options that make it, such as ``--tags a,b --exclude-tags c``."""
+        parts = []
+        if self.include:
+            parts.append(f"--tags {','.join(self.include)}")
+        if self.exclude:
+            parts.append(f"--exclude-tags {','.join(self.exclude)}")
+        return " ".join(parts)
+
+
 class RunInfo(BaseModel):
     suite: str
     system: str
@@ -183,6 +214,10 @@ class RunInfo(BaseModel):
     # Trials (repeats) per case: ``evalproof run --trials`` or the suite's ``trials``. 1 in run
     # files written before evalproof 0.7 and in imported runs that kept no repeats.
     trials: int = 1
+    # The tag filter the run was made with (``--tags`` / ``--exclude-tags``); None when every case
+    # of the dataset ran, and in run files written before evalproof 1.3. ``evalproof verify``
+    # applies it to the dataset to know which cases the run should hold.
+    tag_filter: TagFilter | None = None
 
 
 class Run(BaseModel):

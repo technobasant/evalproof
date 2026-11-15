@@ -1,0 +1,84 @@
+# Written by `evalproof init --platform bitbucket --ci keyless`.
+#
+#@@IF snippet
+# bitbucket-pipelines.yml already exists, and `evalproof init` never edits it, so this is a
+# snippet: merge it into that file by hand. Keep your own `image` and `clone` if you have them
+# (the step needs Python with pip, and `clone: depth: full`), and put the step below under your
+# own `pipelines: pull-requests: '**':` list: a pattern can appear only once in a file.
+#
+#@@END
+# The evals run on a developer's machine, on their own login, and the pull request commits the
+# result (evals/runs/latest.json). This pipeline makes no model calls and needs no repository
+# variable: it compares that file with the one on the destination branch and fails the pull
+# request pipeline on a regression that is both large enough to matter and statistically
+# significant.
+#
+# What that proves, and what it does not. Before comparing, the step runs `evalproof verify`:
+# the committed run must match the committed suite (system, judge, scorers, seed) and cover
+# exactly the dataset's cases as they are now. So a stale run file, a --limit run and an
+# edited case all fail the step. It also scores the stored outputs again with the suite's scorers
+# that need no model, so a deterministic score edited by hand fails the step too. It cannot check
+# model-judged scores or the stored outputs themselves. For pull requests from people you do not
+# trust, review the run file, or use `evalproof init --platform bitbucket --ci api-key`, which
+# makes the run in CI.
+#
+# Variables Bitbucket sets for every step (see
+# https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/):
+#   BITBUCKET_PR_DESTINATION_BRANCH  the branch the pull request targets; pull-request pipelines
+#                                    only, which is why the step below lives under `pull-requests`
+#   BITBUCKET_PR_ID                  the pull request's number; pull-request pipelines only
+#   BITBUCKET_CLONE_DIR              where the repository is cloned; every pipeline
+# A pull-request pipeline builds the source branch with the destination branch merged in, and
+# Bitbucket does not start one for a pull request from a fork
+# (https://support.atlassian.com/bitbucket-cloud/docs/pipeline-start-conditions/).
+#
+# This file defines `pull-requests` pipelines only, because the baseline is the destination
+# branch.
+image: python:3.13-slim # an image with git skips the git install below
+
+clone:
+  depth: full # the destination branch has to be in the clone (the default is the last 50 commits)
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: evalproof verify and gate
+          script:
+            - |
+              set -eu
+              export PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore
+              # `evalproof verify` (below) already catches a changed suite or dataset. This list
+              # is for files it cannot see: application code that holds your prompts or retrieval
+              # logic. Space-separated paths whose change should come with a fresh run file; add
+              # yours.
+              EVALPROOF_WATCH="evals/"
+              command -v git > /dev/null || { apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null; }
+              target="$BITBUCKET_PR_DESTINATION_BRANCH"
+              git fetch --quiet origin "+refs/heads/$target:refs/remotes/origin/$target"
+
+              # Take the baseline from the destination branch.
+              baseline="${TMPDIR:-/tmp}/evalproof-baseline.json"
+              if ! git cat-file -e "origin/$target:evals/runs/latest.json" 2>/dev/null; then
+                echo "evalproof: notice: $target has no evals/runs/latest.json yet, so there is nothing to compare with. Merge it and later pull requests are gated."
+                exit 0
+              fi
+              if [ ! -f evals/runs/latest.json ]; then
+                echo "evalproof: error: evals/runs/latest.json is missing from this branch. Run the suite and commit the file." >&2
+                exit 1
+              fi
+              git show "origin/$target:evals/runs/latest.json" > "$baseline"
+
+              # Warn when the run file is stale.
+              set -f
+              changed="$(git diff --name-only "origin/$target...HEAD" -- $EVALPROOF_WATCH ':(exclude)evals/runs/')"
+              set +f
+              refreshed="$(git diff --name-only "origin/$target...HEAD" -- evals/runs/latest.json)"
+              if [ -n "$changed" ] && [ -z "$refreshed" ]; then
+                echo "evalproof: warning: these files changed but evals/runs/latest.json did not, so the gate compares results that predate the change: $(printf '%s' "$changed" | tr '\n' ' ')"
+              fi
+
+              # Verify first: a run file that does not match the suite cannot be gated.
+              python -m pip install --quiet "evalproof==@@PIP_VERSION@@"
+              evalproof verify evals/runs/latest.json evals/suite.yaml
+              evalproof compare "$baseline" evals/runs/latest.json --suite evals/suite.yaml --gate

@@ -31,9 +31,16 @@ ACTION_REF = "v1.2.0"
 CI_MODES = ("keyless", "api-key", "none")
 
 # Where the generated CI lives. GitLab gets a file of its own that the user includes from
-# ``.gitlab-ci.yml``; ``init`` never edits that file.
-PLATFORMS = ("github", "gitlab")
+# ``.gitlab-ci.yml``; ``init`` never edits that file. Bitbucket has no include for a file in the
+# repository, so it gets ``bitbucket-pipelines.yml`` itself, or, when that file is someone else's,
+# a snippet to merge by hand.
+PLATFORMS = ("github", "gitlab", "bitbucket")
 GITLAB_CI_FILE = ".gitlab-ci.evalproof.yml"
+BITBUCKET_CI_FILE = "bitbucket-pipelines.yml"
+BITBUCKET_SNIPPET_FILE = "evals/bitbucket-pipelines.snippet.yml"
+# The first words of the comment every generated Bitbucket file starts with: a
+# ``bitbucket-pipelines.yml`` that has it was written by ``init`` and may be replaced.
+BITBUCKET_MARKER = "# Written by `evalproof init --platform bitbucket"
 
 # What the api-key workflow hands a coding-agent CLI: its API key (the default), or, for Claude
 # Code only, the token ``claude setup-token`` prints.
@@ -257,12 +264,22 @@ def _ci_secret(judge: Judge, cli_auth: str) -> str:
 
 
 def render_ci_text(
-    ci: str, judge: Judge, cli_auth: str = "api-key", platform: str = "github"
+    ci: str,
+    judge: Judge,
+    cli_auth: str = "api-key",
+    platform: str = "github",
+    bitbucket_file: str = BITBUCKET_CI_FILE,
 ) -> str:
     gitlab = platform == "gitlab"
+    bitbucket = platform == "bitbucket"
     if gitlab:
         file = f"`{GITLAB_CI_FILE}` (included from `.gitlab-ci.yml`)"
         request, base = "merge request", "target branch"
+    elif bitbucket:
+        file = f"`{bitbucket_file}`"
+        if bitbucket_file == BITBUCKET_SNIPPET_FILE:
+            file += f" (a snippet to merge into your `{BITBUCKET_CI_FILE}`)"
+        request, base = "pull request", "destination branch"
     else:
         file, request, base = "`.github/workflows/evalproof.yml`", "pull request", "base branch"
     if ci == "keyless":
@@ -278,6 +295,18 @@ def render_ci_text(
         )
     if ci == "api-key":
         secret = _ci_secret(judge, cli_auth)
+        if bitbucket:
+            return (
+                "Commit `evals/runs/latest.json` on the main branch to set the baseline. "
+                f"{file} runs the suite on a pull request that changes `evals/` (add the paths "
+                "that hold your prompt to `EVALPROOF_WATCH` in the step) with the "
+                f"`{secret}` secured repository variable and compares the result with that "
+                "file; it fails on a regression that is both large enough to matter and "
+                "statistically significant (exit 1; exit 3 over a budget; exit 4 when it cannot "
+                "decide). Bitbucket starts no pull-request pipeline for a fork, so nothing runs "
+                "for one. Responses are cached between runs. A push to `main` runs the suite "
+                "too and keeps the run as an artifact."
+            )
         if gitlab:
             return (
                 "Commit `evals/runs/latest.json` on the main branch to set the baseline. "
@@ -355,6 +384,35 @@ def render_workflow(ci: str, judge: Judge, pinned: str | None, cli_auth: str = "
         if cli:
             flags.add("cliauth")
     return fill(template("workflow-api-key.yml"), values, frozenset(flags))
+
+
+def render_bitbucket_ci(ci: str, judge: Judge, *, snippet: bool = False) -> str:
+    """``bitbucket-pipelines.yml``, or the snippet to merge into an existing one: the same gate
+    as the GitHub workflow, on pull requests, in ``python:3.13-slim`` with evalproof installed
+    from PyPI at the release this file was written by. A coding-agent CLI judge is refused
+    before this is called (``init_project``): the image has no Node to install the CLI with."""
+    values = {"PIP_VERSION": ACTION_REF.removeprefix("v")}
+    flags = frozenset({"snippet"}) if snippet else frozenset()
+    if ci == "keyless":
+        return fill(template("workflow-bitbucket-keyless.yml"), values, flags)
+    values["KEY_VAR"] = _key_env(judge)
+    return fill(template("workflow-bitbucket-api-key.yml"), values, flags)
+
+
+def bitbucket_ci_target(root: Path) -> str:
+    """Where the Bitbucket pipeline goes under ``root``: ``bitbucket-pipelines.yml`` when it is
+    missing or was written by ``init`` (the usual keep-or-``--force`` rule then applies), and the
+    snippet otherwise. A ``bitbucket-pipelines.yml`` someone wrote holds all of their pipelines,
+    so not even ``--force`` replaces it."""
+    existing = root / BITBUCKET_CI_FILE
+    if not existing.exists():
+        return BITBUCKET_CI_FILE
+    try:
+        lines = existing.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return BITBUCKET_SNIPPET_FILE
+    ours = any(line.startswith(BITBUCKET_MARKER) for line in lines)
+    return BITBUCKET_CI_FILE if ours else BITBUCKET_SNIPPET_FILE
 
 
 def render_gitlab_ci(ci: str, judge: Judge) -> str:
@@ -541,15 +599,17 @@ def build_files(
     cli_auth: str = "api-key",
     platform: str = "github",
     imported: tuple[ImportedDataset, str] | None = None,
+    bitbucket_file: str = BITBUCKET_CI_FILE,
 ) -> list[tuple[str, str]]:
     """Every file to write, as (path relative to the target directory, content).
 
     ``imported`` is an import and the name of the file it came from: the cases and the suite's
-    scorers then come from it instead of the three sample cases.
+    scorers then come from it instead of the three sample cases. ``bitbucket_file`` is where the
+    Bitbucket pipeline goes (``bitbucket_ci_target``).
 
     ``AGENTS.md`` is not in the list: it is merged into an existing file, not written whole
     (``plan_agents_md``)."""
-    ci_text = render_ci_text(ci, judge, cli_auth, platform)
+    ci_text = render_ci_text(ci, judge, cli_auth, platform, bitbucket_file)
     if imported is None:
         suite_text, cases_text = render_suite(judge), template("cases.jsonl")
     else:
@@ -564,6 +624,9 @@ def build_files(
     if ci != "none":
         if platform == "gitlab":
             out.append((GITLAB_CI_FILE, render_gitlab_ci(ci, judge)))
+        elif platform == "bitbucket":
+            snippet = bitbucket_file != BITBUCKET_CI_FILE
+            out.append((bitbucket_file, render_bitbucket_ci(ci, judge, snippet=snippet)))
         else:
             out.append(
                 (".github/workflows/evalproof.yml", render_workflow(ci, judge, pinned, cli_auth))
@@ -617,6 +680,8 @@ def requirement_lines(
             )
     elif platform == "gitlab":
         remote = f"the {_key_env(judge)} CI/CD variable, masked and not protected"
+    elif platform == "bitbucket":
+        remote = f"the {_key_env(judge)} repository variable, marked Secured"
     else:
         remote = f"the {_key_env(judge)} repository secret"
     lines = [f"locally: {local}", f"in CI: {remote}"]
@@ -624,6 +689,10 @@ def requirement_lines(
         if platform == "gitlab":
             lines.append(
                 "merge requests from forks never receive the variable, so the job skips them"
+            )
+        elif platform == "bitbucket":
+            lines.append(
+                "pull requests from forks start no pipeline, so the suite never runs for them"
             )
         else:
             lines.append(
@@ -732,9 +801,9 @@ def init_project(
                 f"{chosen.target!r}. Pass --judge claude-code:<model>, or leave --cli-auth out "
                 "to use an API key (Codex and every other target have no token option)."
             )
-    if platform == "gitlab" and ci == "api-key" and chosen.provider in AGENT_CLIS:
+    if platform in ("gitlab", "bitbucket") and ci == "api-key" and chosen.provider in AGENT_CLIS:
         raise ConfigError(
-            f"--platform gitlab --ci api-key runs in python:3.13-slim, which has no Node to "
+            f"--platform {platform} --ci api-key runs in python:3.13-slim, which has no Node to "
             f"install the {AGENT_CLIS[chosen.provider].label} CLI with, and the judge is "
             f"{chosen.target!r}. Pass --judge with a hosted API target such as "
             f"{ANTHROPIC_DEFAULT}, or use --ci keyless."
@@ -751,8 +820,11 @@ def init_project(
     if from_file is not None:
         imp = import_cases(from_format, from_file, warn=notes.append)
         imported = (replace(imp, notes=[*imp.notes, *notes]), from_file.name)
-    files_to_write = build_files(chosen, ci, skill, pinned, cli_auth, platform, imported)
     root = directory.resolve()
+    bitbucket_file = bitbucket_ci_target(root) if platform == "bitbucket" else BITBUCKET_CI_FILE
+    files_to_write = build_files(
+        chosen, ci, skill, pinned, cli_auth, platform, imported, bitbucket_file
+    )
     # Merge into AGENTS.md before writing anything, so damaged markers stop init with no change.
     agents_plan = plan_agents_md(root) if agents_md else None
 
@@ -785,6 +857,10 @@ def init_project(
     emit("next:")
     emit("  uvx evalproof run evals/suite.yaml --out evals/runs/latest.json")
     gitlab = platform == "gitlab"
+    bitbucket = platform == "bitbucket"
+    snippet = bitbucket_file == BITBUCKET_SNIPPET_FILE
+    # What to commit besides evals/ (the snippet is under evals/ and is not committed on its own).
+    pipeline_file = BITBUCKET_CI_FILE if snippet else bitbucket_file
     if ci == "api-key":
         secret = _ci_secret(chosen, cli_auth)
         if gitlab:
@@ -792,11 +868,22 @@ def init_project(
                 f"  add the CI/CD variable {secret} (masked, not protected), "
                 f"then commit evals/ and {GITLAB_CI_FILE}"
             )
+        elif bitbucket:
+            emit(
+                f"  add the repository variable {secret}, marked Secured "
+                "(Repository settings > Pipelines > Repository variables)"
+            )
+            emit(f"  then commit evals/ and {pipeline_file}")
         else:
             emit(f"  add the repository secret {secret}, then commit evals/ and .github/")
     elif gitlab and ci == "keyless":
         emit(
             f"  commit evals/ (including evals/runs/latest.json) and {GITLAB_CI_FILE} "
+            "with your change"
+        )
+    elif bitbucket and ci == "keyless":
+        emit(
+            f"  commit evals/ (including evals/runs/latest.json) and {pipeline_file} "
             "with your change"
         )
     else:
@@ -806,6 +893,12 @@ def init_project(
         emit("  that file, so add these two lines to it (create it if you have none):")
         emit("    include:")
         emit(f"      - local: {GITLAB_CI_FILE}")
+    if bitbucket and ci != "none":
+        if snippet:
+            emit(f"  {BITBUCKET_CI_FILE} already exists and init never edits it, so the pipeline")
+            emit(f"  went to {BITBUCKET_SNIPPET_FILE}. Merge it into {BITBUCKET_CI_FILE}:")
+            emit("  the comment at the top of the snippet says where each part goes.")
+        emit("  Pipelines must be turned on for the repository (Repository settings > Pipelines).")
     emit("")
     emit("what it needs to run:")
     for line in requirement_lines(chosen, ci, cli_auth, platform):
