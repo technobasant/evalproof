@@ -6,6 +6,8 @@ import os
 import random
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Protocol, TypeVar
 
 import httpx
@@ -16,6 +18,10 @@ from evalproof.config import GenerationParams, Pricing
 T = TypeVar("T")
 
 RETRY_STATUS = {408, 409, 425, 429, 500, 502, 503, 504, 529}
+
+RETRY_ATTEMPTS = 6  # calls per request, the first one included
+MAX_BACKOFF_S = 30.0  # the longest the exponential backoff waits between two attempts
+MAX_RETRY_AFTER_S = 60.0  # the longest a ``Retry-After`` header can make a call wait
 
 
 class ProviderError(RuntimeError):
@@ -77,19 +83,43 @@ def close_resource(obj: object) -> None:
         close()
 
 
+def parse_retry_after(value: str | None, now: datetime | None = None) -> float | None:
+    """Seconds to wait from a ``Retry-After`` header: whole seconds, or an HTTP date counted from
+    ``now`` (default: the current time). None for a missing, unparseable or negative value, and for
+    a date already past, so the caller falls back to its own backoff."""
+    if value is None:
+        return None
+    text = value.strip()
+    if text.isascii() and text.isdigit():
+        return float(int(text))
+    try:
+        when = parsedate_to_datetime(text)
+    except (TypeError, ValueError, IndexError):
+        return None
+    if when.tzinfo is None:  # a date written without a zone is UTC
+        when = when.replace(tzinfo=UTC)
+    seconds = (when - (now or datetime.now(UTC))).total_seconds()
+    return seconds if seconds >= 0 else None
+
+
 def with_retries(
     fn: Callable[[], T],
     *,
-    attempts: int = 4,
-    base_delay: float = 0.5,
+    attempts: int = RETRY_ATTEMPTS,
+    base_delay: float = 1.0,
     sleep: Callable[[float], None] = time.sleep,
     rng: random.Random | None = None,
 ) -> T:
-    """Retry transport errors, retryable HTTP statuses and ``TransientError`` with jittered
-    exponential backoff."""
-    rng = rng or random.Random(0)
+    """Retry transport errors, retryable HTTP statuses and ``TransientError``.
+
+    The wait after a failed attempt is ``base_delay * 2**attempt``, at most 30 seconds, times a
+    jitter between 0.5 and 1.5. When the failed response carries a ``Retry-After`` header, that
+    wait is used instead, capped at 60 seconds: a rate limit says how long it lasts. The default
+    ``rng`` is seeded afresh on every call, so parallel workers do not retry in lockstep."""
+    rng = rng or random.Random()
     last: Exception | None = None
     for attempt in range(attempts):
+        retry_after: float | None = None
         try:
             return fn()
         except httpx.HTTPStatusError as exc:
@@ -98,10 +128,14 @@ def with_retries(
                     f"HTTP {exc.response.status_code}: {exc.response.text[:300]}"
                 ) from exc
             last = exc
+            retry_after = parse_retry_after(exc.response.headers.get("retry-after"))
         except (httpx.TransportError, TransientError) as exc:
             last = exc
         if attempt < attempts - 1:
-            sleep(base_delay * (2**attempt) * (0.5 + rng.random()))
+            if retry_after is not None:
+                sleep(min(retry_after, MAX_RETRY_AFTER_S))
+            else:
+                sleep(min(MAX_BACKOFF_S, base_delay * (2**attempt)) * (0.5 + rng.random()))
     raise ProviderError(f"giving up after {attempts} attempts: {last}") from last
 
 

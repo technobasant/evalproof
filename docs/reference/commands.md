@@ -19,7 +19,7 @@ Every `evalproof` subcommand, its arguments and every flag with its type and def
 | [`evalproof report`](#evalproof-report) | summarise one run |
 | [`evalproof verify`](#evalproof-verify) | check that a run file matches the suite and dataset, without calling a model |
 | [`evalproof rehash`](#evalproof-rehash) | add per-case hashes to a run file written before evalproof 0.5, without calling a model |
-| [`evalproof doctor`](#evalproof-doctor) | check the coding-agent CLI targets, without calling a model |
+| [`evalproof doctor`](#evalproof-doctor) | check the coding-agent CLI targets and a command target, without calling a model |
 | [`evalproof readiness`](#evalproof-readiness) | report which parts of quality a suite covers and which it leaves untested |
 | [`evalproof pairwise`](#evalproof-pairwise) | judge baseline vs candidate outputs head to head |
 
@@ -63,7 +63,7 @@ evalproof run SUITE [options]
 | `--out` | string | none | where to write the run (with `--variant`, only when exactly one variant runs) |
 | `--limit` | int | none | run only the first N cases of the dataset |
 | `--no-cache` | flag | off | do not read or write the response cache |
-| `--cache-only` | flag | off | re-score or rebuild a run from the cache: every model call, the judge's included, is answered from the response cache, and a miss is an error (exit 2), never a model call, which stops the run (with several variants, the runs finished before the miss are written); the run records `cache_only: "true"` in its `environment`; not with `--no-cache`, and a `python` or `http` system is refused because it is not cached |
+| `--cache-only` | flag | off | re-score or rebuild a run from the cache: every model call, the judge's included, is answered from the response cache, and a miss is an error (exit 2), never a model call, which stops the run (with several variants, the runs finished before the miss are written); the run records `cache_only: "true"` in its `environment`; not with `--no-cache`, and a `python`, `http` or `command` system is refused because it is not cached |
 | `--trials` | int, 1 to 100 | none | run each case K times (1 to 100), overriding the suite's trials |
 | `--system` | string | none | override the system target |
 | `--system-prompt-file` | string | none | override the system prompt |
@@ -277,7 +277,7 @@ Exit 0 on success, 4 when the dataset does not match the run, 2 for a usage erro
 
 ## evalproof doctor
 
-Checks each coding-agent CLI target (`claude-code`, `codex`, and the experimental `opencode`, `cursor` and `copilot`): binary, version, login and the isolation flags. It makes no model call, except with `--cursor-canary`. With a suite it checks the targets that suite uses; without one it surveys every CLI on the machine.
+Checks each coding-agent CLI target (`claude-code`, `codex`, and the experimental `opencode`, `cursor` and `copilot`): binary, version, login and the isolation flags. It makes no model call, except with `--cursor-canary`. With a suite it checks the targets that suite uses; without one it surveys every CLI on the machine. A suite's `command:` system is checked too: doctor prints the file its program resolves to and the directory it runs in, says that no credential is used, and reports a program that cannot be found.
 
 ```bash title="Terminal"
 evalproof doctor [SUITE]

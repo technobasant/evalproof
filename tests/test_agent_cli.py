@@ -734,9 +734,9 @@ def test_persistent_overload_gives_up(tmp_path: Path, monkeypatch: pytest.Monkey
         version="v",
         responses=[claude_failure(529, "Overloaded")],
     )
-    with pytest.raises(ProviderError, match="giving up after 4 attempts"):
+    with pytest.raises(ProviderError, match="giving up after 6 attempts"):
         claude_provider().chat(USER, PARAMS)
-    assert len(fake.calls()) == 4
+    assert len(fake.calls()) == 6
 
 
 def test_codex_retries_a_rate_limit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -13,7 +13,7 @@ trials: 5          # in the suite; `evalproof run --trials 5` overrides it (1 to
 
 The run file then holds `cases x trials` results. Each trial is run and scored on its own. A
 python system gets `ctx.trial` (0 to `trials - 1`), an http system a `trial` field in the request
-body (only when `trials` is above 1), and a local model that honours a seed gets `seed + trial`,
+body and a command system one on stdin (only when `trials` is above 1), and a local model that honours a seed gets `seed + trial`,
 so each trial can draw a different sample. The response cache keeps trial 0 under the key it always
 had and keys every later trial separately, so a re-run is still free and a trial never replays
 another's answer. Nothing new goes to any provider. A run file from before trials loads as one

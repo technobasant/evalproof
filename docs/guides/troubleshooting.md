@@ -22,15 +22,15 @@ Most errors print as `evalproof: error: <message>` on stderr and exit with code 
 
 **Fix:** correct what the provider names. Check the key, the model id after the colon in `provider:model`, and `base_url` when the suite sets one.
 
-### `giving up after 4 attempts: ...`
+### `giving up after 6 attempts: ...`
 
-**Cause:** the call failed four times in a row. evalproof retries a transport error (the host could not be reached, the connection dropped) and the statuses 408, 409, 425, 429, 500, 502, 503, 504 and 529, with a jittered exponential backoff that starts at 0.5 seconds. The error after the colon is the last one it saw. A rate limit or an overloaded provider is the usual cause.
+**Cause:** the call failed six times in a row. evalproof retries a transport error (the host could not be reached, the connection dropped) and the statuses 408, 409, 425, 429, 500, 502, 503, 504 and 529. The wait between attempts is a jittered exponential backoff that starts at 1 second and never exceeds 30 seconds. When the provider sends a `Retry-After` header, evalproof waits that long instead, up to 60 seconds. The error after the colon is the last one it saw. A rate limit or an overloaded provider is the usual cause.
 
 **Fix:** run the suite again. Only calls that succeeded are cached, so the re-run repeats just the ones that failed. If it keeps failing, lower the load on the provider or wait out the limit.
 
 ### Ollama is not running
 
-**Symptom:** `giving up after 4 attempts:` followed by a connection error, on an `ollama:<model>` target.
+**Symptom:** `giving up after 6 attempts:` followed by a connection error, on an `ollama:<model>` target.
 
 **Cause:** nothing is listening where evalproof looks. The default endpoint is `http://127.0.0.1:11434`.
 
@@ -110,11 +110,11 @@ Most errors print as `evalproof: error: <message>` on stderr and exit with code 
 
 **Fix:** use a hosted model, or the `claude-code` target, for that role. Run `evalproof doctor SUITE` to see what each CLI target would use.
 
-### `multi-turn cases need a python, http or direct model target`
+### `multi-turn cases need a python, http, command or direct model target`
 
 **Cause:** a case in the dataset has `turns`, and the system is a coding-agent CLI, which takes one prompt per call. The check runs before any case does.
 
-**Fix:** point the system at a python, http or direct model target, or move the multi-turn cases to a separate suite.
+**Fix:** point the system at a python, http, command or direct model target, or move the multi-turn cases to a separate suite.
 
 ## The suite and the dataset
 

@@ -179,8 +179,8 @@ def run_suite(
     ``on_plan(cases, trials)`` is called once before the first run.
 
     With ``cache_only`` every model call, the judge's included, is answered from the response
-    cache; the first one that is not there raises ``CacheMiss`` and no run is returned. A python
-    or http system is refused, because it does not go through the cache."""
+    cache; the first one that is not there raises ``CacheMiss`` and no run is returned. A python,
+    http or command system is refused, because it does not go through the cache."""
     n_trials = cfg.trials if trials is None else trials
     if not 1 <= n_trials <= MAX_TRIALS:
         raise ConfigError(f"trials must be between 1 and {MAX_TRIALS}, got {n_trials}")
@@ -188,7 +188,7 @@ def run_suite(
         raise ConfigError("cache_only needs the cache: it cannot be combined with use_cache=False")
     variant_vars = cfg.variant(variant).vars if variant is not None else {}
     system_cfg = system_override or cfg.variant_system(variant)
-    if cache_only and system_cfg.kind in ("python", "http"):
+    if cache_only and system_cfg.kind in ("python", "http", "command"):
         raise ConfigError(
             f"--cache-only needs a model system: a {system_cfg.kind} system is not cached, "
             "so its code would run"

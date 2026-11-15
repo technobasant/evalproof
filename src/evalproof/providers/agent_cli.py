@@ -25,9 +25,7 @@ import json
 import os
 import re
 import shutil
-import signal
 import subprocess
-import sys
 import tempfile
 import time
 from collections.abc import Callable
@@ -35,6 +33,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
 
+from evalproof._process import kill_tree, popen_group_kwargs
 from evalproof.config import GenerationParams, TargetConfig
 from evalproof.providers.base import (
     ChatResponse,
@@ -99,17 +98,6 @@ def render_prompt(messages: list[Message]) -> str:
     return "\n\n".join(f"{labels.get(m.role, m.role.title())}: {m.content}" for m in messages)
 
 
-def _kill_group(proc: subprocess.Popen[bytes]) -> None:
-    """Kill the child and everything it started (it runs in its own session)."""
-    try:
-        if sys.platform == "win32":  # pragma: no cover - POSIX only in CI
-            proc.kill()
-        else:
-            os.killpg(proc.pid, signal.SIGKILL)
-    except (ProcessLookupError, PermissionError):
-        pass
-
-
 def run_process(
     cmd: list[str],
     *,
@@ -119,7 +107,7 @@ def run_process(
     timeout_s: float,
 ) -> tuple[int, str, str]:
     """Run ``cmd`` with ``stdin`` as its whole input (then EOF) and return the exit code, stdout
-    and stderr. On a timeout, or any other interruption, the whole process group is killed and
+    and stderr. On a timeout, or any other interruption, the whole process tree is killed and
     the exception is re-raised, so nothing outlives the call."""
     proc = subprocess.Popen(
         cmd,
@@ -128,12 +116,12 @@ def run_process(
         stderr=subprocess.PIPE,
         cwd=cwd,
         env=env,
-        start_new_session=True,
+        **popen_group_kwargs(),
     )
     try:
         out, err = proc.communicate(stdin, timeout=timeout_s)
     except BaseException:
-        _kill_group(proc)
+        kill_tree(proc)
         with contextlib.suppress(subprocess.TimeoutExpired, OSError, ValueError):
             proc.communicate(timeout=5)
         raise

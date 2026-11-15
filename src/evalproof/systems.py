@@ -1,19 +1,24 @@
-"""Systems under test: an LLM prompt, a Python function, or an HTTP endpoint.
+"""Systems under test: an LLM prompt, a Python function, a program, or an HTTP endpoint.
 
 A system failure is recorded on the case, not raised: one timeout should not throw
 away an hour of judging. Errored cases score as failures and are listed in reports.
 
-A python or http system may be an agent. It then returns, besides its ``output``, a ``trace`` of
-what it did (see ``evalproof.models.Trace``) and optionally its token counts and cost; the runner
-fills any token or cost figure it leaves out from the trace's usage (``_finish``).
+A python, http or command system may be an agent. It then returns, besides its ``output``, a
+``trace`` of what it did (see ``evalproof.models.Trace``) and optionally its token counts and cost;
+the runner fills any token or cost figure it leaves out from the trace's usage (``_finish``).
 """
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import importlib
 import inspect
+import json
+import os
+import shutil
 import string
+import subprocess
 import sys
 import time
 from collections.abc import Callable, Iterable
@@ -23,12 +28,14 @@ from typing import Any, Protocol
 import httpx
 from pydantic import ValidationError
 
+from evalproof._process import kill_tree, popen_group_kwargs
 from evalproof.cache import CachedProvider, ResponseCache, trial_scope
 from evalproof.config import (
     ConfigError,
     GenerationParams,
     Pricing,
     TargetConfig,
+    command_argv,
     trial_params,
 )
 from evalproof.models import Case, SystemOutput, Trace
@@ -197,7 +204,8 @@ class LLMSystem:
 
 @dataclass
 class _Result:
-    """What a python or http system returned, before token and cost figures are settled."""
+    """What a python, http or command system returned, before token and cost figures are
+    settled."""
 
     output: str
     retrieved: list[str] = field(default_factory=list)
@@ -335,6 +343,31 @@ class PythonSystem:
         return _finish(coerced, (time.perf_counter() - start) * 1000, self.pricing)
 
 
+def request_body(
+    case: Case,
+    *,
+    variant: str | None,
+    vars: dict[str, Any],
+    trials: int,
+    trial: int,
+) -> dict[str, Any]:
+    """What an http or command system is sent for one run: ``id`` and ``input``, and when the case
+    or variant has them ``turns``, ``state``, ``variant`` and ``vars``; ``trial`` when each case
+    runs more than once."""
+    body: dict[str, Any] = {"id": case.id, "input": case.input}
+    for key, value in (
+        ("turns", case.turns),
+        ("state", case.state),
+        ("variant", variant),
+        ("vars", vars),
+    ):
+        if value:
+            body[key] = value
+    if trials > 1:
+        body["trial"] = trial
+    return body
+
+
 class HttpSystem:
     """POSTs ``{"id", "input"}`` and, when the case or variant has them, ``turns``, ``state``,
     ``variant`` and ``vars``; with more than one trial per case, also ``trial``. Expects JSON
@@ -364,18 +397,9 @@ class HttpSystem:
             self._client.close()
 
     def _body(self, case: Case, trial: int = 0) -> dict[str, Any]:
-        body: dict[str, Any] = {"id": case.id, "input": case.input}
-        for key, value in (
-            ("turns", case.turns),
-            ("state", case.state),
-            ("variant", self.variant),
-            ("vars", self.vars),
-        ):
-            if value:
-                body[key] = value
-        if self.trials > 1:
-            body["trial"] = trial
-        return body
+        return request_body(
+            case, variant=self.variant, vars=self.vars, trials=self.trials, trial=trial
+        )
 
     def run(self, case: Case, *, trial: int = 0) -> SystemOutput:
         body = self._body(case, trial)
@@ -395,15 +419,133 @@ class HttpSystem:
         return _finish(coerced, (time.perf_counter() - start) * 1000, self.cfg.pricing)
 
 
+# -- the command target ----------------------------------------------------------------------------
+
+STDERR_TAIL_CHARS = 300  # how much of a failed command's stderr goes into the case's error
+REAP_TIMEOUT_S = 5.0  # how long to wait for a killed command's pipes to close
+
+
+def resolve_program(program: str, base_dir: str | None = None) -> str:
+    """The file a ``command:`` target runs, or a ``ConfigError`` naming the program.
+
+    A program with a path separator (``/``, and ``\\`` on Windows) is a path, relative to the
+    suite's directory ``base_dir``. A bare name is looked up on ``PATH``, where ``shutil.which``
+    adds the extensions Windows runs (``npx`` finds ``npx.cmd``)."""
+    separators = [c for c in (os.sep, os.altsep) if c]
+    if any(c in program for c in separators):
+        path = os.path.abspath(os.path.join(base_dir or ".", program))
+        found = shutil.which(path)
+        if found is None:
+            raise ConfigError(f"command target: {program!r} is not an executable file ({path})")
+    else:
+        found = shutil.which(program)
+        if found is None:
+            raise ConfigError(f"command target: program {program!r} not found on PATH")
+    return os.path.abspath(found)  # the command runs elsewhere, so a relative path would break
+
+
+class CommandSystem:
+    """``command:<program> [args...]``: runs the program once per case (and per trial), in the
+    suite's directory. It reads the same JSON an http system is sent from stdin, and prints either
+    plain text or JSON ``{"output", "retrieved"?, "trace"?, "tokens_in"?, "tokens_out"?,
+    "cost_usd"?}``. A failure (an exit code, a timeout, a program that will not start) is recorded
+    on the case. No shell is used: the command line comes from the suite file, so it is trusted as
+    much as a ``python:`` target."""
+
+    def __init__(
+        self,
+        cfg: TargetConfig,
+        base_dir: str | None = None,
+        *,
+        variant: str | None = None,
+        vars: dict[str, Any] | None = None,
+        trials: int = 1,
+    ) -> None:
+        self.cfg = cfg
+        self.name = cfg.label or cfg.target
+        self.variant = variant
+        self.vars = dict(vars or {})
+        self.trials = trials  # the input carries ``trial`` only when a case runs more than once
+        self.cwd = os.path.abspath(base_dir) if base_dir else None
+        try:
+            argv = command_argv(cfg.target)
+        except ValueError as exc:  # a target set after validation, such as ``--system``
+            raise ConfigError(str(exc)) from exc
+        self.argv = [resolve_program(argv[0], self.cwd), *argv[1:]]
+
+    def _execute(self, stdin: bytes) -> tuple[int, bytes, bytes] | None:
+        """Run the command and return its exit code, stdout and stderr, or None when it timed
+        out (and was killed). A command still running when this is interrupted is killed too."""
+        with subprocess.Popen(
+            self.argv,
+            cwd=self.cwd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            **popen_group_kwargs(),
+        ) as proc:
+            try:
+                stdout, stderr = proc.communicate(stdin, timeout=self.cfg.timeout_s)
+            except subprocess.TimeoutExpired:
+                kill_tree(proc)
+                # Reap it and drain the pipes; if something outside its group still holds one,
+                # leaving the ``with`` block closes it.
+                with contextlib.suppress(subprocess.TimeoutExpired):
+                    proc.communicate(timeout=REAP_TIMEOUT_S)
+                return None
+            except BaseException:
+                kill_tree(proc)
+                raise
+            return proc.returncode, stdout, stderr
+
+    def run(self, case: Case, *, trial: int = 0) -> SystemOutput:
+        body = request_body(
+            case, variant=self.variant, vars=self.vars, trials=self.trials, trial=trial
+        )
+        try:
+            stdin = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        except ValueError as exc:  # e.g. a lone surrogate, which UTF-8 cannot hold
+            return SystemOutput(output="", error=f"cannot encode the case for the command: {exc}")
+        start = time.perf_counter()
+        try:
+            done = self._execute(stdin)
+        except OSError as exc:
+            return SystemOutput(output="", error=f"cannot run {self.argv[0]}: {exc}")
+        if done is None:
+            return SystemOutput(output="", error=f"command timed out after {self.cfg.timeout_s:g}s")
+        code, stdout, stderr = done
+        if code != 0:
+            tail = stderr.decode("utf-8", errors="replace").strip()[-STDERR_TAIL_CHARS:]
+            message = f"command exited with code {code}"
+            return SystemOutput(output="", error=f"{message}: {tail}" if tail else message)
+        latency_ms = (time.perf_counter() - start) * 1000
+        text = stdout.decode("utf-8", errors="replace")
+        try:
+            coerced = _coerce(_parse_stdout(text))
+        except (TypeError, ValueError) as exc:
+            return SystemOutput(output="", error=str(exc))
+        return _finish(coerced, latency_ms, self.cfg.pricing)
+
+
+def _parse_stdout(text: str) -> Any:
+    """A JSON object is the result as an http system's JSON reply is; anything else, a number or
+    a sentence, is the answer as plain text."""
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return text.strip()
+    return value if isinstance(value, dict) else text.strip()
+
+
 def check_turns_supported(cfg: TargetConfig, cases: Iterable[Case]) -> None:
-    """Multi-turn cases run on a python, http or direct model target. A coding-agent CLI takes
-    one prompt per call, so it is refused up front rather than run on the first turn alone."""
+    """Multi-turn cases run on a python, http, command or direct model target. A coding-agent CLI
+    takes one prompt per call, so it is refused up front rather than run on the first turn alone."""
     if cfg.kind not in CLI_PROVIDERS:
         return
     for case in cases:
         if case.turns:
             raise ConfigError(
-                "multi-turn cases need a python, http or direct model target: "
+                "multi-turn cases need a python, http, command or direct model target: "
                 f"case {case.id!r} has turns, and {cfg.target} is a coding-agent CLI"
             )
 
@@ -412,9 +554,9 @@ def check_variant_vars(
     cfg: TargetConfig, variant: str, variant_vars: dict[str, Any], cases: Iterable[Case]
 ) -> None:
     """A variant's vars are template fields of a model prompt, next to the case's own fields, so
-    a name in both is ambiguous. (A python or http system gets them apart, in ``ctx.vars`` or
-    the request body, so nothing can clash there.)"""
-    if not variant_vars or cfg.kind in ("python", "http"):
+    a name in both is ambiguous. (A python, http or command system gets them apart, in
+    ``ctx.vars``, the request body or the command's input, so nothing can clash there.)"""
+    if not variant_vars or cfg.kind in ("python", "http", "command"):
         return
     for case in cases:
         fields = set(case.render_vars())
@@ -446,6 +588,8 @@ def make_system(
         )
     if kind == "http":
         return HttpSystem(cfg, client=client, variant=variant, vars=vars, trials=trials)
+    if kind == "command":
+        return CommandSystem(cfg, base_dir=search_path, variant=variant, vars=vars, trials=trials)
     provider: Provider = make_provider(cfg, client=client)
     if cache is not None:
         provider = CachedProvider(
