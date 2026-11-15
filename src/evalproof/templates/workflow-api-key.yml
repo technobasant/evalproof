@@ -79,6 +79,20 @@ jobs:
         run: npm install -g @@NPM_SPEC@@
 
 #@@END
+#@@IF node
+      # The system is evals/system.mjs, which imports evalproof from node_modules: install the
+      # repository's npm dependencies first (npm ci needs the package-lock.json you commit).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install the npm dependencies
+        if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        run: npm ci
+
+#@@END
       - name: Restore the response cache
         id: cache
         if: steps.baseline.outputs.found == 'true' && github.event.pull_request.head.repo.full_name == github.repository

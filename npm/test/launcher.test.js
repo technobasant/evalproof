@@ -1,6 +1,6 @@
 'use strict';
 
-// Run with `node --test test` from npm/. The launcher is started for real with fake `uvx`,
+// Run with `npm test` from npm/. The launcher is started for real with fake `uvx`,
 // `pipx` and `evalproof` programs on a temporary PATH (POSIX only); the choice of method, the
 // Windows path and quoting rules and the exit codes are also tested on any OS with injected
 // PATH, PATHEXT and file lookups.
@@ -38,7 +38,10 @@ test('package.json pins one version, one bin, no dependencies and a minimal file
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
   assert.equal(pkg.version, VERSION);
   assert.deepEqual(pkg.bin, { evalproof: 'bin/evalproof.js' });
-  assert.deepEqual(pkg.files, ['bin', 'README.md', 'LICENSE']);
+  assert.deepEqual(pkg.files, ['bin', 'lib', 'README.md', 'LICENSE']);
+  assert.equal(pkg.main, 'lib/index.js');
+  assert.equal(pkg.types, 'lib/index.d.ts');
+  assert.equal(pkg.exports, undefined, 'no exports map: deep requires keep working');
   assert.equal(pkg.engines.node, '>=18');
   assert.equal(pkg.license, 'Apache-2.0');
   assert.equal(pkg.repository.directory, 'npm');

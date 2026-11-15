@@ -4,6 +4,41 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
+### Added
+
+- The `evalproof` npm package is now a helper library for a JavaScript or TypeScript system as
+  well as the `npx` launcher. `runCommand(handler)` runs a `command:` target: it reads the case
+  from stdin, awaits the handler (which returns a string or `{output, retrieved, trace,
+  tokens_in, tokens_out, cost_usd}`) and prints the result as JSON, with `console.log` sent to
+  stderr. `serve(handler, {port, host, path})` serves the `http://` target protocol with
+  `node:http`, on `127.0.0.1` by default. `fromVercelAI(result)` and `fromLangChain(messages)`
+  build a trace (tool calls, tokens) from an AI SDK `generateText` result or a LangChain.js
+  agent's messages. It ships TypeScript types, works from ESM and CommonJS, has no dependencies
+  and needs Node 18 or newer.
+- `evalproof init --node` writes `evals/system.mjs`, a program that imports `runCommand`, and a
+  suite whose target is `command:node system.mjs`. With `--ci api-key` on GitHub the workflow
+  sets up Node and runs `npm ci`. It cannot be combined with `--agent-files-only`, and it is
+  refused with `--platform gitlab` or `bitbucket` and `--ci api-key`, whose job image has no Node.
+- `evalproof scan` finds Vercel AI SDK tools and agents and LangChain.js tools and agents in
+  TypeScript and JavaScript files, and follows a suite whose target is a `node`, `tsx`
+  (or `npx tsx`), `bun` or `deno` command through the relative imports of its script. TypeScript
+  code now takes part in the `uncovered_code` and `tool_unchecked` gaps. An import it cannot
+  follow (an unresolved relative path, a path alias, a workspace package, a module loaded by a
+  computed name) or a script it cannot find leaves reachability unknown and `uncovered_code` not
+  computed. Test files and files that only import an SDK are not reported as untested code.
+- A guide, [Testing a TypeScript or JavaScript system](https://basantbhattarai.com.np/evalproof/guides/typescript/).
+
+The helper library, `init --node` and the scan of TypeScript tools and agents are experimental:
+they can change in a minor release. The converters print one line to stderr the first time they
+are called.
+
+### Changed
+
+- `scan` reads a multi-line `import { ... } from "..."` and skips comments in TypeScript and
+  JavaScript files, and no longer reports "imports X; no call found" for a LangChain.js file that
+  defines tools. `evalproof draft` reads only Python files for a function's signature and
+  docstring.
+
 ## [1.3.0] — 2026-11-15
 
 ### Added

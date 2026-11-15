@@ -50,6 +50,12 @@ ANTHROPIC_DEFAULT = "anthropic:claude-haiku-5-5"
 OLLAMA_DEFAULT = "ollama:qwen3:8b"
 CODEX_PLACEHOLDER = "codex:<model>"
 
+# ``init --node``: the system under test is a Node.js program the suite runs as a ``command:``
+# target. The suite is in ``evals/`` and a command runs with its folder as the working directory,
+# so the target names the file without ``evals/``.
+NODE_SYSTEM_FILE = "evals/system.mjs"
+NODE_TARGET = "command:node system.mjs"
+
 
 @dataclass(frozen=True)
 class AgentCLI:
@@ -243,7 +249,7 @@ def _key_env(judge: Judge) -> str:
     return profile.api_key_env
 
 
-def render_suite(judge: Judge) -> str:
+def render_suite(judge: Judge, node: bool = False) -> str:
     line = f"  api_key_env: {judge.api_key_env}" if judge.api_key_env else ""
     local = judge.provider in ("ollama", "vllm", "lmstudio", "llamacpp")
     note = f"  # {judge.note}" if judge.note else ""
@@ -255,6 +261,7 @@ def render_suite(judge: Judge) -> str:
             "API_KEY_LINE": line,
             "CONCURRENCY": "1" if local else "4",
         },
+        frozenset({"node" if node else "model"}),
     )
 
 
@@ -350,7 +357,9 @@ def render_ci_text(
     )
 
 
-def render_workflow(ci: str, judge: Judge, pinned: str | None, cli_auth: str = "api-key") -> str:
+def render_workflow(
+    ci: str, judge: Judge, pinned: str | None, cli_auth: str = "api-key", node: bool = False
+) -> str:
     if ci == "keyless":
         return fill(template("workflow-keyless.yml"), {"ACTION_REF": ACTION_REF})
     cli = AGENT_CLIS.get(judge.provider)
@@ -377,6 +386,8 @@ def render_workflow(ci: str, judge: Judge, pinned: str | None, cli_auth: str = "
                 "latest:\n      # replace latest with the version your run file records."
             )
     flags = {"cli"} if cli else set()
+    if node:
+        flags.add("node")  # the system is a Node program: set Node up and install its packages
     if oauth:
         flags.add("oauth")  # the token replaces both the API key and EVALPROOF_CLI_AUTH
     else:
@@ -433,7 +444,12 @@ def render_gitlab_ci(ci: str, judge: Judge) -> str:
 
 
 def render_import_suite(
-    dataset: ImportedDataset, judge: Judge, *, source: str, dataset_path: str = "cases.jsonl"
+    dataset: ImportedDataset,
+    judge: Judge,
+    *,
+    source: str,
+    dataset_path: str = "cases.jsonl",
+    node: bool = False,
 ) -> str:
     """A suite for imported cases: exactly the scorers the import needs, and the ``judge`` block
     only when one of them is an ``llm_judge``. Raises ``ConfigError`` when no scorer fits."""
@@ -474,7 +490,7 @@ def render_import_suite(
             "SCORERS": "\n".join(blocks),
             "METRIC": dataset.gate_metric or dataset.scorers[0].name,
         },
-        frozenset({"judge"}) if dataset.needs_judge else frozenset(),
+        frozenset({"node" if node else "model"} | ({"judge"} if dataset.needs_judge else set())),
     )
 
 
@@ -591,6 +607,22 @@ def _write_files(
     return kept
 
 
+def _node_text(ci: str, platform: str) -> str:
+    """The README paragraph about ``evals/system.mjs``, with the blank line that sets it off."""
+    text = (
+        "The system under test is `system.mjs`, a Node.js program that `evalproof run` starts "
+        "once for each case: the case is JSON on stdin and the answer is JSON on stdout, and "
+        "the command runs with this folder as its working directory. It imports its helper "
+        "from the `evalproof` npm package: run `npm install --save-dev evalproof` in the "
+        "repository root, then replace the placeholder in `system.mjs` with a call into your "
+        "code. Until you do, every case errors. For TypeScript, write `system.ts` and set the "
+        "suite's target to `command:npx tsx system.ts`."
+    )
+    if ci == "api-key" and platform == "github":
+        text += " The workflow runs `npm ci` before the suite, so commit `package-lock.json`."
+    return "\n" + text
+
+
 def build_files(
     judge: Judge,
     ci: str,
@@ -600,27 +632,35 @@ def build_files(
     platform: str = "github",
     imported: tuple[ImportedDataset, str] | None = None,
     bitbucket_file: str = BITBUCKET_CI_FILE,
+    node: bool = False,
 ) -> list[tuple[str, str]]:
     """Every file to write, as (path relative to the target directory, content).
 
     ``imported`` is an import and the name of the file it came from: the cases and the suite's
     scorers then come from it instead of the three sample cases. ``bitbucket_file`` is where the
-    Bitbucket pipeline goes (``bitbucket_ci_target``).
+    Bitbucket pipeline goes (``bitbucket_ci_target``). ``node`` makes the system a Node.js program,
+    ``evals/system.mjs``, that the suite runs as a ``command:`` target.
 
     ``AGENTS.md`` is not in the list: it is merged into an existing file, not written whole
     (``plan_agents_md``)."""
     ci_text = render_ci_text(ci, judge, cli_auth, platform, bitbucket_file)
     if imported is None:
-        suite_text, cases_text = render_suite(judge), template("cases.jsonl")
+        suite_text, cases_text = render_suite(judge, node), template("cases.jsonl")
     else:
-        suite_text = render_import_suite(imported[0], judge, source=imported[1])
+        suite_text = render_import_suite(imported[0], judge, source=imported[1], node=node)
         cases_text = dataset_text(imported[0].cases)
+    readme = fill(
+        template("evals-readme.md"),
+        {"CI_TEXT": ci_text, "NODE_TEXT": _node_text(ci, platform) if node else ""},
+    )
     out = [
         ("evals/suite.yaml", suite_text),
         ("evals/cases.jsonl", cases_text),
-        ("evals/README.md", fill(template("evals-readme.md"), {"CI_TEXT": ci_text})),
+        ("evals/README.md", readme),
         ("evals/.gitignore", template("gitignore")),
     ]
+    if node:
+        out.insert(2, (NODE_SYSTEM_FILE, template("system.mjs")))
     if ci != "none":
         if platform == "gitlab":
             out.append((GITLAB_CI_FILE, render_gitlab_ci(ci, judge)))
@@ -629,7 +669,10 @@ def build_files(
             out.append((bitbucket_file, render_bitbucket_ci(ci, judge, snippet=snippet)))
         else:
             out.append(
-                (".github/workflows/evalproof.yml", render_workflow(ci, judge, pinned, cli_auth))
+                (
+                    ".github/workflows/evalproof.yml",
+                    render_workflow(ci, judge, pinned, cli_auth, node),
+                )
             )
     if skill:
         out.extend(skill_files())
@@ -647,7 +690,11 @@ def _hosted_key(judge: Judge) -> str | None:
 
 
 def requirement_lines(
-    judge: Judge, ci: str, cli_auth: str = "api-key", platform: str = "github"
+    judge: Judge,
+    ci: str,
+    cli_auth: str = "api-key",
+    platform: str = "github",
+    node: bool = False,
 ) -> list[str]:
     """What the starter suite needs to run, locally and in CI, for the chosen judge.
 
@@ -685,6 +732,12 @@ def requirement_lines(
     else:
         remote = f"the {_key_env(judge)} repository secret"
     lines = [f"locally: {local}", f"in CI: {remote}"]
+    if node:
+        lines.insert(
+            0,
+            f"the system: Node.js 18 or later, and `npm install --save-dev evalproof` for the "
+            f"helper {NODE_SYSTEM_FILE} imports; the judge's needs follow",
+        )
     if ci == "api-key":
         if platform == "gitlab":
             lines.append(
@@ -754,9 +807,14 @@ def init_project(
     agent_files_only: bool = False,
     from_file: Path | None = None,
     from_format: str = "auto",
+    node: bool = False,
     emit: Callable[[str], None] = print,
 ) -> int:
     """Write the starter files into ``directory``; returns the exit code (always 0).
+
+    ``node`` makes the system a Node.js program, ``evals/system.mjs``, that the suite runs as a
+    ``command:`` target; the judge is still a model. It writes no suite with ``agent_files_only``
+    and refuses an api-key workflow on GitLab or Bitbucket, whose image has no Node.
 
     ``agents_md`` also puts the evalproof section into the repository's ``AGENTS.md``.
     ``agent_files_only`` writes only the agent files (that section and the skill) and nothing else.
@@ -769,6 +827,11 @@ def init_project(
         raise ConfigError(
             "--from imports test cases into a suite, and --agent-files-only writes no suite: "
             "use one or the other"
+        )
+    if node and agent_files_only:
+        raise ConfigError(
+            "--node writes a Node.js system and a suite for it, and --agent-files-only writes "
+            "neither: use one or the other"
         )
     if agent_files_only:
         return _init_agent_files(
@@ -808,6 +871,12 @@ def init_project(
             f"{chosen.target!r}. Pass --judge with a hosted API target such as "
             f"{ANTHROPIC_DEFAULT}, or use --ci keyless."
         )
+    if node and platform in ("gitlab", "bitbucket") and ci == "api-key":
+        raise ConfigError(
+            f"--node --platform {platform} --ci api-key runs the suite in python:3.13-slim, "
+            "which has no Node to run evals/system.mjs with. Use --ci keyless (CI then compares "
+            "committed run files and runs no program) or --platform github."
+        )
     # An api-key workflow needs the key variable and, for a CLI judge, its pinned version.
     pinned = None
     if ci == "api-key":
@@ -819,11 +888,16 @@ def init_project(
     notes: list[str] = []
     if from_file is not None:
         imp = import_cases(from_format, from_file, warn=notes.append)
+        if node and imp.prompt_template:
+            notes.append(
+                "the prompt template of the import is not used: the system is a Node.js "
+                "program that builds its own prompt"
+            )
         imported = (replace(imp, notes=[*imp.notes, *notes]), from_file.name)
     root = directory.resolve()
     bitbucket_file = bitbucket_ci_target(root) if platform == "bitbucket" else BITBUCKET_CI_FILE
     files_to_write = build_files(
-        chosen, ci, skill, pinned, cli_auth, platform, imported, bitbucket_file
+        chosen, ci, skill, pinned, cli_auth, platform, imported, bitbucket_file, node
     )
     # Merge into AGENTS.md before writing anything, so damaged markers stop init with no change.
     agents_plan = plan_agents_md(root) if agents_md else None
@@ -855,6 +929,9 @@ def init_project(
             emit(f"note: {cli.binary} was not found, so the workflow installs the latest; pin it")
     emit("")
     emit("next:")
+    if node:
+        emit("  npm install --save-dev evalproof")
+        emit(f"  replace the placeholder in {NODE_SYSTEM_FILE} with a call into your code")
     emit("  uvx evalproof run evals/suite.yaml --out evals/runs/latest.json")
     gitlab = platform == "gitlab"
     bitbucket = platform == "bitbucket"
@@ -901,6 +978,6 @@ def init_project(
         emit("  Pipelines must be turned on for the repository (Repository settings > Pipelines).")
     emit("")
     emit("what it needs to run:")
-    for line in requirement_lines(chosen, ci, cli_auth, platform):
+    for line in requirement_lines(chosen, ci, cli_auth, platform, node):
         emit(f"  {line}")
     return 0

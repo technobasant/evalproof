@@ -245,12 +245,13 @@ With several candidates, `compare --gate` exits with the worst code in the order
 
 Add `--help` to any command for its flags.
 
-- `evalproof init [--dir DIR] [--judge TARGET] [--ci keyless|api-key|none] [--platform github|gitlab|bitbucket] [--cli-auth api-key|oauth-token] [--from FILE] [--from-format FORMAT] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]`:
+- `evalproof init [--dir DIR] [--judge TARGET] [--ci keyless|api-key|none] [--platform github|gitlab|bitbucket] [--cli-auth api-key|oauth-token] [--from FILE] [--from-format FORMAT] [--node] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]`:
   write the starter suite, CI workflow, agent skill and this section. Existing files are kept
   unless `--force`; `AGENTS.md` is always merged, never overwritten. `--agent-files-only`
   refreshes only this section and the skill (experimental). `--from FILE` writes
   `evals/cases.jsonl` and the suite from another tool's test cases instead of the sample cases
-  (`--from-format` defaults to `auto`).
+  (`--from-format` defaults to `auto`). `--node` (experimental) writes `evals/system.mjs`, a Node.js
+  system the suite runs as a `command:` target, instead of a model with a system prompt.
 - `evalproof run SUITE [--out FILE] [--limit N] [--tags TAG,...] [--exclude-tags TAG,...] [--trials K] [--system TARGET] [--variant NAME]... [--all-variants] [--gate] [--no-cache] [--cache-only] [--junit FILE] [--markdown FILE] [--quiet] [--show N]`:
   run the suite and write a run file. `--system-prompt-file` and `--label` also override the
   system.

@@ -143,6 +143,7 @@ nav:
       - Coding agents: guides/coding-agents.md
       - Testing agents: guides/testing-agents.md
       - Testing a system in any language: guides/command-target.md
+      - Testing a TypeScript or JavaScript system: guides/typescript.md
       - Repeated trials: guides/repeated-trials.md
       - Readiness: guides/readiness.md
       - Find what is not tested: guides/find-gaps.md

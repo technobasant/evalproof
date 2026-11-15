@@ -397,8 +397,8 @@ def test_typescript_files_in_a_scan_are_marked_and_skip_declarations(tmp_path: P
     assert [(f.path, f.line, f.language) for f in report.findings] == [
         ("src/chat.ts", 2, "typescript")
     ]
-    # TypeScript findings never become uncovered_code: no python target can reach them.
-    assert "uncovered_code" not in gap_kinds(report)
+    # With no suite at all, a TypeScript model call is as untested as a Python one.
+    assert gap_kinds(report) == ["no_suite", "uncovered_code"]
 
 
 # --- the import graph --------------------------------------------------------------------------

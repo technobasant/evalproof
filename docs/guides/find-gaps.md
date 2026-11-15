@@ -14,7 +14,7 @@ The rule behind both is that a model may suggest what to ask, never what the rig
 evalproof scan . --out scan.json
 ```
 
-The scan makes no model call and imports and runs none of your code. It parses Python with `ast` and reads TypeScript and JavaScript with patterns, so it finds the common SDKs and agent frameworks by how they are imported and called, not by running them. Hidden directories, `node_modules`, virtual environments and build output are skipped.
+The scan makes no model call and imports and runs none of your code. It parses Python with `ast` and reads TypeScript and JavaScript with patterns, so it finds the common SDKs and agent frameworks by how they are imported and called, not by running them. In TypeScript and JavaScript that includes Vercel AI SDK and LangChain.js tools and agents. Hidden directories, `node_modules`, virtual environments and build output are skipped.
 
 ```text title="Output"
 evalproof scan: . (6 files read)
@@ -54,7 +54,9 @@ A finding is something the code is or has: a model call, an agent, a tool, a pro
 | `test_cases_not_imported` | test cases in another format: a pytest file, promptfoo, DeepEval, Ragas or the like | `evalproof draft` for pytest, `evalproof import-dataset` for the others |
 | `few_cases` | a suite with fewer cases than its gate's `min_cases` | inputs from a model |
 
-"Reaches" means the scan followed imports between files in the repository, starting from the suite's `python:module:function` target. If a suite's target is a command, an endpoint, a model, or Python code outside the repository, the scan cannot know what it runs, so it says `uncovered_code` was not computed instead of listing every file. It prints that reason; it does not guess.
+"Reaches" means the scan followed imports between files in the repository, starting from the suite's `python:module:function` target, or from the script of a `node`, `tsx` (also `npx tsx`), `bun` or `deno` command target. For a command it follows static imports with a relative path (`./x`, `../x`, with the `.js` to `.ts` swap a TypeScript project uses, and `index` files), and it reads the script relative to the suite's directory, the directory the command runs in. A package from `node_modules` is not followed.
+
+If a suite's target is an endpoint, a model, a command that is not one of those four, or Python code outside the repository, the scan cannot know what it runs, so it says `uncovered_code` was not computed instead of listing every file. The same happens when it can follow a command's script only part of the way: an import that matches no file in the repository, a path alias (`@/`, `~/`, `#` or a `paths` entry in `tsconfig.json`), a workspace package, a module loaded by a computed name, an inline script (`node -e`) or a script that is not among the scanned files. It prints that reason; it does not guess. TypeScript test files (`*.test.ts`, `*.spec.js`, `__tests__`) and files that only import an SDK without calling it are never listed as untested code. See [Testing a TypeScript or JavaScript system](typescript.md) for the helper that runs such a system.
 
 The exit code is 0 whether or not there are gaps. A gap is advice, not a gate. Pass `--json` to print the JSON instead of text, `--exclude GLOB` to skip paths, and `--suite FILE` to name the suites yourself.
 
