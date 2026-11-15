@@ -101,8 +101,9 @@ deterministic score fails the job ([In CI](../guides/ci.md#in-ci)).
 
 ## Test a non-LLM system the same way
 
-Any Python function (`python:module:func`) or HTTP
-endpoint can be the system, scored by deterministic scorers: a classifier, a router, a search
+Any Python function (`python:module:func`), HTTP
+endpoint or program in another language (`command:node eval/system.js`, see
+[Testing a system in any language](../guides/command-target.md)) can be the system, scored by deterministic scorers: a classifier, a router, a search
 service. The [offline example](quickstart.md#five-minute-quickstart) is a keyword router.
 
 ## Next steps

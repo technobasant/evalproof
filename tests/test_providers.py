@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+import random
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime, timedelta
+from email.utils import format_datetime
 
 import httpx
 import pytest
@@ -20,6 +23,7 @@ from evalproof.providers import (
     parse_target,
     with_retries,
 )
+from evalproof.providers.base import parse_retry_after
 from evalproof.systems import LLMSystem
 from tests.conftest import mock_client
 
@@ -168,6 +172,145 @@ def test_transport_errors_give_up() -> None:
 
     with pytest.raises(ProviderError, match="giving up"):
         with_retries(boom, attempts=3, sleep=lambda s: None)
+
+
+class FixedJitter(random.Random):
+    """A jitter factor of exactly 1.0 (``0.5 + 0.5``), so the delays are the bare backoff."""
+
+    def random(self) -> float:
+        return 0.5
+
+
+def status_error(status: int, retry_after: str | None = None) -> httpx.HTTPStatusError:
+    headers = {} if retry_after is None else {"Retry-After": retry_after}
+    resp = httpx.Response(status, headers=headers, request=httpx.Request("POST", "http://x/y"))
+    try:
+        resp.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        return exc
+    raise AssertionError(f"status {status} did not raise")
+
+
+def failing_then_ok(*errors: Exception) -> Callable[[], str]:
+    """A call that raises each error in turn, then returns ``"ok"``."""
+    pending = list(errors)
+
+    def call() -> str:
+        if pending:
+            raise pending.pop(0)
+        return "ok"
+
+    return call
+
+
+def test_retries_default_to_six_attempts() -> None:
+    sleeps: list[float] = []
+    calls = {"n": 0}
+
+    def boom() -> int:
+        calls["n"] += 1
+        raise httpx.ConnectError("down")
+
+    with pytest.raises(ProviderError, match="giving up after 6 attempts: down"):
+        with_retries(boom, sleep=sleeps.append, rng=FixedJitter())
+    assert calls["n"] == 6
+    assert sleeps == [1.0, 2.0, 4.0, 8.0, 16.0]  # none after the last attempt
+
+
+def test_backoff_is_capped_at_thirty_seconds() -> None:
+    sleeps: list[float] = []
+    with pytest.raises(ProviderError):
+        with_retries(
+            failing_then_ok(*[status_error(503)] * 9),
+            attempts=8,
+            sleep=sleeps.append,
+            rng=FixedJitter(),
+        )
+    assert sleeps == [1.0, 2.0, 4.0, 8.0, 16.0, 30.0, 30.0]
+
+
+def test_backoff_jitter_stays_within_half_to_one_and_a_half() -> None:
+    sleeps: list[float] = []
+    with pytest.raises(ProviderError):
+        with_retries(
+            failing_then_ok(*[status_error(503)] * 7),
+            attempts=6,
+            sleep=sleeps.append,
+            rng=random.Random(7),
+        )
+    for attempt, delay in enumerate(sleeps):
+        assert 0.5 * 2**attempt <= delay <= 1.5 * 2**attempt
+
+
+def test_default_rng_differs_between_calls() -> None:
+    """A fixed seed would make parallel workers retry in lockstep."""
+
+    def delays() -> list[float]:
+        sleeps: list[float] = []
+        with pytest.raises(ProviderError):
+            with_retries(failing_then_ok(*[status_error(503)] * 9), attempts=4, sleep=sleeps.append)
+        return sleeps
+
+    assert delays() != delays()
+
+
+def test_retry_after_seconds_replaces_the_backoff() -> None:
+    sleeps: list[float] = []
+    fn = failing_then_ok(status_error(429, "7"), status_error(429, "3"))
+    assert with_retries(fn, sleep=sleeps.append, rng=FixedJitter()) == "ok"
+    assert sleeps == [7.0, 3.0]
+
+
+def test_retry_after_is_capped_at_sixty_seconds() -> None:
+    sleeps: list[float] = []
+    fn = failing_then_ok(status_error(429, "3600"))
+    assert with_retries(fn, sleep=sleeps.append) == "ok"
+    assert sleeps == [60.0]
+
+
+def test_retry_after_http_date_is_counted_from_now() -> None:
+    sleeps: list[float] = []
+    when = format_datetime(datetime.now(UTC) + timedelta(seconds=20), usegmt=True)
+    assert with_retries(failing_then_ok(status_error(503, when)), sleep=sleeps.append) == "ok"
+    assert len(sleeps) == 1 and 15 < sleeps[0] <= 20
+
+
+@pytest.mark.parametrize("value", ["soon", "-5", "", "1.5", "Wed, 21 Oct 2015 07:28:00 GMT"])
+def test_unusable_retry_after_falls_back_to_the_backoff(value: str) -> None:
+    sleeps: list[float] = []
+    fn = failing_then_ok(status_error(429, value))
+    assert with_retries(fn, sleep=sleeps.append, rng=FixedJitter()) == "ok"
+    assert sleeps == [1.0]
+
+
+def test_retry_after_comes_from_the_failed_response_only() -> None:
+    sleeps: list[float] = []
+    fn = failing_then_ok(status_error(429, "9"), httpx.ConnectError("down"))
+    assert with_retries(fn, sleep=sleeps.append, rng=FixedJitter()) == "ok"
+    assert sleeps == [9.0, 2.0]
+
+
+def test_parse_retry_after() -> None:
+    now = datetime(2026, 11, 15, 12, 0, 0, tzinfo=UTC)
+    assert parse_retry_after("0") == 0.0
+    assert parse_retry_after(" 120 ") == 120.0
+    assert parse_retry_after(None) is None
+    assert parse_retry_after("Sun, 15 Nov 2026 12:00:45 GMT", now) == 45.0
+    assert parse_retry_after("Sun, 15 Nov 2026 12:00:45 -0000", now) == 45.0  # no zone: UTC
+    assert parse_retry_after("Sun, 15 Nov 2026 11:59:00 GMT", now) is None  # already past
+    assert parse_retry_after("tomorrow", now) is None
+
+
+def test_non_retryable_status_ignores_retry_after() -> None:
+    calls = {"n": 0}
+
+    def call() -> str:
+        calls["n"] += 1
+        raise status_error(400, "5")
+
+    with pytest.raises(ProviderError, match="HTTP 400"):
+        with_retries(call, sleep=lambda s: pytest.fail("a 400 is not retried"))
+    assert calls["n"] == 1
 
 
 def test_make_provider(monkeypatch: pytest.MonkeyPatch) -> None:

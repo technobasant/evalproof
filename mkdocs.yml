@@ -141,6 +141,7 @@ nav:
       - guides/index.md
       - Providers: guides/providers.md
       - Testing agents: guides/testing-agents.md
+      - Testing a system in any language: guides/command-target.md
       - Repeated trials: guides/repeated-trials.md
       - Readiness: guides/readiness.md
       - Agent SDK adapters: guides/adapters.md

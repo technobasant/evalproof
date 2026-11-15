@@ -1,5 +1,8 @@
 """``evalproof doctor``: is each coding-agent CLI target in a suite ready to use?
 
+A ``command:`` target is listed too: it uses no credential, and doctor says whether its program
+resolves.
+
 Free by construction: it looks up the binary, runs ``--version`` and the CLI's own auth-status
 command, and never sends a prompt. The auth check prints only fields that identify the kind of
 login (not an account, email or organisation).
@@ -17,7 +20,14 @@ import shutil
 import sys
 from typing import TextIO
 
-from evalproof.config import GenerationParams, TargetConfig, load_config
+from evalproof.config import (
+    ConfigError,
+    GenerationParams,
+    SuiteConfig,
+    TargetConfig,
+    command_argv,
+    load_config,
+)
 from evalproof.gate import EXIT_CANNOT_GATE, EXIT_PASS, EXIT_REGRESSION
 from evalproof.providers import parse_target
 from evalproof.providers.agent_cli import (
@@ -34,6 +44,7 @@ from evalproof.providers.agent_cli_experimental import (
     cursor_sandbox_state,
 )
 from evalproof.providers.base import Message, ProviderError
+from evalproof.systems import resolve_program
 
 # What to check when no suite is given: one target per CLI, so the model is only a placeholder.
 DEFAULT_TARGETS = ("claude-code:<model>", "codex:<model>")
@@ -49,19 +60,25 @@ def installed_experimental() -> list[str]:
     ]
 
 
-def suite_targets(path: str | None) -> list[tuple[TargetConfig, list[str]]]:
-    """The CLI targets of a suite (or claude-code, codex and whichever experimental CLIs are on
-    ``PATH`` when there is no suite), each with the roles that use it."""
-    if path is None:
+def targets_to_check(cfg: SuiteConfig | None) -> list[tuple[TargetConfig, list[str]]]:
+    """The targets doctor checks in a suite: its coding-agent CLIs, and a ``command:`` system.
+    Without a suite, claude-code, codex and whichever experimental CLIs are on ``PATH``. Each
+    target comes with the roles that use it."""
+    if cfg is None:
         return [(TargetConfig(target=t), []) for t in (*DEFAULT_TARGETS, *installed_experimental())]
-    cfg = load_config(path)
     found: dict[str, tuple[TargetConfig, list[str]]] = {}
     for role, target in (("system", cfg.system), ("judge", cfg.judge)):
-        if target is None or target.kind not in CLI_PROVIDERS:
+        is_command = target is not None and target.kind == "command" and role == "system"
+        if target is None or not (target.kind in CLI_PROVIDERS or is_command):
             continue
         key = f"{target.target}|{target.api_key_env}"
         found.setdefault(key, (target, []))[1].append(role)
     return list(found.values())
+
+
+def suite_targets(path: str | None) -> list[tuple[TargetConfig, list[str]]]:
+    """``targets_to_check`` for the suite at ``path``."""
+    return targets_to_check(load_config(path) if path else None)
 
 
 CURSOR_SKILLS_WARNING = (
@@ -150,8 +167,30 @@ def credential_lines(kind: str, cfg: TargetConfig, provider: AgentCLIProvider) -
     return [login, use_key]
 
 
-def check_target(cfg: TargetConfig, roles: list[str], out: TextIO) -> bool:
+def check_command_target(
+    cfg: TargetConfig, roles: list[str], out: TextIO, base_dir: str | None = None
+) -> bool:
+    """Print what is known about a ``command:`` target; True when its program resolves. It runs
+    nothing: a command target uses no credential of its own, so there is no login to check."""
+    out.write(f"{cfg.target} ({', '.join(roles)})\n" if roles else f"{cfg.target}\n")
+    try:
+        program = resolve_program(command_argv(cfg.target)[0], base_dir)
+    except (ConfigError, ValueError) as exc:
+        out.write(f"  problem: {exc}\n")
+        return False
+    out.write(f"  program: {program}\n")
+    out.write(f"  working directory: {os.path.abspath(base_dir or '.')}\n")
+    out.write("  credential: none; evalproof passes the command no key or login\n")
+    out.write("  in CI: usable where the program is installed\n")
+    return True
+
+
+def check_target(
+    cfg: TargetConfig, roles: list[str], out: TextIO, base_dir: str | None = None
+) -> bool:
     """Print what is known about one target; True when it is usable."""
+    if cfg.kind == "command":
+        return check_command_target(cfg, roles, out, base_dir)
     kind, model = parse_target(cfg.target)
     # Without a suite the model is a placeholder, so only the CLI is named.
     out.write(f"{cfg.target} ({', '.join(roles)})\n" if roles else f"{kind}\n")
@@ -215,11 +254,13 @@ def check_target(cfg: TargetConfig, roles: list[str], out: TextIO) -> bool:
 
 def run_doctor(suite: str | None, out: TextIO | None = None) -> int:
     out = out or sys.stdout
-    targets = suite_targets(suite)
+    suite_cfg = load_config(suite) if suite else None
+    base_dir = suite_cfg.base_dir if suite_cfg else None
+    targets = targets_to_check(suite_cfg)
     if not targets:
-        out.write("no coding-agent CLI targets in this suite; nothing to check\n")
+        out.write("no coding-agent CLI or command targets in this suite; nothing to check\n")
         return 0
-    results = [check_target(cfg, roles, out) for cfg, roles in targets]
+    results = [check_target(cfg, roles, out, base_dir) for cfg, roles in targets]
     if suite is None:
         # A survey of the machine: fine when any CLI is usable; the others are listed.
         names = [parse_target(cfg.target)[0] for cfg, _ in targets]

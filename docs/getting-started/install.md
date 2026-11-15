@@ -71,7 +71,7 @@ What else you need depends on what you run:
 | To | You need |
 |---|---|
 | `compare`, `calibrate`, `verify`, `rehash`, `report`, `import`, `init`, `doctor`, `readiness` | nothing: they read run files and make no model call |
-| `run` against a Python function or an HTTP endpoint | that function or endpoint |
+| `run` against a Python function, an HTTP endpoint or a command | that function, endpoint or program |
 | `run` on a local model | [Ollama](https://ollama.com) (the default), vLLM, LM Studio or llama.cpp, with the model pulled |
 | `run` on a hosted model | the provider's key in an environment variable ([Providers](../guides/providers.md#providers)) |
 | `run` with your Claude Code or Codex login | the `claude` or `codex` CLI on your `PATH`, logged in; check with `evalproof doctor` |

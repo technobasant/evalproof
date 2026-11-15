@@ -135,7 +135,8 @@ may also carry `state`, an object holding the initial session state the system s
 ```
 
 A python system gets the later turns as `ctx.turns` and the state as `ctx.state`. An http system
-gets `turns`, `state`, `variant` and `vars` in the POST body when they are set. A direct model
+gets `turns`, `state`, `variant` and `vars` in the POST body when they are set, and a command
+system gets the same fields as JSON on stdin. A direct model
 target plays the turns in order, each after the model's previous reply, and its output is the last
 reply. A coding-agent CLI takes one prompt per call, so a suite with `turns` cases on one is refused
 up front, before any case runs.
@@ -161,8 +162,8 @@ evalproof compare runs/v1.json runs/v2.json --suite suite.yaml --gate
 
 Each variant writes `runs/<variant>.json` (`--out` names a file only when one variant runs), and
 the run file records the variant, so `compare` names it in its report. A variant's `vars` reach a
-python system as `ctx.vars`, an http system in the request body, and a model prompt as template
-fields. A variant name uses only `a-z`, `0-9`, `.`, `_` and `-`.
+python system as `ctx.vars`, an http system in the request body, a command system on stdin, and a
+model prompt as template fields. A variant name uses only `a-z`, `0-9`, `.`, `_` and `-`.
 
 ## Example: a planted bug that only the tool calls show
 

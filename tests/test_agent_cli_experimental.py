@@ -630,9 +630,9 @@ def test_opencode_does_not_retry_a_usage_limit_but_retries_an_overload(opencode:
     assert len(opencode.fake.calls()) == 2
 
     opencode.set_replies(opencode_failure("rate-limit", "slow down", status=429))
-    with pytest.raises(ProviderError, match="giving up after 4 attempts"):
+    with pytest.raises(ProviderError, match="giving up after 6 attempts"):
         opencode.provider().chat(USER, PARAMS)
-    assert len(opencode.fake.calls()) == 4
+    assert len(opencode.fake.calls()) == 6
 
 
 def test_opencode_tool_use_means_the_isolation_broke(opencode: Case) -> None:

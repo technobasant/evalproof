@@ -251,7 +251,7 @@ def test_cli_agent_targets_refuse_multi_turn_cases(tmp_path: Path, target: str) 
         "utf-8",
     )
     with pytest.raises(
-        ConfigError, match=r"multi-turn cases need a python, http or direct model target"
+        ConfigError, match=r"multi-turn cases need a python, http, command or direct model target"
     ) as exc:
         run_suite(load_config(suite), use_cache=False)
     assert "'chat'" in str(exc.value) and target in str(exc.value)

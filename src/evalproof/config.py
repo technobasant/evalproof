@@ -5,6 +5,7 @@ from __future__ import annotations
 import difflib
 import hashlib
 import re
+import shlex
 import warnings
 from pathlib import Path
 from typing import Any, Literal, get_args
@@ -75,6 +76,22 @@ def trial_params(params: GenerationParams, trial: int) -> GenerationParams:
     return shifted
 
 
+COMMAND_PREFIX = "command:"
+
+
+def command_argv(target: str) -> list[str]:
+    """The program and arguments of a ``command:`` target, split with POSIX rules on every
+    platform. ``ValueError`` when the command is empty or its quoting does not close."""
+    text = target.removeprefix(COMMAND_PREFIX)
+    try:
+        argv = shlex.split(text, posix=True)
+    except ValueError as exc:
+        raise ValueError(f"command target {target!r} cannot be split into words: {exc}") from exc
+    if not argv:
+        raise ValueError("command target is empty: write the program after 'command:'")
+    return argv
+
+
 class TargetConfig(BaseModel):
     """A model or system to call. ``target`` is one of:
 
@@ -85,6 +102,11 @@ class TargetConfig(BaseModel):
       ``openai-compatible`` for any other server (it needs ``base_url``). The model name is
       everything after the first colon, so ``openrouter:anthropic/claude-sonnet-4.5`` works;
     * ``python:<module>:<function>``;
+    * ``command:<program> [args...]``, any program in any language: it is run once per case (and
+      per trial) with the suite's directory as its working directory, gets the case as JSON on
+      stdin and prints the answer. The text after ``command:`` is split like a POSIX shell
+      would split it (quotes and backslash escapes) on every platform, and no shell runs it, so
+      use ``/`` in paths and quote an argument that holds a space;
     * an ``http(s)://`` endpoint.
 
     ``api_key_env`` names the environment variable that holds the key, replacing the
@@ -107,6 +129,12 @@ class TargetConfig(BaseModel):
     api_key_env: str | None = None
     headers: dict[str, str] = Field(default_factory=dict)
     pricing: Pricing = Field(default_factory=Pricing)
+
+    @model_validator(mode="after")
+    def _check_command(self) -> TargetConfig:
+        if self.target.startswith(COMMAND_PREFIX):
+            command_argv(self.target)  # raises ValueError for an empty or unparseable command
+        return self
 
     @property
     def kind(self) -> str:
@@ -234,9 +262,9 @@ _MERGED_SYSTEM_KEYS = ("params", "pricing")
 
 class VariantConfig(BaseModel):
     """One way to run the suite: the same cases, scorers and gate, with another model, prompt or
-    flag. ``vars`` name what differs (they reach a python or http system through ``RunContext``
-    and the request body, and a model prompt as template fields); ``system`` is an optional
-    partial ``TargetConfig`` merged over the suite's ``system``."""
+    flag. ``vars`` name what differs (they reach a python system through ``RunContext``, an http
+    system in the request body, a command system on stdin, and a model prompt as template fields);
+    ``system`` is an optional partial ``TargetConfig`` merged over the suite's ``system``."""
 
     model_config = ConfigDict(extra="forbid")
 

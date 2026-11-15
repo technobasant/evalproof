@@ -83,6 +83,7 @@ The top level of the file. `name`, `dataset`, `system` and `scorers` are require
 | `openai-compatible:<model>` | any other OpenAI-compatible server; needs `base_url` |
 | `python:<module>:<function>` | a Python function in your project; see [Testing agents](../guides/testing-agents.md#testing-agents) |
 | `http://...` or `https://...` | an HTTP endpoint |
+| `command:<program> [args...]` | a program in any language, run once per case with the case as JSON on stdin; see [Testing a system in any language](../guides/command-target.md) |
 | `claude-code:<model>`, `codex:<model>` | a coding agent you have logged in; see [Providers](../guides/providers.md#use-your-claude-code-or-codex-login) |
 
 | Key | Type | Default | What it does |
@@ -258,7 +259,7 @@ A variant is one way to run the same cases, scorers and gate with another model,
 | Key | Type | Default | What it does |
 |---|---|---|---|
 | `name` | string | required | unique; only `a-z`, `0-9`, `.`, `_` and `-`; the run file is `runs/<name>.json` |
-| `vars` | object | none | what differs, as plain JSON values; a python or http system receives them, a model prompt reads them as template fields |
+| `vars` | object | none | what differs, as plain JSON values; a python system receives them in its `RunContext`, an http system in the request body, a command system on stdin, and a model prompt reads them as template fields |
 | `system` | object | none | a partial `system` block merged over the suite's; `params` and `pricing` merge key by key, every other key (`headers` included) is replaced |
 
 ## Rules checked when the suite loads
