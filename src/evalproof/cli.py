@@ -1,7 +1,7 @@
 """Command line.
 
 ``evalproof init | run | import | import-dataset | compare | verify | rehash | calibrate | report |
-doctor | pairwise | readiness``
+doctor | pairwise | readiness | hook``
 """
 
 from __future__ import annotations
@@ -51,6 +51,7 @@ from evalproof.gate import (
     decide,
     refusal,
 )
+from evalproof.hook import DEFAULT_RUN, DEFAULT_SUITE, install_hook, uninstall_hook
 from evalproof.importers import DATASET_FORMATS, EPOCHS, FORMATS, import_cases, import_run
 from evalproof.junit import gate_testsuite, run_testsuite, testsuites, write_junit
 from evalproof.models import CaseResult, Run, TagFilter
@@ -86,6 +87,7 @@ from evalproof.stats import holm
 from evalproof.verify import verify_markdown, verify_run
 
 EXIT_INTERRUPTED = 130  # the shell's code for a process stopped by Ctrl-C
+HOOK_ACTIONS = ("install", "uninstall")
 
 
 def _emit(markdown: str, path: str | None, *, quiet: bool = False) -> None:
@@ -561,6 +563,13 @@ def cmd_init(args: argparse.Namespace) -> int:
         from_format=args.from_format,
         emit=_say,
     )
+
+
+def cmd_hook(args: argparse.Namespace) -> int:
+    directory = Path.cwd()
+    if args.action == "uninstall":
+        return uninstall_hook(directory, emit=_say)
+    return install_hook(directory, suite=args.suite, run=args.run, force=args.force, emit=_say)
 
 
 def cmd_import(args: argparse.Namespace) -> int:
@@ -1122,6 +1131,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="exit 1 unless these dimensions are covered (comma-separated; may repeat)",
     )
     rd.set_defaults(func=cmd_readiness)
+
+    hk = sub.add_parser(
+        "hook",
+        help="install or remove a git pre-push hook that runs `evalproof verify`",
+        description="install writes a git pre-push hook that runs `evalproof verify RUN SUITE` "
+        "before every push, so a run file that no longer matches the suite and dataset stops "
+        "the push. Makes no model call. uninstall removes the hook, only when evalproof wrote "
+        "it. Exit 0 on success, 2 for a usage error (not in a git repository, or a hook that "
+        "evalproof did not write).",
+    )
+    hk.add_argument("action", metavar="ACTION", choices=HOOK_ACTIONS, help="install or uninstall")
+    hk.add_argument(
+        "--suite",
+        default=DEFAULT_SUITE,
+        help="the suite the hook verifies against (default: %(default)s)",
+    )
+    hk.add_argument(
+        "--run",
+        default=DEFAULT_RUN,
+        help="the committed run file the hook verifies (default: %(default)s)",
+    )
+    hk.add_argument(
+        "--force",
+        action="store_true",
+        help="install over a pre-push hook that evalproof did not write",
+    )
+    hk.set_defaults(func=cmd_hook)
 
     pw = sub.add_parser("pairwise", help="judge baseline vs candidate outputs head to head")
     pw.add_argument("baseline")

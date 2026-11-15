@@ -21,6 +21,7 @@ Every `evalproof` subcommand, its arguments and every flag with its type and def
 | [`evalproof rehash`](#evalproof-rehash) | add per-case hashes to a run file written before evalproof 0.5, without calling a model |
 | [`evalproof doctor`](#evalproof-doctor) | check the coding-agent CLI targets and a command target, without calling a model |
 | [`evalproof readiness`](#evalproof-readiness) | report which parts of quality a suite covers and which it leaves untested |
+| [`evalproof hook`](#evalproof-hook) | install or remove a git pre-push hook that runs `evalproof verify` |
 | [`evalproof pairwise`](#evalproof-pairwise) | judge baseline vs candidate outputs head to head |
 
 ## evalproof init
@@ -350,6 +351,34 @@ evalproof readiness evals/suite.yaml --require correctness,gate
 ```
 
 Exit 0, or 1 when a `--require`d dimension is not covered, 2 for a usage error.
+
+## evalproof hook
+
+Installs, or removes, a git `pre-push` hook that runs [`evalproof verify`](#evalproof-verify) on a committed run file before every push. A run file that no longer matches the suite or its dataset stops the push; no model is called. The hook is a POSIX `sh` script, which Git for Windows runs with its own `sh`.
+
+`install` finds the hooks folder with `git rev-parse --git-path hooks`, so it follows `core.hooksPath` and, in a linked worktree, writes to the folder the worktrees share. The script starts with the line `# evalproof pre-push hook` and the evalproof version. Running `install` again updates a hook that has that line. A `pre-push` hook without it is never replaced unless you pass `--force`, and `uninstall` removes only a hook that has it.
+
+The hook runs `evalproof` from the `PATH`, and otherwise `uvx evalproof@VERSION` for the version that wrote it. It skips with a message, and does not stop the push, when the suite or the run file does not exist, or when neither `evalproof` nor `uvx` is available. Otherwise it passes `verify`'s exit code through and adds one line on how to refresh the run or push with `git push --no-verify`. Git runs a hook from the repository root, so `--suite` and `--run` are stored relative to it.
+
+```bash title="Terminal"
+evalproof hook {install,uninstall} [--suite SUITE] [--run RUN] [--force]
+```
+
+| Argument | Required | What it is |
+|---|---|---|
+| `ACTION` | yes | `install` writes the hook; `uninstall` removes it |
+
+| Flag | Type | Default | What it does |
+|---|---|---|---|
+| `--suite` | string | `evals/suite.yaml` | the suite the hook verifies against; `install` only |
+| `--run` | string | `evals/runs/latest.json` | the committed run file the hook verifies; `install` only |
+| `--force` | flag | off | install over a `pre-push` hook that evalproof did not write; `install` only |
+
+```bash title="Example"
+evalproof hook install
+```
+
+Exit 0, or 2 for a usage error: outside a git repository, a `pre-push` hook that evalproof did not write (`install` without `--force`, and `uninstall`), or git missing. `uninstall` with no hook in place says so and exits 0. See also: [Check before every push](../guides/ci.md#check-before-every-push).
 
 ## evalproof pairwise
 
