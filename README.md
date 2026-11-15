@@ -45,7 +45,11 @@ away ([Providers](https://basantbhattarai.com.np/evalproof/guides/providers/)), 
 key, and every model call is cached by content so re-runs are free and reproducible. Results
 from promptfoo, Inspect, DeepEval, lm-eval, garak, Google ADK and Claude Code plugin evals can be
 [imported](https://basantbhattarai.com.np/evalproof/guides/import/) and gated without re-running
-them, and a Google ADK eval set can be turned into a dataset.
+them. The test cases you already have in promptfoo, DeepEval, Ragas, LangSmith, OpenAI Evals,
+Inspect, Braintrust, Langfuse, Phoenix or a Google ADK eval set can be turned into a dataset and a
+suite with `evalproof import-dataset auto FILE --out cases.jsonl --suite-out suite.yaml`, or when
+you set up with `evalproof init --from FILE`
+([Import test cases](https://basantbhattarai.com.np/evalproof/guides/import-test-cases/)).
 
 ## Install
 

@@ -147,6 +147,7 @@ nav:
       - Readiness: guides/readiness.md
       - Agent SDK adapters: guides/adapters.md
       - Import results from other tools: guides/import.md
+      - Import test cases from other tools: guides/import-test-cases.md
       - From Python: guides/python.md
       - In CI: guides/ci.md
       - Troubleshooting: guides/troubleshooting.md

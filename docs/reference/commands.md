@@ -29,8 +29,10 @@ Writes a starter suite, a CI workflow and an agent skill into a repository. It m
 
 It also adds an evalproof section to the repository's `AGENTS.md`, so any coding agent that reads that file knows how to use evalproof. That file is merged, never overwritten, with or without `--force`: a missing file is created, a file without the section gets it appended after one blank line, and a file that has it gets only the text between the `<!-- evalproof:begin -->` and `<!-- evalproof:end -->` markers replaced. Every byte outside the markers stays as it was, including the file's line endings. If the markers are damaged (one without the other, repeated, or in the wrong order), `init` stops with exit 2 and writes nothing. `--agent-files-only` writes the section and the skill and nothing else. [Coding agents](../guides/coding-agents.md) has the details.
 
+`--from FILE` starts from test cases you already have in another tool: `evals/cases.jsonl` is those cases and `evals/suite.yaml` has the scorers they need, in place of the sample cases. Everything else `init` writes is unchanged. The file is read before anything is written, so a file that cannot be imported (exit 2) leaves the directory as it was. See [Import test cases from other tools](../guides/import-test-cases.md#start-a-repository-from-existing-cases).
+
 ```bash title="Terminal"
-evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab}] [--cli-auth {api-key,oauth-token}] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]
+evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab}] [--cli-auth {api-key,oauth-token}] [--from FILE] [--from-format FORMAT] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]
 ```
 
 | Flag | Type | Default | What it does |
@@ -40,6 +42,8 @@ evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--pla
 | `--ci` | one of `keyless`, `api-key`, `none` | `keyless` | `keyless`: CI compares committed run files, with no model calls; `api-key`: CI runs the suite with a secret; `none`: no workflow |
 | `--platform` | one of `github`, `gitlab` | `github` | where CI runs: `github` writes `.github/workflows/evalproof.yml`; `gitlab` writes `.gitlab-ci.evalproof.yml`, which you include from `.gitlab-ci.yml` (never edited). `gitlab` with `--ci api-key` refuses a coding-agent CLI judge ([In CI](../guides/ci.md#gitlab-ci)) |
 | `--cli-auth` | one of `api-key`, `oauth-token` | `api-key` | with `--ci api-key` and a coding-agent CLI judge, what the workflow passes the CLI: its API key (`api-key`), or `oauth-token`: `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, for `claude-code` in your own repository and CI only |
+| `--from` | string | none | a file of test cases from another tool, imported into `evals/cases.jsonl` and a suite with the scorers they need, instead of the sample cases. It cannot be combined with `--agent-files-only` (exit 2) |
+| `--from-format` | one of `auto`, `promptfoo`, `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse`, `phoenix`, `adk`, `jsonl`, `csv` | `auto` | the tool the `--from` file is from; `auto` reads it off the file. `jsonl` and `csv` need an `input` column here, as `init` has no field options: use `import-dataset` for other columns |
 | `--no-skill` | flag | off | do not write the agent skill |
 | `--no-agents-md` | flag | off | do not add the evalproof section to `AGENTS.md` |
 | `--agent-files-only` | flag | off | experimental. Write only the agent files, the evalproof section of `AGENTS.md` and the skill: no suite and no CI workflow. It cannot be combined with `--judge`, `--ci`, `--platform` or `--cli-auth`, or with both `--no-agents-md` and `--no-skill` (exit 2). An existing skill copy is kept unless you pass `--force`, and a note says when a kept copy differs from this version |
@@ -123,26 +127,32 @@ Exit 0, or 2 for a usage error such as an unreadable file. `adk` and `claude-plu
 
 ## evalproof import-dataset
 
-Turns another tool's test set, which holds no results, into a JSONL dataset that `evalproof run` reads. `adk` reads a Google ADK eval set (`*.evalset.json`) or the flat `*.test.json` list; any other shape is refused. See [Google ADK eval sets as a dataset](../guides/import.md#google-adk-eval-sets-as-a-dataset).
+Turns another tool's test cases, which hold no results, into a JSONL dataset that `evalproof run` reads, and optionally into a suite with the scorers those cases need. It makes no model call. `auto` reads the format off the file, prints which one it chose and refuses a file that fits several or none. `adk` reads a Google ADK eval set (`*.evalset.json`) or the flat `*.test.json` list; any other shape is refused. See [Import test cases from other tools](../guides/import-test-cases.md) for every format and what each assertion becomes, and [Google ADK eval sets as a dataset](../guides/import.md#google-adk-eval-sets-as-a-dataset).
 
 ```bash title="Terminal"
-evalproof import-dataset FORMAT FILE --out PATH
+evalproof import-dataset FORMAT FILE --out PATH [--suite-out PATH] [--force] [--id-field COLUMN] [--input-field COLUMN] [--reference-field COLUMN] [--tags-field COLUMN]
 ```
 
 | Argument | Required | What it is |
 |---|---|---|
-| `FORMAT` | yes | the tool the file is from: `adk` |
+| `FORMAT` | yes | the tool the file is from: one of `auto`, `promptfoo`, `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse`, `phoenix`, `adk`, `jsonl`, `csv`. All but `promptfoo`, `jsonl`, `csv` and `adk` are experimental and print a note once |
 | `FILE` | yes | the test set to import |
 
 | Flag | Type | Default | What it does |
 |---|---|---|---|
 | `--out` | string, required | none | where to write the dataset; an existing file is replaced |
+| `--suite-out` | string | none | also write a suite with exactly the scorers the cases need, and a `judge:` block only when one needs it. It refuses (exit 2) when nothing in the cases can be checked |
+| `--force` | flag | off | overwrite an existing `--suite-out` file; without it the command stops (exit 2) before writing anything |
+| `--id-field` | string | none | `jsonl` and `csv` only: the column that holds the case id |
+| `--input-field` | string, repeatable | none | `jsonl` and `csv` only: the column that holds the input. Repeat it or give a comma list for several, which make the input an object; with none, the `input` column is used |
+| `--reference-field` | string | none | `jsonl` and `csv` only: the column that holds the expected answer, which becomes the `reference` |
+| `--tags-field` | string | none | `jsonl` and `csv` only: the column that holds tags, a list or a comma-separated string |
 
 ```bash title="Example"
-evalproof import-dataset adk evals/home_automation.evalset.json --out datasets/home.jsonl
+evalproof import-dataset auto promptfooconfig.yaml --out evals/cases.jsonl --suite-out evals/suite.yaml
 ```
 
-The cases that cannot be replayed (ADK user-simulation cases) are skipped with one warning on stderr. Exit 0, or 2 for a usage error, an unreadable file, an unsupported shape or a file with no case to import.
+The cases that cannot be replayed (ADK user-simulation cases) are skipped with one warning on stderr. Assertions that no scorer can express stay on the case under `unmapped` and are counted in one summary line. Exit 0, or 2 for a usage error, an unreadable file, an unsupported or ambiguous shape, or a file with no case to import.
 
 ## evalproof compare
 
