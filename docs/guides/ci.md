@@ -156,7 +156,8 @@ branch with an open merge request does not start two pipelines.
 
 The job writes a JUnit report, `evalproof-junit.xml`, and GitLab shows it in the merge request's
 test summary. The artifact is kept for a week, and it is saved when the gate fails, which is the
-report you want to read.
+report you want to read. What the report holds, and how to use it in Jenkins or Azure DevOps:
+[JUnit reports](../reference/junit.md).
 
 ## This repository's own CI
 
@@ -168,4 +169,5 @@ gate returns 1 for the real regression and 0 for the noisy and refactored candid
 * Which secret each target needs: [What it needs to run](../getting-started/credentials.md).
 * How the gate decides: [Concepts](../reference/concepts.md#compare-and-gate).
 * What each exit code means: [Exit codes](../reference/exit-codes.md).
+* Failed cases and gate checks as test results: [JUnit reports](../reference/junit.md).
 * A gate that exits 4, or a verify failure: [Troubleshooting](troubleshooting.md#comparing-and-gating).

@@ -76,6 +76,15 @@ removed or renamed.
   from the released wheel with a provenance attestation and tagged with the version, the minor
   version and `latest`. It runs as a non-root user in `/work` and has no agent CLIs.
 - `python -m evalproof` runs the command line.
+- An npm launcher, `npx evalproof`, runs the PyPI release of the same version through `uvx`,
+  then `pipx`, then an `evalproof` of that exact version on `PATH`; `EVALPROOF_LAUNCHER` picks
+  one. It needs Python, and it is published only once npm trusted publishing is set up.
+- The GitHub Action's `pr-comment: true` posts the report as one pull-request comment and
+  updates it on every push. A comment that cannot be posted is a warning; the gate's exit code
+  is kept.
+- `evalproof init --platform gitlab` writes `.gitlab-ci.evalproof.yml`, a merge-request job that
+  gates against the target branch and publishes the JUnit report, for you to `include:` from
+  `.gitlab-ci.yml`.
 - `scripts/test-in-docker.sh` runs the test suite in Linux containers (Python 3.11 to 3.14,
   Alpine, and `linux/amd64` under emulation) for contributors.
 
