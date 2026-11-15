@@ -1,7 +1,7 @@
 """Command line.
 
 ``evalproof init | run | import | import-dataset | compare | verify | rehash | calibrate | report |
-doctor | pairwise | readiness | hook``
+doctor | pairwise | readiness | hook | scan | draft``
 """
 
 from __future__ import annotations
@@ -39,6 +39,8 @@ from evalproof.dataset import (
     write_dataset,
 )
 from evalproof.doctor import CANARY_MODEL, run_cursor_canary, run_doctor
+from evalproof.draft import GAP_CHOICES, DraftOptions, emit_warnings, render_result, run_draft
+from evalproof.experimental import experimental_notice
 from evalproof.gate import (
     EXIT_BUDGET,
     EXIT_CANNOT_GATE,
@@ -82,6 +84,7 @@ from evalproof.scaffold import (
     init_project,
     render_import_suite,
 )
+from evalproof.scan import render_text, report_json, scan_path
 from evalproof.scorers import pairwise
 from evalproof.stats import holm
 from evalproof.verify import verify_markdown, verify_run
@@ -530,6 +533,48 @@ def cmd_readiness(args: argparse.Namespace) -> int:
         readiness_json(report, required) if args.json else readiness_markdown(report, required)
     )
     return exit_code(report, required)
+
+
+def cmd_scan(args: argparse.Namespace) -> int:
+    experimental_notice("scan", "its findings, gaps and JSON shape may change in a minor release")
+    out = Path(args.out) if args.out else None
+    if out is not None:
+        _check_writable(out, "the scan file")
+    report = scan_path(
+        Path(args.path),
+        excludes=args.exclude or [],
+        suite_files=[Path(s) for s in args.suite or []],
+        scan_ref=args.out or "scan.json",
+    )
+    if out is not None:
+        out.write_text(report_json(report), encoding="utf-8", newline="\n")
+        sys.stderr.write(f"wrote {out}\n")
+    sys.stdout.write(report_json(report) if args.json else render_text(report))
+    return EXIT_PASS
+
+
+def cmd_draft(args: argparse.Namespace) -> int:
+    experimental_notice("draft", "its drafted cases and flags may change in a minor release")
+    options = DraftOptions(
+        scan=Path(args.scan),
+        out=Path(args.out),
+        target=args.target,
+        suite=Path(args.suite) if args.suite else None,
+        per_gap=args.per_gap,
+        max_cases=args.max_cases,
+        from_tests_only=args.from_tests_only,
+        no_cache=args.no_cache,
+        force=args.force,
+        gaps=args.gap or (),
+        tools=args.tool or (),
+        files=args.file or (),
+    )
+    if not options.out.exists() or options.force:
+        _check_writable(options.out, "the drafts file")
+    result = run_draft(options)
+    emit_warnings(result)
+    sys.stdout.write(render_result(result, options.out))
+    return EXIT_PASS
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -1160,6 +1205,97 @@ def build_parser() -> argparse.ArgumentParser:
         help="install over a pre-push hook that evalproof did not write",
     )
     hk.set_defaults(func=cmd_hook)
+
+    sc = sub.add_parser(
+        "scan",
+        help="find the model calls, agents and tools in a repository and what no suite tests",
+        description="Read the code under PATH without running it and report what it does with "
+        "an LLM (model calls, agents, tools, prompts, multi-turn use), the test cases and "
+        "suites it already has, and the gaps: code and tools no suite tests, and test cases "
+        "that are not evalproof cases yet. Static: makes no model call and imports no code. "
+        "Exit 0 with or without gaps, 2 for a usage error. Experimental.",
+    )
+    sc.add_argument("path", nargs="?", default=".", metavar="PATH")
+    sc.add_argument("--json", action="store_true", help="print JSON instead of text")
+    sc.add_argument("--out", metavar="FILE", help="also write the JSON to FILE")
+    sc.add_argument(
+        "--exclude",
+        action="append",
+        metavar="GLOB",
+        help="skip files and directories matching GLOB (may repeat)",
+    )
+    sc.add_argument(
+        "--suite",
+        action="append",
+        metavar="SUITE",
+        help="use this suite file instead of looking for suites (may repeat)",
+    )
+    sc.set_defaults(func=cmd_scan)
+
+    dr = sub.add_parser(
+        "draft",
+        help="draft test inputs for what a scan found untested (inputs only, never answers)",
+        description="Turn the gaps in a scan file (from `evalproof scan --out`) into a separate "
+        "JSONL of draft cases. Cases harvested from pytest files keep the assertion their test "
+        "made and call no model. For tools, multi-turn use, uncovered code and thin suites a "
+        "model writes inputs only, tagged `draft`, with no expected answer: a person adds the "
+        "reference or checks before a draft goes into a dataset. The output is never a suite's "
+        "dataset. Experimental.",
+    )
+    dr.add_argument(
+        "--scan", required=True, metavar="FILE", help="the JSON from `evalproof scan --out`"
+    )
+    dr.add_argument(
+        "--out", required=True, metavar="FILE", help="the JSONL to write (refused if it exists)"
+    )
+    dr.add_argument(
+        "--target",
+        metavar="MODEL",
+        help="the model that writes inputs (default: the suite's judge)",
+    )
+    dr.add_argument("--suite", metavar="SUITE", help="draft for this suite only")
+    dr.add_argument(
+        "--per-gap",
+        type=int,
+        default=3,
+        metavar="N",
+        help="inputs to ask a model for, for each gap (default 3)",
+    )
+    dr.add_argument(
+        "--max-cases",
+        type=int,
+        default=30,
+        metavar="N",
+        help="stop after this many drafts in all (default 30)",
+    )
+    dr.add_argument(
+        "--from-tests-only",
+        action="store_true",
+        help="draft only from pytest files: no model is called",
+    )
+    dr.add_argument(
+        "--no-cache", action="store_true", help="do not read or write the response cache"
+    )
+    dr.add_argument("--force", action="store_true", help="overwrite --out if it exists")
+    dr.add_argument(
+        "--gap",
+        action="append",
+        choices=GAP_CHOICES,
+        metavar="KIND",
+        help="draft only for this kind of gap (may repeat; choices: "
+        + ", ".join(GAP_CHOICES)
+        + ")",
+    )
+    dr.add_argument(
+        "--tool", action="append", metavar="NAME", help="draft only for this tool (may repeat)"
+    )
+    dr.add_argument(
+        "--file",
+        action="append",
+        metavar="PATH",
+        help="draft only for code in this file (may repeat)",
+    )
+    dr.set_defaults(func=cmd_draft)
 
     pw = sub.add_parser("pairwise", help="judge baseline vs candidate outputs head to head")
     pw.add_argument("baseline")

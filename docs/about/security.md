@@ -18,8 +18,9 @@ evalproof sends data only to the targets you configure.
 | A `python:module:function` target | nothing: it calls your function, which does what you wrote it to do |
 | `claude-code:` or `codex:` | the prompt, to your own `claude` or `codex` binary, which talks to its own service |
 | The judge | the text its prompt is built from (the system's output and the rubric), to the judge's target, which can be any of the above |
+| `draft` (not `--from-tests-only`) | for each gap it drafts for: a tool's name, signature and docstring, or the signature and docstring of an uncovered function, a short excerpt of a prompt from your code, and up to twelve existing inputs, to the `--target` model or the suite's judge |
 
-The network clients in the package are the provider clients, the `http` system and the Ollama check above. Nothing else in evalproof opens a connection. `compare`, `calibrate`, `report`, `verify`, `rehash`, `readiness` and `doctor` make no model call.
+The network clients in the package are the provider clients, the `http` system and the Ollama check above. Nothing else in evalproof opens a connection. `compare`, `calibrate`, `report`, `verify`, `rehash`, `readiness`, `scan` and `doctor` make no model call, and neither does `draft --from-tests-only`.
 
 ## What is stored
 

@@ -22,6 +22,8 @@ Every `evalproof` subcommand, its arguments and every flag with its type and def
 | [`evalproof doctor`](#evalproof-doctor) | check the coding-agent CLI targets and a command target, without calling a model |
 | [`evalproof readiness`](#evalproof-readiness) | report which parts of quality a suite covers and which it leaves untested |
 | [`evalproof hook`](#evalproof-hook) | install or remove a git pre-push hook that runs `evalproof verify` |
+| [`evalproof scan`](#evalproof-scan) | find the model calls, agents and tools in a repository and what no suite tests (experimental) |
+| [`evalproof draft`](#evalproof-draft) | draft test inputs for what a scan found untested: inputs only, never answers (experimental) |
 | [`evalproof pairwise`](#evalproof-pairwise) | judge baseline vs candidate outputs head to head |
 
 ## evalproof init
@@ -379,6 +381,66 @@ evalproof hook install
 ```
 
 Exit 0, or 2 for a usage error: outside a git repository, a `pre-push` hook that evalproof did not write (`install` without `--force`, and `uninstall`), or git missing. `uninstall` with no hook in place says so and exits 0. See also: [Check before every push](../guides/ci.md#check-before-every-push).
+
+## evalproof scan
+
+Experimental. Reads the code under `PATH` and reports what it does with a model, and what no suite tests yet. It parses Python files with `ast` and reads TypeScript and JavaScript files with patterns. It makes no model call, imports no code and runs nothing, so it is safe to point at a repository you have not read. See [Find what is not tested](../guides/find-gaps.md).
+
+It reports findings (model calls, agents, tools, prompts, evidence of multi-turn use, files of test cases, and the evalproof suites it finds) and gaps. A gap is something the code has that no suite tests: `no_suite`, `uncovered_code`, `tool_unchecked`, `no_multi_turn_cases`, `test_cases_not_imported` or `few_cases`. Each gap prints the next command to run. A suite whose target is not a Python function found in the repository leaves reachability unknown, so `uncovered_code` is reported as not computed rather than guessed.
+
+```bash title="Terminal"
+evalproof scan [PATH] [--json] [--out FILE] [--exclude GLOB] [--suite SUITE]
+```
+
+| Argument | Required | What it is |
+|---|---|---|
+| `PATH` | no | the directory to scan (default `.`) |
+
+| Flag | Type | Default | What it does |
+|---|---|---|---|
+| `--json` | flag | off | print JSON instead of text |
+| `--out` | string | none | also write the JSON to this file; `evalproof draft` reads it |
+| `--exclude` | string, repeatable | none | skip files and directories that match this glob |
+| `--suite` | string, repeatable | none | use this suite file instead of looking for suites |
+
+```bash title="Example"
+evalproof scan . --out scan.json
+```
+
+The JSON has `format_version` (1), `root`, `findings`, `suites`, `gaps`, `not_computed`, `notes` and `skipped` (counts of unparsable files, files over 1 MB and suites that did not load). Directories that are hidden, `node_modules`, `.venv`, `venv`, `env`, `build`, `dist`, `site-packages`, `__pycache__` and `*.egg-info` are not entered.
+
+Exit 0, with or without gaps, or 2 for a usage error. Gaps are advice, not a gate.
+
+## evalproof draft
+
+Experimental. Turns the gaps in a scan file into a separate JSONL of draft cases. It writes inputs, never expected answers. A case harvested from a pytest file keeps the assertion its test already made and needs no model. For a tool no case exercises, code no suite runs, a conversation no case continues and a suite with too few cases, a model writes inputs only: each is tagged `draft` and carries no `reference`, `accept`, `require`, `pattern`, `schema` or `expect`. A person adds the expected answer or the checks before a draft goes into a dataset. See [Find what is not tested](../guides/find-gaps.md).
+
+```bash title="Terminal"
+evalproof draft --scan FILE --out FILE [options]
+```
+
+| Flag | Type | Default | What it does |
+|---|---|---|---|
+| `--scan` | string, required | none | the JSON written by `evalproof scan --out` |
+| `--out` | string, required | none | the JSONL to write; it is never a suite's dataset, and an existing file is refused unless `--force` |
+| `--target` | string | none | the model that writes inputs; without it the suite's judge is used, and with neither the command exits 2 |
+| `--suite` | string | none | draft for this suite only |
+| `--per-gap` | int | `3` | inputs to ask the model for, for each gap |
+| `--max-cases` | int | `30` | stop after this many drafts in all, pytest and model together |
+| `--from-tests-only` | flag | off | draft only from pytest files; no model is called, so no target is needed |
+| `--no-cache` | flag | off | do not read or write the response cache |
+| `--force` | flag | off | overwrite `--out` if it exists |
+| `--gap` | choice, repeatable | none | draft only for this kind of gap: `tool_unchecked`, `no_multi_turn_cases`, `uncovered_code`, `few_cases` or `test_cases_not_imported` |
+| `--tool` | string, repeatable | none | draft only for this tool; without `--gap` it means `--gap tool_unchecked` |
+| `--file` | string, repeatable | none | draft only for the gaps in this file (a code file, or a test file with `--gap test_cases_not_imported`); without `--gap` it means `--gap uncovered_code` |
+
+```bash title="Example"
+evalproof draft --scan scan.json --out evals/drafts.jsonl --target ollama:qwen3:8b
+```
+
+Every draft has an id of the form `draft-` and ten hex digits of a hash of its input and turns, the tags `draft`, `gap:<kind>` and `from:pytest` or `from:model`, and a `draft_for` object that says which gap it answers. A draft from a model also has `drafted_by`, the model that wrote it. A draft from pytest has `source`, the test it came from. The model must reply with a JSON array; a reply that is not one is retried once, then the gap is skipped with a warning. Inputs that repeat one already in a suite, or an earlier draft, are dropped.
+
+Exit 0, including when nothing was drafted (no file is written then), or 2 for a usage error: a scan file that cannot be read, an `--out` that exists, or no model for a gap that needs one.
 
 ## evalproof pairwise
 

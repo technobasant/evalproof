@@ -30,7 +30,7 @@ These are covered by the guarantee:
 
 These are not:
 
-* **Anything marked experimental**: the `opencode:`, `cursor:` and `copilot:` providers, the Cursor sandbox, the `adk` and `claude-plugin-eval` importers, the OpenTelemetry adapter, and the `import-dataset` formats `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse` and `phoenix` (written from each tool's documented fields, not yet checked against files exported by each tool). They can change in a minor release until they are declared stable. The adapters and importers warn when used, and so do the providers; the `import-dataset` formats are marked in [Import test cases](../guides/import-test-cases.md).
+* **Anything marked experimental**: the `opencode:`, `cursor:` and `copilot:` providers, the Cursor sandbox, the `adk` and `claude-plugin-eval` importers, the OpenTelemetry adapter, the `scan` and `draft` commands (what they find, the JSON shape, the fields of a drafted case and their flags), and the `import-dataset` formats `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse` and `phoenix` (written from each tool's documented fields, not yet checked against files exported by each tool). They can change in a minor release until they are declared stable. The adapters and importers warn when used, and so do the providers, `scan` and `draft`; the `import-dataset` formats are marked in [Import test cases](../guides/import-test-cases.md).
 * **What 1.0.0 added on top of that** is experimental too, without a warning, until it has been used in more projects: the `command:` target's input and output, the [JUnit reports](../reference/junit.md) (`--junit`) and the names of their test cases, the `checks` list in the gate's `--json` output, `init --platform gitlab` and `init --platform bitbucket`, the action's `pr-comment` input, the npm launcher and the container image's contents. They can change in a minor release, and the changelog says when.
 * **The coding-agent files** `init` writes: the text of the evalproof section of `AGENTS.md`, the skill's text and `init --agent-files-only`. The markers around the section and the rule that `init` never changes anything outside them are stable.
 * **Human-readable output**: the terminal and Markdown reports can be reworded or rearranged in any release. Read `--json` output or run files from scripts.
@@ -47,8 +47,8 @@ Fixes go into the latest minor release. Security fixes also go into the previous
 
 | Version | Supported |
 |---|---|
-| 1.2.x | yes |
-| 1.1.x, 1.0.x | security fixes until 2027-02-13 |
+| 1.3.x | yes |
+| 1.2.x, 1.1.x, 1.0.x | security fixes until 2027-02-13 |
 | < 1.0 | no |
 
 Report a vulnerability privately, as the [security policy](https://github.com/technobasant/evalproof/blob/main/SECURITY.md) describes. [Security and data handling](security.md) covers what evalproof stores and sends.

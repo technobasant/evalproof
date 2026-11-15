@@ -124,7 +124,9 @@ What else you need depends on what you run:
 
 | To | You need |
 |---|---|
-| `compare`, `calibrate`, `verify`, `rehash`, `report`, `import`, `init`, `doctor`, `readiness` | nothing: they read run files and make no model call |
+| `compare`, `calibrate`, `verify`, `rehash`, `report`, `import`, `init`, `doctor`, `readiness`, `scan` | nothing: they read run files or source files and make no model call |
+| `draft --from-tests-only` | nothing: it reads the scan file and your pytest files and makes no model call |
+| `draft` for the other gaps | a model to write inputs: `--target`, or the suite's judge |
 | `run` against a Python function, an HTTP endpoint or a command | that function, endpoint or program |
 | `run` on a local model | [Ollama](https://ollama.com) (the default), vLLM, LM Studio or llama.cpp, with the model pulled |
 | `run` on a hosted model | the provider's key in an environment variable ([Providers](../guides/providers.md#providers)) |
