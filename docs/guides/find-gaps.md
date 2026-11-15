@@ -68,12 +68,13 @@ A pytest file that calls your code with a literal input and asserts on the resul
 
 ```python title="tests/test_llm.py"
 def test_window():
-    assert answer("What is the refund window?") == "30 days"      # reference
+    assert answer("What is the refund window?") == "30 days"  # reference
+
 
 def test_contact():
     result = answer("How do I reach you?")
-    assert "email" in result                                       # accept
-    assert re.search(r"[a-z]+@", result)                           # pattern
+    assert "email" in result  # accept
+    assert re.search(r"[a-z]+@", result)  # pattern
 ```
 
 An exact comparison becomes a `reference`, `"text" in result` becomes an `accept` entry, and `re.search` becomes a `pattern` that keeps its flags. Calls through a module (`llm.answer(...)`), `await`, `.lower()` and `.strip()` on the result, `and` chains and a result held in a variable are followed. The function must be imported from a file in the repository that reaches a model call, and the input must be a string literal (the first argument, or a keyword such as `question=`). Anything else is skipped, not guessed. Each case records `source`, the test it came from, and is tagged `draft` and `from:pytest`. No model is called, so no `--target` is needed.
