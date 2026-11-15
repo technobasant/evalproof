@@ -1,7 +1,7 @@
 """Command line.
 
 ``evalproof init | run | import | import-dataset | compare | verify | rehash | calibrate | report |
-doctor | pairwise | readiness``
+doctor | pairwise | readiness | scan | draft``
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from evalproof.config import (
 )
 from evalproof.dataset import DatasetError, load_dataset, write_dataset
 from evalproof.doctor import CANARY_MODEL, run_cursor_canary, run_doctor
+from evalproof.experimental import experimental_notice
 from evalproof.gate import (
     EXIT_BUDGET,
     EXIT_CANNOT_GATE,
@@ -75,6 +76,7 @@ from evalproof.scaffold import (
     init_project,
     render_import_suite,
 )
+from evalproof.scan import render_text, report_json, scan_path
 from evalproof.scorers import pairwise
 from evalproof.stats import holm
 from evalproof.verify import verify_markdown, verify_run
@@ -501,6 +503,24 @@ def cmd_readiness(args: argparse.Namespace) -> int:
         readiness_json(report, required) if args.json else readiness_markdown(report, required)
     )
     return exit_code(report, required)
+
+
+def cmd_scan(args: argparse.Namespace) -> int:
+    experimental_notice("scan", "its findings, gaps and JSON shape may change in a minor release")
+    out = Path(args.out) if args.out else None
+    if out is not None:
+        _check_writable(out, "the scan file")
+    report = scan_path(
+        Path(args.path),
+        excludes=args.exclude or [],
+        suite_files=[Path(s) for s in args.suite or []],
+        scan_ref=args.out or "scan.json",
+    )
+    if out is not None:
+        out.write_text(report_json(report), encoding="utf-8", newline="\n")
+        sys.stderr.write(f"wrote {out}\n")
+    sys.stdout.write(report_json(report) if args.json else render_text(report))
+    return EXIT_PASS
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -1092,6 +1112,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="exit 1 unless these dimensions are covered (comma-separated; may repeat)",
     )
     rd.set_defaults(func=cmd_readiness)
+
+    sc = sub.add_parser(
+        "scan",
+        help="find the model calls, agents and tools in a repository and what no suite tests",
+        description="Read the code under PATH without running it and report what it does with "
+        "an LLM (model calls, agents, tools, prompts, multi-turn use), the test cases and "
+        "suites it already has, and the gaps: code and tools no suite tests, and test cases "
+        "that are not evalproof cases yet. Static: makes no model call and imports no code. "
+        "Exit 0 with or without gaps, 2 for a usage error. Experimental.",
+    )
+    sc.add_argument("path", nargs="?", default=".", metavar="PATH")
+    sc.add_argument("--json", action="store_true", help="print JSON instead of text")
+    sc.add_argument("--out", metavar="FILE", help="also write the JSON to FILE")
+    sc.add_argument(
+        "--exclude",
+        action="append",
+        metavar="GLOB",
+        help="skip files and directories matching GLOB (may repeat)",
+    )
+    sc.add_argument(
+        "--suite",
+        action="append",
+        metavar="SUITE",
+        help="use this suite file instead of looking for suites (may repeat)",
+    )
+    sc.set_defaults(func=cmd_scan)
 
     pw = sub.add_parser("pairwise", help="judge baseline vs candidate outputs head to head")
     pw.add_argument("baseline")
