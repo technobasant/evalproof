@@ -12,7 +12,7 @@ evalproof ends with a distinct code for each way a run can finish, so a pipeline
 | 1 | regression | a quality check failed | `compare --gate`, `run --gate`, `readiness --require`, `doctor` |
 | 2 | usage error | the command, a file or the configuration is wrong | every command |
 | 3 | budget breach | the candidate is over a latency or cost limit | `compare --gate` |
-| 4 | cannot gate | the runs cannot be compared, so no verdict is possible | `compare --gate`, `run --gate`, `verify`, `rehash` |
+| 4 | cannot gate | the runs cannot be compared, so no verdict is possible | `compare --gate`, `run --gate`, `verify`, `rehash`, `doctor --cursor-canary` |
 | 130 | interrupted | the process was stopped with Ctrl-C | every command |
 
 ## Exit 1: a quality check failed
@@ -22,6 +22,7 @@ evalproof ends with a distinct code for each way a run can finish, so a pipeline
 * An absolute check failed: a pass rate below `min_pass_rate`, or a `must_pass` case that did not pass (in every trial, when the runs repeat each case).
 * `evalproof readiness --require` named a dimension the suite does not cover.
 * `evalproof doctor` found a coding-agent CLI target that is not ready.
+* `evalproof doctor --cursor-canary` did not see its canary skill, or saw another skill besides it (the leak it exists to find).
 
 ## Exit 2: a usage or configuration error
 
@@ -49,7 +50,8 @@ The gate could not reach a verdict, and a pass would be wrong. The causes includ
 * the judge's target, CLI, isolation or resolved model changed between the runs, unless `allow_judge_change` is set (a new CLI version alone only warns);
 * the runs repeat each case a different number of times;
 * `evalproof verify` found that the run does not match the suite or the dataset;
-* `evalproof rehash` found that the dataset does not match the run.
+* `evalproof rehash` found that the dataset does not match the run;
+* `evalproof doctor --cursor-canary` made its one call and it failed, so there is no verdict.
 
 The message says which. [Troubleshooting](../guides/troubleshooting.md#comparing-and-gating) gives the fix for each.
 

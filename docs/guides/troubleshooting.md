@@ -86,6 +86,18 @@ Most errors print as `evalproof: error: <message>` on stderr and exit with code 
 
 **Fix:** set it to `login` or `api-key`, or unset it.
 
+### `sandbox-exec: sandbox_apply: Operation not permitted` (cursor)
+
+**Cause:** on macOS, evalproof starts `cursor-agent` inside `sandbox-exec` so that the skills and rules in your home directory cannot be read. macOS lets a process apply a sandbox only when it is not already inside one that forbids it, so this fails when evalproof itself runs under another sandbox (a coding agent's, a container's). The error ends with `the macOS sandbox did not start`.
+
+**Fix:** set `EVALPROOF_CURSOR_SANDBOX=off` to run `cursor-agent` without the sandbox. Your skills list is then sent with every prompt (isolation tag `cursor/2`), and `evalproof doctor` says so; run `evalproof doctor --cursor-canary` (one real call) to see what reaches the prompt.
+
+### `EVALPROOF_CURSOR_SANDBOX must be one of on, off, got 'x'`
+
+**Cause:** the variable `EVALPROOF_CURSOR_SANDBOX` is set to something else. Unset or empty means `on`, which sandboxes `cursor-agent` on macOS and does nothing elsewhere.
+
+**Fix:** set it to `on` or `off`, or unset it.
+
 ### `timed out after 120s`, or `exited with status 1`
 
 **Cause:** the CLI did not answer within the target's timeout, or it exited with an error. When the CLI wrote anything to stderr or stdout, that text replaces `exited with status`.

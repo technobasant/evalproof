@@ -4,7 +4,28 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## [Unreleased]
 
-Nothing yet. Changes merged after 0.8.0 are listed here until the next release.
+### Added
+
+- On macOS the `cursor:` provider now runs `cursor-agent` inside `sandbox-exec`, with a profile
+  that denies reading the folders where skills and rules live (`~/.claude`, `~/.agents`,
+  `~/.codex`, `~/.gemini`, and `~/.cursor/skills`, `skills-cursor`, `rules`, `plugins`,
+  `agents`), so the skills in your home directory no longer reach the prompt. The login is
+  unaffected. `EVALPROOF_CURSOR_SANDBOX=off` turns it off (`on` is the default; any other value
+  is an error), and it has no effect outside macOS or without `/usr/bin/sandbox-exec`. If
+  `sandbox-exec` fails to start, the error points at that variable. Cursor User Rules come from
+  Cursor's servers and are still sent: clear them in Cursor Settings > Rules.
+- `evalproof doctor --cursor-canary [--model MODEL]` makes **one real `cursor-agent` call**
+  (it uses your Cursor quota; default model `composer-2.5-fast`) with a canary skill in the
+  call's workspace and asks the model which skills and user-rule titles it can see. It reports
+  whether the canary was seen, any other skill (a leak) and the rule titles, never their
+  contents. The answer is the model's own account, so it is best effort. Exit 0 when the canary
+  was seen and nothing leaked, 1 otherwise, 4 when the call failed.
+
+### Changed
+
+- The cursor isolation tag is `cursor/3` when the sandbox is on and `cursor/2` when it is not, so
+  cached replies and compared runs never mix the two. The `doctor` warning about the skills list
+  now depends on the sandbox: with it on, it names the blocked folders and the User Rules limit.
 
 ## [0.8.0] — 2026-11-15
 
