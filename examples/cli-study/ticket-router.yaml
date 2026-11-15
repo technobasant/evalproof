@@ -7,7 +7,7 @@ seed: 0
 
 system:
   target: claude-code:claude-sonnet-5-5
-  label: "Claude Sonnet 5.5 (claude-code)"
+  label: "Anthropic Claude Sonnet 5.5"
   system_prompt_file: prompt.router.md
   prompt_template: "{input}"
   timeout_s: 300
@@ -17,12 +17,12 @@ variants:
   - name: codex
     system:
       target: codex:gpt-6-astra
-      label: "GPT-6 Astra, medium effort (codex)"
+      label: "OpenAI GPT-6 Astra (medium effort)"
       params: {extra: {reasoning_effort: medium}}
   - name: gemini
     system:
       target: cursor:gemini-4-argon-medium
-      label: "Gemini 4 Argon Medium (cursor)"
+      label: "Google Gemini 4 Argon Medium"
 
 scorers:
   - name: queue
