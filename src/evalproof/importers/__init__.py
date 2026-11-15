@@ -18,33 +18,51 @@ different things in its input. Compare runs imported by the same importer.
 ``adk`` and ``claude-plugin-eval`` are experimental (``EXPERIMENTAL_FORMATS``): no real sample of
 their files was available, so they were written from the tools' schemas. ``adk_dataset`` is not an
 importer of runs: it turns an ADK eval set into a dataset (``evalproof import-dataset adk``).
+
+The ``*_dataset`` modules turn other tools' TEST CASES into evalproof cases and the scorers those
+cases need (``import_cases``; ``import_dataset`` returns just the cases). Their shared rules are in
+``_dataset``. ``EXPERIMENTAL_DATASET_FORMATS`` lists the readers written from documentation alone.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 
 from evalproof.importers import (
     adk,
     adk_dataset,
+    braintrust_dataset,
     claude_plugin_eval,
     deepeval,
+    deepeval_dataset,
     garak,
     inspect_ai,
+    inspect_dataset,
+    langfuse_dataset,
+    langsmith_dataset,
     lm_eval,
+    openai_evals_dataset,
+    phoenix_dataset,
     promptfoo,
+    promptfoo_dataset,
+    ragas_dataset,
     table,
+    table_dataset,
 )
 from evalproof.importers._common import (
     EPOCHS,
+    EXPERIMENTAL_DATASET_FORMATS,
     EXPERIMENTAL_FORMATS,
     ImportFormatError,
     Options,
     _default_warn,
     imported_dataset_hash,
+    warn_experimental,
 )
+from evalproof.importers._dataset import DatasetOptions, ImportedDataset
+from evalproof.importers._detect import detect_format
 from evalproof.models import Case, Run
 
 _READERS: dict[str, Callable[[Path, Options], Run]] = {
@@ -60,17 +78,34 @@ _READERS: dict[str, Callable[[Path, Options], Run]] = {
 }
 FORMATS = tuple(_READERS)
 
-_DATASET_READERS: dict[str, Callable[[Path, Callable[[str], None]], list[Case]]] = {
-    "adk": adk_dataset.read,
+_DATASET_READERS: dict[str, Callable[[Path, DatasetOptions], ImportedDataset]] = {
+    "promptfoo": promptfoo_dataset.read,
+    "deepeval": deepeval_dataset.read,
+    "ragas": ragas_dataset.read,
+    "langsmith": langsmith_dataset.read,
+    "openai-evals": openai_evals_dataset.read,
+    "inspect": inspect_dataset.read,
+    "braintrust": braintrust_dataset.read,
+    "langfuse": langfuse_dataset.read,
+    "phoenix": phoenix_dataset.read,
+    "adk": adk_dataset.read_dataset,
+    "jsonl": table_dataset.read_jsonl,
+    "csv": table_dataset.read_csv,
 }
-DATASET_FORMATS = tuple(_DATASET_READERS)
+# ``auto`` is not a reader: it picks one of the others from the file (``detect_format``).
+DATASET_FORMATS = ("auto", *_DATASET_READERS)
 
 __all__ = [
     "DATASET_FORMATS",
     "EPOCHS",
+    "EXPERIMENTAL_DATASET_FORMATS",
     "EXPERIMENTAL_FORMATS",
     "FORMATS",
+    "DatasetOptions",
     "ImportFormatError",
+    "ImportedDataset",
+    "detect_format",
+    "import_cases",
     "import_dataset",
     "import_run",
     "imported_dataset_hash",
@@ -115,18 +150,68 @@ def import_run(
     return reader(Path(path), options)
 
 
-def import_dataset(
-    fmt: str, path: str | Path, *, warn: Callable[[str], None] | None = None
-) -> list[Case]:
-    """Read the test cases in ``path`` (``fmt`` is ``adk``: an ``*.evalset.json`` or the flat
-    ``*.test.json`` list) and return them as evalproof cases, ready for ``write_dataset``.
+def import_cases(
+    fmt: str,
+    path: str | Path,
+    *,
+    warn: Callable[[str], None] | None = None,
+    id_field: str | None = None,
+    input_fields: Sequence[str] = (),
+    reference_field: str | None = None,
+    tags_field: str | None = None,
+) -> ImportedDataset:
+    """Read the test cases in ``path`` as ``fmt`` and return them with the scorers they need.
 
-    ``warn`` receives notes about cases it skipped; by default they are raised as Python warnings.
-    Raises ``ImportFormatError`` (a ``ValueError``) when the file is not in the format asked for.
+    ``fmt`` is one of ``DATASET_FORMATS``; ``auto`` picks the format from the file and says so in
+    ``ImportedDataset.detected``. ``id_field``, ``input_fields``, ``reference_field`` and
+    ``tags_field`` name the columns of a generic ``jsonl`` or ``csv`` file and apply to those two
+    formats only. ``warn`` receives the notes (what was not imported, and why); by default they
+    are raised as Python warnings. Raises ``ImportFormatError`` (a ``ValueError``) when the file
+    is not in the format asked for, or ``auto`` cannot tell.
     """
+    target = Path(path)
+    detected = fmt == "auto"
+    if detected:
+        fmt = detect_format(target, DATASET_FORMATS)
     reader = _DATASET_READERS.get(fmt)
     if reader is None:
         raise ImportFormatError(
             f"unknown dataset format {fmt!r}; choose one of {', '.join(DATASET_FORMATS)}"
         )
-    return reader(Path(path), warn or _default_warn)
+    say = warn or _default_warn
+    if fmt in EXPERIMENTAL_DATASET_FORMATS:
+        warn_experimental(fmt)
+    result = reader(
+        target,
+        DatasetOptions(
+            warn=say,
+            id_field=id_field,
+            input_fields=tuple(input_fields),
+            reference_field=reference_field,
+            tags_field=tags_field,
+        ),
+    )
+    if detected and fmt == "deepeval":
+        result.notes.insert(
+            0,
+            "Langfuse dataset items have the same keys and map the same way; "
+            "name the format langfuse to use the item id as the case id",
+        )
+    result.format = fmt
+    result.detected = detected
+    return result
+
+
+def import_dataset(
+    fmt: str, path: str | Path, *, warn: Callable[[str], None] | None = None
+) -> list[Case]:
+    """Read the test cases in ``path`` as ``fmt`` and return them as evalproof cases, ready for
+    ``write_dataset``. ``import_cases`` also returns the scorers the cases need.
+
+    ``fmt`` is ``adk`` (an ``*.evalset.json`` or the flat ``*.test.json`` list) or any other of
+    ``DATASET_FORMATS``; ``auto`` picks the format from the file. ``warn`` receives notes about
+    cases it skipped or fields it did not carry over; by default they are raised as Python
+    warnings. Raises ``ImportFormatError`` (a ``ValueError``) when the file is not in the format
+    asked for.
+    """
+    return import_cases(fmt, path, warn=warn).cases
