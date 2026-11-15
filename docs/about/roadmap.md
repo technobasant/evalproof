@@ -11,7 +11,7 @@ What has already shipped is in the [changelog](changelog.md). Version 1.0 declar
 ## Next: more frameworks (1.4)
 
 * **Adapters** for Pydantic AI, LlamaIndex, CrewAI, DSPy, Haystack, AutoGen and Semantic Kernel, next to the ones for LangChain, ADK, the Claude Agent SDK and the OpenAI Agents SDK.
-* **TypeScript.** Helpers for testing a TypeScript agent through a `command:` or HTTP target, and `scan` support for LangChain.js and the Vercel AI SDK.
+* **TypeScript.** A helper library in the `evalproof` npm package for testing a TypeScript agent through a `command:` or HTTP target (`runCommand`, `serve`), converters that turn a Vercel AI SDK or LangChain.js result into a trace, `init --node`, and `scan` support for the tools and agents of LangChain.js and the Vercel AI SDK. It is experimental when it ships. See [Testing a TypeScript or JavaScript system](../guides/typescript.md).
 
 ## Later
 

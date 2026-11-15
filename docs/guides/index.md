@@ -12,6 +12,7 @@ Each guide takes one task from start to finish. They are for people who have run
 | [Coding agents](coding-agents.md) | the `AGENTS.md` section and the skill `init` writes, so a coding agent can use evalproof in your repository |
 | [Testing agents](testing-agents.md) | traces, the `checks` scorer, several turns and variants |
 | [Testing a system in any language](command-target.md) | run a Node.js, Go or shell program as the system, with the case on stdin |
+| [Testing a TypeScript or JavaScript system](typescript.md) | the npm helper: `runCommand`, `serve`, a trace from a Vercel AI SDK or LangChain.js result, `init --node`, and `scan` for TypeScript tools and agents |
 | [Repeated trials](repeated-trials.md) | run each case several times, and compare several candidates in one table |
 | [Readiness](readiness.md) | which parts of quality a suite covers and which it leaves untested |
 | [Find what is not tested](find-gaps.md) | scan a repository for model calls, agents and tools no suite tests, and draft inputs for them, never answers |
