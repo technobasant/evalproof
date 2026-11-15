@@ -4,9 +4,9 @@
     "system": "Anthropic Claude Sonnet 5.5",
     "dataset_path": "ticket-router.sample.jsonl",
     "dataset_hash": "371b97a163bfa5c0",
-    "started_at": "2026-11-15T03:51:02+00:00",
-    "finished_at": "2026-11-15T03:52:53+00:00",
-    "wall_time_s": 111.16,
+    "started_at": "2026-11-15T04:33:43+00:00",
+    "finished_at": "2026-11-15T04:33:43+00:00",
+    "wall_time_s": 0.014,
     "evalproof_version": "0.8.0",
     "seed": 0,
     "environment": {
@@ -38,7 +38,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -67,7 +67,7 @@
         "tokens_in": 769,
         "tokens_out": 4,
         "cost_usd": 0.003112,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -96,7 +96,7 @@
         "tokens_in": 768,
         "tokens_out": 4,
         "cost_usd": 0.003108,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -125,7 +125,7 @@
         "tokens_in": 766,
         "tokens_out": 4,
         "cost_usd": 0.0031000000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -154,7 +154,7 @@
         "tokens_in": 771,
         "tokens_out": 4,
         "cost_usd": 0.0031200000000000004,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -183,7 +183,7 @@
         "tokens_in": 770,
         "tokens_out": 4,
         "cost_usd": 0.0031160000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -212,7 +212,7 @@
         "tokens_in": 770,
         "tokens_out": 4,
         "cost_usd": 0.0031160000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -241,7 +241,7 @@
         "tokens_in": 770,
         "tokens_out": 4,
         "cost_usd": 0.0031160000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -270,7 +270,7 @@
         "tokens_in": 770,
         "tokens_out": 4,
         "cost_usd": 0.0031160000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -299,7 +299,7 @@
         "tokens_in": 770,
         "tokens_out": 4,
         "cost_usd": 0.0031160000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -328,7 +328,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -357,7 +357,7 @@
         "tokens_in": 769,
         "tokens_out": 4,
         "cost_usd": 0.003112,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -386,7 +386,7 @@
         "tokens_in": 765,
         "tokens_out": 4,
         "cost_usd": 0.0030960000000000002,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -415,7 +415,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -444,7 +444,7 @@
         "tokens_in": 772,
         "tokens_out": 3,
         "cost_usd": 0.003114,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -473,7 +473,7 @@
         "tokens_in": 769,
         "tokens_out": 3,
         "cost_usd": 0.003102,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -502,7 +502,7 @@
         "tokens_in": 766,
         "tokens_out": 3,
         "cost_usd": 0.0030900000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -531,7 +531,7 @@
         "tokens_in": 765,
         "tokens_out": 3,
         "cost_usd": 0.003086,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -560,7 +560,7 @@
         "tokens_in": 762,
         "tokens_out": 3,
         "cost_usd": 0.0030740000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -589,7 +589,7 @@
         "tokens_in": 763,
         "tokens_out": 3,
         "cost_usd": 0.003078,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -618,7 +618,7 @@
         "tokens_in": 767,
         "tokens_out": 3,
         "cost_usd": 0.003094,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -647,7 +647,7 @@
         "tokens_in": 767,
         "tokens_out": 3,
         "cost_usd": 0.003094,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -676,7 +676,7 @@
         "tokens_in": 773,
         "tokens_out": 3,
         "cost_usd": 0.003118,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -705,7 +705,7 @@
         "tokens_in": 772,
         "tokens_out": 3,
         "cost_usd": 0.003114,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -734,7 +734,7 @@
         "tokens_in": 764,
         "tokens_out": 3,
         "cost_usd": 0.003082,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -763,7 +763,7 @@
         "tokens_in": 764,
         "tokens_out": 3,
         "cost_usd": 0.003082,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -792,7 +792,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -821,7 +821,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -850,7 +850,7 @@
         "tokens_in": 770,
         "tokens_out": 4,
         "cost_usd": 0.0031160000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -879,7 +879,7 @@
         "tokens_in": 769,
         "tokens_out": 4,
         "cost_usd": 0.003112,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -908,7 +908,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -937,7 +937,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -966,7 +966,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -995,7 +995,7 @@
         "tokens_in": 766,
         "tokens_out": 4,
         "cost_usd": 0.0031000000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1024,7 +1024,7 @@
         "tokens_in": 769,
         "tokens_out": 4,
         "cost_usd": 0.003112,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1053,7 +1053,7 @@
         "tokens_in": 769,
         "tokens_out": 4,
         "cost_usd": 0.003112,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1082,7 +1082,7 @@
         "tokens_in": 767,
         "tokens_out": 4,
         "cost_usd": 0.003104,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1111,7 +1111,7 @@
         "tokens_in": 768,
         "tokens_out": 4,
         "cost_usd": 0.003108,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1140,7 +1140,7 @@
         "tokens_in": 769,
         "tokens_out": 4,
         "cost_usd": 0.003112,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1169,7 +1169,7 @@
         "tokens_in": 770,
         "tokens_out": 4,
         "cost_usd": 0.0031160000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1198,7 +1198,7 @@
         "tokens_in": 767,
         "tokens_out": 5,
         "cost_usd": 0.0031139999999999996,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1227,7 +1227,7 @@
         "tokens_in": 767,
         "tokens_out": 5,
         "cost_usd": 0.0031139999999999996,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1256,7 +1256,7 @@
         "tokens_in": 768,
         "tokens_out": 5,
         "cost_usd": 0.0031179999999999997,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1285,7 +1285,7 @@
         "tokens_in": 770,
         "tokens_out": 5,
         "cost_usd": 0.003126,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1314,7 +1314,7 @@
         "tokens_in": 767,
         "tokens_out": 5,
         "cost_usd": 0.0031139999999999996,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1343,7 +1343,7 @@
         "tokens_in": 765,
         "tokens_out": 5,
         "cost_usd": 0.003106,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1372,7 +1372,7 @@
         "tokens_in": 770,
         "tokens_out": 5,
         "cost_usd": 0.003126,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1401,7 +1401,7 @@
         "tokens_in": 770,
         "tokens_out": 5,
         "cost_usd": 0.003126,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1430,7 +1430,7 @@
         "tokens_in": 766,
         "tokens_out": 5,
         "cost_usd": 0.00311,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1459,7 +1459,7 @@
         "tokens_in": 767,
         "tokens_out": 5,
         "cost_usd": 0.0031139999999999996,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1488,7 +1488,7 @@
         "tokens_in": 768,
         "tokens_out": 5,
         "cost_usd": 0.0031179999999999997,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1517,7 +1517,7 @@
         "tokens_in": 768,
         "tokens_out": 5,
         "cost_usd": 0.0031179999999999997,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1546,7 +1546,7 @@
         "tokens_in": 763,
         "tokens_out": 4,
         "cost_usd": 0.003088,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1575,7 +1575,7 @@
         "tokens_in": 765,
         "tokens_out": 4,
         "cost_usd": 0.0030960000000000002,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1604,7 +1604,7 @@
         "tokens_in": 764,
         "tokens_out": 3,
         "cost_usd": 0.003082,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1633,7 +1633,7 @@
         "tokens_in": 763,
         "tokens_out": 3,
         "cost_usd": 0.003078,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1662,7 +1662,7 @@
         "tokens_in": 765,
         "tokens_out": 3,
         "cost_usd": 0.003086,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1691,7 +1691,7 @@
         "tokens_in": 765,
         "tokens_out": 3,
         "cost_usd": 0.003086,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1720,7 +1720,7 @@
         "tokens_in": 764,
         "tokens_out": 3,
         "cost_usd": 0.003082,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1749,7 +1749,7 @@
         "tokens_in": 766,
         "tokens_out": 3,
         "cost_usd": 0.0030900000000000003,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },

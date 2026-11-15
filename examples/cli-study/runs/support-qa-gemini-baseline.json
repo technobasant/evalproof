@@ -3,10 +3,10 @@
     "suite": "support-qa-cli",
     "system": "Google Gemini 4 Argon Medium + grounded prompt",
     "dataset_path": "support-qa.sample.jsonl",
-    "dataset_hash": "e70b69691dde56fd",
-    "started_at": "2026-11-15T03:47:00+00:00",
-    "finished_at": "2026-11-15T04:03:35+00:00",
-    "wall_time_s": 995.324,
+    "dataset_hash": "d8153b286d07c1c5",
+    "started_at": "2026-11-15T04:33:42+00:00",
+    "finished_at": "2026-11-15T04:33:42+00:00",
+    "wall_time_s": 0.026,
     "evalproof_version": "0.8.0",
     "seed": 0,
     "environment": {
@@ -21,7 +21,7 @@
       "system_sampling": "cli-default",
       "system_model_resolved": "gemini-4-argon-medium"
     },
-    "suite_hash": "1e67d07a2c33773e",
+    "suite_hash": "c8bc50b1d23db4e8",
     "variant": "gemini-baseline",
     "trials": 2
   },
@@ -49,10 +49,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "a4bc8687d8d0339d",
-      "content_hash": "720ea36663482d2e",
+      "case_hash": "67eb547b89e75411",
+      "content_hash": "5a49db17f26494b9",
       "trial": 0
     },
     {
@@ -78,10 +85,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "a4bc8687d8d0339d",
-      "content_hash": "720ea36663482d2e",
+      "case_hash": "67eb547b89e75411",
+      "content_hash": "5a49db17f26494b9",
       "trial": 1
     },
     {
@@ -107,10 +121,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "685df865c5dea27c",
-      "content_hash": "2d1f5dcd8fbe5c0a",
+      "case_hash": "106cc7e084ab50d9",
+      "content_hash": "78c3f5ca6e79e3bb",
       "trial": 0
     },
     {
@@ -136,10 +157,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "685df865c5dea27c",
-      "content_hash": "2d1f5dcd8fbe5c0a",
+      "case_hash": "106cc7e084ab50d9",
+      "content_hash": "78c3f5ca6e79e3bb",
       "trial": 1
     },
     {
@@ -165,10 +193,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "46f646590c054607",
-      "content_hash": "6703c562b9f484ba",
+      "case_hash": "754f7891a89cdff8",
+      "content_hash": "a3af8023132867c6",
       "trial": 0
     },
     {
@@ -183,7 +218,7 @@
         "tokens_in": 8892,
         "tokens_out": 28,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -194,10 +229,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "46f646590c054607",
-      "content_hash": "6703c562b9f484ba",
+      "case_hash": "754f7891a89cdff8",
+      "content_hash": "a3af8023132867c6",
       "trial": 1
     },
     {
@@ -223,10 +265,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "98d66d9acc9101cc",
-      "content_hash": "4bd54645af0cae6b",
+      "case_hash": "c08dafce2ba94216",
+      "content_hash": "916f29dfc125e161",
       "trial": 0
     },
     {
@@ -241,7 +290,7 @@
         "tokens_in": 8912,
         "tokens_out": 40,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -252,10 +301,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "98d66d9acc9101cc",
-      "content_hash": "4bd54645af0cae6b",
+      "case_hash": "c08dafce2ba94216",
+      "content_hash": "916f29dfc125e161",
       "trial": 1
     },
     {
@@ -281,10 +337,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "6f2cafe2a14ffb62",
-      "content_hash": "5cf5836a314c5d3b",
+      "case_hash": "b61c54ad2598cd67",
+      "content_hash": "4eabc81962627857",
       "trial": 0
     },
     {
@@ -299,7 +362,7 @@
         "tokens_in": 8896,
         "tokens_out": 19,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -310,10 +373,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "6f2cafe2a14ffb62",
-      "content_hash": "5cf5836a314c5d3b",
+      "case_hash": "b61c54ad2598cd67",
+      "content_hash": "4eabc81962627857",
       "trial": 1
     },
     {
@@ -328,7 +398,7 @@
         "tokens_in": 8902,
         "tokens_out": 15,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -339,10 +409,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "551726a68dcb90ee",
-      "content_hash": "67e7e155a3ab9401",
+      "case_hash": "f1e73a977c390561",
+      "content_hash": "b025633b400f6c27",
       "trial": 0
     },
     {
@@ -357,7 +434,7 @@
         "tokens_in": 8902,
         "tokens_out": 15,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -368,10 +445,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "551726a68dcb90ee",
-      "content_hash": "67e7e155a3ab9401",
+      "case_hash": "f1e73a977c390561",
+      "content_hash": "b025633b400f6c27",
       "trial": 1
     },
     {
@@ -386,7 +470,7 @@
         "tokens_in": 8909,
         "tokens_out": 16,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -397,10 +481,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "33da464d39f20492",
-      "content_hash": "73c219e89ac33b45",
+      "case_hash": "23f5be3f456474b3",
+      "content_hash": "e455ce6ca48bb765",
       "trial": 0
     },
     {
@@ -415,7 +506,7 @@
         "tokens_in": 8904,
         "tokens_out": 16,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -426,10 +517,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "33da464d39f20492",
-      "content_hash": "73c219e89ac33b45",
+      "case_hash": "23f5be3f456474b3",
+      "content_hash": "e455ce6ca48bb765",
       "trial": 1
     },
     {
@@ -444,7 +542,7 @@
         "tokens_in": 8899,
         "tokens_out": 127,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -455,10 +553,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "28836fb663b3cc00",
-      "content_hash": "29b2acf1257fc01f",
+      "case_hash": "d10c12d850d25a39",
+      "content_hash": "5c6732414212549b",
       "trial": 0
     },
     {
@@ -473,7 +578,7 @@
         "tokens_in": 8904,
         "tokens_out": 18,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -484,10 +589,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "28836fb663b3cc00",
-      "content_hash": "29b2acf1257fc01f",
+      "case_hash": "d10c12d850d25a39",
+      "content_hash": "5c6732414212549b",
       "trial": 1
     },
     {
@@ -502,7 +614,7 @@
         "tokens_in": 8901,
         "tokens_out": 35,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -513,10 +625,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "e66e3a2c3e528990",
-      "content_hash": "a25ed888aa973899",
+      "case_hash": "6f3650f36b0c294a",
+      "content_hash": "4f21d09f39ea3d92",
       "trial": 0
     },
     {
@@ -531,7 +650,7 @@
         "tokens_in": 8906,
         "tokens_out": 35,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -542,10 +661,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "e66e3a2c3e528990",
-      "content_hash": "a25ed888aa973899",
+      "case_hash": "6f3650f36b0c294a",
+      "content_hash": "4f21d09f39ea3d92",
       "trial": 1
     },
     {
@@ -560,7 +686,7 @@
         "tokens_in": 8899,
         "tokens_out": 33,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -571,10 +697,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b7bea2642bb4b52f",
-      "content_hash": "c1ff73268542b261",
+      "case_hash": "7fae881d6e958851",
+      "content_hash": "5135f7b92583a991",
       "trial": 0
     },
     {
@@ -589,7 +722,7 @@
         "tokens_in": 8904,
         "tokens_out": 33,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -600,10 +733,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b7bea2642bb4b52f",
-      "content_hash": "c1ff73268542b261",
+      "case_hash": "7fae881d6e958851",
+      "content_hash": "5135f7b92583a991",
       "trial": 1
     },
     {
@@ -618,7 +758,7 @@
         "tokens_in": 8900,
         "tokens_out": 50,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -629,10 +769,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "4304060dbb421f14",
-      "content_hash": "f966d2621ae0dfa6",
+      "case_hash": "0af4cf777ea86718",
+      "content_hash": "6567eb9bd4cb04b8",
       "trial": 0
     },
     {
@@ -647,7 +794,7 @@
         "tokens_in": 8900,
         "tokens_out": 50,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -658,10 +805,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "4304060dbb421f14",
-      "content_hash": "f966d2621ae0dfa6",
+      "case_hash": "0af4cf777ea86718",
+      "content_hash": "6567eb9bd4cb04b8",
       "trial": 1
     },
     {
@@ -676,7 +830,7 @@
         "tokens_in": 8897,
         "tokens_out": 40,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -687,10 +841,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "a88631714b0bc07b",
-      "content_hash": "4710f741f87ce259",
+      "case_hash": "d5035b8ef95286cf",
+      "content_hash": "1132a4442d282928",
       "trial": 0
     },
     {
@@ -705,7 +866,7 @@
         "tokens_in": 8902,
         "tokens_out": 37,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -716,10 +877,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "a88631714b0bc07b",
-      "content_hash": "4710f741f87ce259",
+      "case_hash": "d5035b8ef95286cf",
+      "content_hash": "1132a4442d282928",
       "trial": 1
     },
     {
@@ -734,7 +902,7 @@
         "tokens_in": 8903,
         "tokens_out": 34,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -745,10 +913,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "829ff026002a263b",
-      "content_hash": "af7a0c1534b5f19a",
+      "case_hash": "351971d24950a57c",
+      "content_hash": "27b6acbf93a6a023",
       "trial": 0
     },
     {
@@ -763,7 +938,7 @@
         "tokens_in": 8903,
         "tokens_out": 34,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -774,10 +949,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "829ff026002a263b",
-      "content_hash": "af7a0c1534b5f19a",
+      "case_hash": "351971d24950a57c",
+      "content_hash": "27b6acbf93a6a023",
       "trial": 1
     },
     {
@@ -792,7 +974,7 @@
         "tokens_in": 8896,
         "tokens_out": 29,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -803,10 +985,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b22b41c537446f41",
-      "content_hash": "647d5fee18d88ae1",
+      "case_hash": "015515612eef8ae3",
+      "content_hash": "cf825058b0f2bf4d",
       "trial": 0
     },
     {
@@ -821,7 +1010,7 @@
         "tokens_in": 8901,
         "tokens_out": 29,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -832,10 +1021,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b22b41c537446f41",
-      "content_hash": "647d5fee18d88ae1",
+      "case_hash": "015515612eef8ae3",
+      "content_hash": "cf825058b0f2bf4d",
       "trial": 1
     },
     {
@@ -850,7 +1046,7 @@
         "tokens_in": 8910,
         "tokens_out": 21,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -861,10 +1057,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b49af12b0346ad28",
-      "content_hash": "4e67a304884fdb62",
+      "case_hash": "81e007e465182206",
+      "content_hash": "402136888065634f",
       "trial": 0
     },
     {
@@ -879,7 +1082,7 @@
         "tokens_in": 8910,
         "tokens_out": 21,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -890,10 +1093,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b49af12b0346ad28",
-      "content_hash": "4e67a304884fdb62",
+      "case_hash": "81e007e465182206",
+      "content_hash": "402136888065634f",
       "trial": 1
     },
     {
@@ -908,7 +1118,7 @@
         "tokens_in": 8898,
         "tokens_out": 46,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -919,10 +1129,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "01790eff0bc484ad",
-      "content_hash": "878916acb6e20794",
+      "case_hash": "77da989e622b1671",
+      "content_hash": "086c0aff2277bee6",
       "trial": 0
     },
     {
@@ -937,7 +1154,7 @@
         "tokens_in": 8908,
         "tokens_out": 24,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -948,10 +1165,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "01790eff0bc484ad",
-      "content_hash": "878916acb6e20794",
+      "case_hash": "77da989e622b1671",
+      "content_hash": "086c0aff2277bee6",
       "trial": 1
     },
     {
@@ -966,7 +1190,7 @@
         "tokens_in": 8896,
         "tokens_out": 35,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -977,10 +1201,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "a8b77ae5d92f0e1b",
-      "content_hash": "ab6c50e547a51647",
+      "case_hash": "8c5ae27d7fa7eaac",
+      "content_hash": "2b4015f13c7d9c38",
       "trial": 0
     },
     {
@@ -995,7 +1226,7 @@
         "tokens_in": 8906,
         "tokens_out": 35,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1006,10 +1237,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "a8b77ae5d92f0e1b",
-      "content_hash": "ab6c50e547a51647",
+      "case_hash": "8c5ae27d7fa7eaac",
+      "content_hash": "2b4015f13c7d9c38",
       "trial": 1
     },
     {
@@ -1024,7 +1262,7 @@
         "tokens_in": 8905,
         "tokens_out": 47,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1035,10 +1273,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "976860739c1f0f76",
-      "content_hash": "6023864edadef974",
+      "case_hash": "98c53c5518b2df7e",
+      "content_hash": "9e9f9ab6c86b0e3d",
       "trial": 0
     },
     {
@@ -1053,7 +1298,7 @@
         "tokens_in": 8905,
         "tokens_out": 16,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1064,10 +1309,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "976860739c1f0f76",
-      "content_hash": "6023864edadef974",
+      "case_hash": "98c53c5518b2df7e",
+      "content_hash": "9e9f9ab6c86b0e3d",
       "trial": 1
     },
     {
@@ -1082,7 +1334,7 @@
         "tokens_in": 8905,
         "tokens_out": 18,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1093,10 +1345,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "8bdbb3e8f9834dc5",
-      "content_hash": "b50406806686aa40",
+      "case_hash": "ca284a93044c41a5",
+      "content_hash": "d427547d225ca498",
       "trial": 0
     },
     {
@@ -1111,7 +1370,7 @@
         "tokens_in": 8905,
         "tokens_out": 18,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1122,10 +1381,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "8bdbb3e8f9834dc5",
-      "content_hash": "b50406806686aa40",
+      "case_hash": "ca284a93044c41a5",
+      "content_hash": "d427547d225ca498",
       "trial": 1
     },
     {
@@ -1140,7 +1406,7 @@
         "tokens_in": 8903,
         "tokens_out": 19,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1151,10 +1417,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "43c51da9f67e2747",
-      "content_hash": "2ff712d585627f69",
+      "case_hash": "a6aca0ac3e4203e8",
+      "content_hash": "d1ab568211cc4ecf",
       "trial": 0
     },
     {
@@ -1169,7 +1442,7 @@
         "tokens_in": 8898,
         "tokens_out": 19,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1180,10 +1453,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "43c51da9f67e2747",
-      "content_hash": "2ff712d585627f69",
+      "case_hash": "a6aca0ac3e4203e8",
+      "content_hash": "d1ab568211cc4ecf",
       "trial": 1
     },
     {
@@ -1198,7 +1478,7 @@
         "tokens_in": 8913,
         "tokens_out": 29,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1209,10 +1489,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b0a127e053ab72bd",
-      "content_hash": "e9b68854809d520f",
+      "case_hash": "27dc0b513238207a",
+      "content_hash": "499b69f3f871f9d2",
       "trial": 0
     },
     {
@@ -1227,7 +1514,7 @@
         "tokens_in": 8908,
         "tokens_out": 30,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1238,10 +1525,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b0a127e053ab72bd",
-      "content_hash": "e9b68854809d520f",
+      "case_hash": "27dc0b513238207a",
+      "content_hash": "499b69f3f871f9d2",
       "trial": 1
     },
     {
@@ -1256,7 +1550,7 @@
         "tokens_in": 8897,
         "tokens_out": 16,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1267,10 +1561,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "c1dce7dedf984202",
-      "content_hash": "4bff12885bfd460b",
+      "case_hash": "0a42bb1b5036dc5d",
+      "content_hash": "227da897a4c3ce0d",
       "trial": 0
     },
     {
@@ -1285,7 +1586,7 @@
         "tokens_in": 8887,
         "tokens_out": 29,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1296,10 +1597,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "c1dce7dedf984202",
-      "content_hash": "4bff12885bfd460b",
+      "case_hash": "0a42bb1b5036dc5d",
+      "content_hash": "227da897a4c3ce0d",
       "trial": 1
     },
     {
@@ -1314,7 +1622,7 @@
         "tokens_in": 8902,
         "tokens_out": 17,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1325,10 +1633,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "5ee6531a870cedcb",
-      "content_hash": "5b28ff82db38cd34",
+      "case_hash": "d3f818011bc78160",
+      "content_hash": "8ed7b7862443cc25",
       "trial": 0
     },
     {
@@ -1343,7 +1658,7 @@
         "tokens_in": 8897,
         "tokens_out": 17,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1354,10 +1669,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "5ee6531a870cedcb",
-      "content_hash": "5b28ff82db38cd34",
+      "case_hash": "d3f818011bc78160",
+      "content_hash": "8ed7b7862443cc25",
       "trial": 1
     },
     {
@@ -1372,7 +1694,7 @@
         "tokens_in": 8902,
         "tokens_out": 26,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1383,10 +1705,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "2f945b1a60f04ccd",
-      "content_hash": "26182363ddef36b6",
+      "case_hash": "df77724a8830f51e",
+      "content_hash": "5b0bf8e567c3cc1f",
       "trial": 0
     },
     {
@@ -1401,7 +1730,7 @@
         "tokens_in": 8897,
         "tokens_out": 26,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1412,10 +1741,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "2f945b1a60f04ccd",
-      "content_hash": "26182363ddef36b6",
+      "case_hash": "df77724a8830f51e",
+      "content_hash": "5b0bf8e567c3cc1f",
       "trial": 1
     },
     {
@@ -1430,7 +1766,7 @@
         "tokens_in": 8908,
         "tokens_out": 32,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1441,10 +1777,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "bc1538b6200048b5",
-      "content_hash": "aaa582042dafa08f",
+      "case_hash": "ddead9335f9f680f",
+      "content_hash": "37aa73a51e98b1ae",
       "trial": 0
     },
     {
@@ -1459,7 +1802,7 @@
         "tokens_in": 8908,
         "tokens_out": 16,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1470,10 +1813,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "bc1538b6200048b5",
-      "content_hash": "aaa582042dafa08f",
+      "case_hash": "ddead9335f9f680f",
+      "content_hash": "37aa73a51e98b1ae",
       "trial": 1
     },
     {
@@ -1488,7 +1838,7 @@
         "tokens_in": 8898,
         "tokens_out": 17,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1499,10 +1849,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "6359893111b0a71b",
-      "content_hash": "e7911ddea75a7685",
+      "case_hash": "66dbe233f832a561",
+      "content_hash": "51b1d4f52700f926",
       "trial": 0
     },
     {
@@ -1517,7 +1874,7 @@
         "tokens_in": 8893,
         "tokens_out": 15,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1528,10 +1885,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "6359893111b0a71b",
-      "content_hash": "e7911ddea75a7685",
+      "case_hash": "66dbe233f832a561",
+      "content_hash": "51b1d4f52700f926",
       "trial": 1
     },
     {
@@ -1546,7 +1910,7 @@
         "tokens_in": 8907,
         "tokens_out": 16,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1557,10 +1921,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "69d41e1b96166e4c",
-      "content_hash": "cb80b93455386a7a",
+      "case_hash": "c4b2d0d064f0792b",
+      "content_hash": "95665b0637357ab9",
       "trial": 0
     },
     {
@@ -1575,7 +1946,7 @@
         "tokens_in": 8902,
         "tokens_out": 16,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1586,10 +1957,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "69d41e1b96166e4c",
-      "content_hash": "cb80b93455386a7a",
+      "case_hash": "c4b2d0d064f0792b",
+      "content_hash": "95665b0637357ab9",
       "trial": 1
     },
     {
@@ -1604,7 +1982,7 @@
         "tokens_in": 8905,
         "tokens_out": 35,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1615,10 +1993,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "42991d3a22e59875",
-      "content_hash": "f025dc7daa657527",
+      "case_hash": "8bec9e7357b05fbd",
+      "content_hash": "c1f6024a2677a6e0",
       "trial": 0
     },
     {
@@ -1633,7 +2018,7 @@
         "tokens_in": 8905,
         "tokens_out": 32,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1644,10 +2029,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "42991d3a22e59875",
-      "content_hash": "f025dc7daa657527",
+      "case_hash": "8bec9e7357b05fbd",
+      "content_hash": "c1f6024a2677a6e0",
       "trial": 1
     },
     {
@@ -1662,7 +2054,7 @@
         "tokens_in": 8896,
         "tokens_out": 86,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1673,10 +2065,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "62a61756bf717c82",
-      "content_hash": "99a5b1ab8602d612",
+      "case_hash": "bf1ce9c091d581e3",
+      "content_hash": "5ffaf4d3769bc2a6",
       "trial": 0
     },
     {
@@ -1691,7 +2090,7 @@
         "tokens_in": 8896,
         "tokens_out": 34,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1702,10 +2101,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "62a61756bf717c82",
-      "content_hash": "99a5b1ab8602d612",
+      "case_hash": "bf1ce9c091d581e3",
+      "content_hash": "5ffaf4d3769bc2a6",
       "trial": 1
     },
     {
@@ -1720,7 +2126,7 @@
         "tokens_in": 8909,
         "tokens_out": 27,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1731,10 +2137,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "61bf97f6b7e00c3d",
-      "content_hash": "01414d6d83500251",
+      "case_hash": "04439e934e2882a3",
+      "content_hash": "67db6b8c9098d773",
       "trial": 0
     },
     {
@@ -1749,7 +2162,7 @@
         "tokens_in": 8899,
         "tokens_out": 27,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1760,10 +2173,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "61bf97f6b7e00c3d",
-      "content_hash": "01414d6d83500251",
+      "case_hash": "04439e934e2882a3",
+      "content_hash": "67db6b8c9098d773",
       "trial": 1
     },
     {
@@ -1778,7 +2198,7 @@
         "tokens_in": 8896,
         "tokens_out": 20,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1789,10 +2209,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "5de6f3cc1ad74ffa",
-      "content_hash": "20ec917920780ccd",
+      "case_hash": "4103e42267b5c315",
+      "content_hash": "bdd76c3997430760",
       "trial": 0
     },
     {
@@ -1807,7 +2234,7 @@
         "tokens_in": 8896,
         "tokens_out": 19,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1818,10 +2245,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "5de6f3cc1ad74ffa",
-      "content_hash": "20ec917920780ccd",
+      "case_hash": "4103e42267b5c315",
+      "content_hash": "bdd76c3997430760",
       "trial": 1
     },
     {
@@ -1836,7 +2270,7 @@
         "tokens_in": 8902,
         "tokens_out": 30,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1847,10 +2281,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "11c12822aea77474",
-      "content_hash": "586569274b237b8d",
+      "case_hash": "09e41a44b4b8d7d1",
+      "content_hash": "2046c8b9148856e8",
       "trial": 0
     },
     {
@@ -1865,7 +2306,7 @@
         "tokens_in": 8912,
         "tokens_out": 30,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1876,10 +2317,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "11c12822aea77474",
-      "content_hash": "586569274b237b8d",
+      "case_hash": "09e41a44b4b8d7d1",
+      "content_hash": "2046c8b9148856e8",
       "trial": 1
     },
     {
@@ -1894,7 +2342,7 @@
         "tokens_in": 8905,
         "tokens_out": 51,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1905,10 +2353,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "951425d2f586eb63",
-      "content_hash": "67122b2c254f70dd",
+      "case_hash": "8012f8c8739e42c6",
+      "content_hash": "3ee5fa36d2f525b6",
       "trial": 0
     },
     {
@@ -1923,7 +2378,7 @@
         "tokens_in": 8895,
         "tokens_out": 50,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1934,10 +2389,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "951425d2f586eb63",
-      "content_hash": "67122b2c254f70dd",
+      "case_hash": "8012f8c8739e42c6",
+      "content_hash": "3ee5fa36d2f525b6",
       "trial": 1
     },
     {
@@ -1952,7 +2414,7 @@
         "tokens_in": 8909,
         "tokens_out": 57,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1963,10 +2425,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "03c553d65292f298",
-      "content_hash": "d06d685e04d853de",
+      "case_hash": "82e954f554341135",
+      "content_hash": "30dfbc31e4a6f0bf",
       "trial": 0
     },
     {
@@ -1981,7 +2450,7 @@
         "tokens_in": 8904,
         "tokens_out": 16,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -1992,10 +2461,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "03c553d65292f298",
-      "content_hash": "d06d685e04d853de",
+      "case_hash": "82e954f554341135",
+      "content_hash": "30dfbc31e4a6f0bf",
       "trial": 1
     },
     {
@@ -2010,7 +2486,7 @@
         "tokens_in": 8905,
         "tokens_out": 55,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2021,10 +2497,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "bcabdd8a1ca793ea",
-      "content_hash": "ab14f332abafec97",
+      "case_hash": "e796399efddbdc77",
+      "content_hash": "d6487c931af2e45f",
       "trial": 0
     },
     {
@@ -2039,7 +2522,7 @@
         "tokens_in": 8905,
         "tokens_out": 55,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2050,10 +2533,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "bcabdd8a1ca793ea",
-      "content_hash": "ab14f332abafec97",
+      "case_hash": "e796399efddbdc77",
+      "content_hash": "d6487c931af2e45f",
       "trial": 1
     },
     {
@@ -2068,7 +2558,7 @@
         "tokens_in": 8903,
         "tokens_out": 18,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2079,10 +2569,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "216894c2e3d54550",
-      "content_hash": "035086647f67f5be",
+      "case_hash": "1101f5836797d09d",
+      "content_hash": "cba1cf4a737a986e",
       "trial": 0
     },
     {
@@ -2097,7 +2594,7 @@
         "tokens_in": 8898,
         "tokens_out": 18,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2108,10 +2605,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "216894c2e3d54550",
-      "content_hash": "035086647f67f5be",
+      "case_hash": "1101f5836797d09d",
+      "content_hash": "cba1cf4a737a986e",
       "trial": 1
     },
     {
@@ -2126,7 +2630,7 @@
         "tokens_in": 8901,
         "tokens_out": 35,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2137,10 +2641,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "e8a100770ed946bf",
-      "content_hash": "249a9405e2511dc7",
+      "case_hash": "e628bf5207cff76b",
+      "content_hash": "7bd24141ad45e74f",
       "trial": 0
     },
     {
@@ -2155,7 +2666,7 @@
         "tokens_in": 8901,
         "tokens_out": 35,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2166,10 +2677,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "e8a100770ed946bf",
-      "content_hash": "249a9405e2511dc7",
+      "case_hash": "e628bf5207cff76b",
+      "content_hash": "7bd24141ad45e74f",
       "trial": 1
     },
     {
@@ -2184,7 +2702,7 @@
         "tokens_in": 8899,
         "tokens_out": 31,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2195,10 +2713,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "34eb8432b00310e9",
-      "content_hash": "18f51b34e2f7abd7",
+      "case_hash": "da0d3aac9861a67b",
+      "content_hash": "52ce3cfa16522882",
       "trial": 0
     },
     {
@@ -2213,7 +2738,7 @@
         "tokens_in": 8904,
         "tokens_out": 29,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2224,10 +2749,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "34eb8432b00310e9",
-      "content_hash": "18f51b34e2f7abd7",
+      "case_hash": "da0d3aac9861a67b",
+      "content_hash": "52ce3cfa16522882",
       "trial": 1
     },
     {
@@ -2242,7 +2774,7 @@
         "tokens_in": 8892,
         "tokens_out": 26,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2253,10 +2785,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "86b2613db96e8ee9",
-      "content_hash": "5a3f76d2f82d6148",
+      "case_hash": "5e0504bb177bc7c1",
+      "content_hash": "eb6ea031a9000a30",
       "trial": 0
     },
     {
@@ -2271,7 +2810,7 @@
         "tokens_in": 8902,
         "tokens_out": 26,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2282,10 +2821,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "86b2613db96e8ee9",
-      "content_hash": "5a3f76d2f82d6148",
+      "case_hash": "5e0504bb177bc7c1",
+      "content_hash": "eb6ea031a9000a30",
       "trial": 1
     },
     {
@@ -2300,7 +2846,7 @@
         "tokens_in": 8895,
         "tokens_out": 55,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2311,10 +2857,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "4289b208561e38d9",
-      "content_hash": "f7cdfb2fef571e0a",
+      "case_hash": "307f8c3cb1d44e0c",
+      "content_hash": "d7fb68b1901ff3c6",
       "trial": 0
     },
     {
@@ -2329,7 +2882,7 @@
         "tokens_in": 8900,
         "tokens_out": 40,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2340,10 +2893,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "4289b208561e38d9",
-      "content_hash": "f7cdfb2fef571e0a",
+      "case_hash": "307f8c3cb1d44e0c",
+      "content_hash": "d7fb68b1901ff3c6",
       "trial": 1
     },
     {
@@ -2358,7 +2918,7 @@
         "tokens_in": 8902,
         "tokens_out": 32,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2369,10 +2929,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b2dc4a37c16179e5",
-      "content_hash": "993c8e71c3695fac",
+      "case_hash": "a3d10d0a49463945",
+      "content_hash": "ada26f8bb3c10f00",
       "trial": 0
     },
     {
@@ -2387,7 +2954,7 @@
         "tokens_in": 8892,
         "tokens_out": 27,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2398,10 +2965,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "b2dc4a37c16179e5",
-      "content_hash": "993c8e71c3695fac",
+      "case_hash": "a3d10d0a49463945",
+      "content_hash": "ada26f8bb3c10f00",
       "trial": 1
     },
     {
@@ -2416,7 +2990,7 @@
         "tokens_in": 8902,
         "tokens_out": 52,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2427,10 +3001,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "97ea0e6e083b1ff6",
-      "content_hash": "cf6ade20cc5431aa",
+      "case_hash": "e7bfa2388ad6a31a",
+      "content_hash": "f906ff5963afcd1d",
       "trial": 0
     },
     {
@@ -2445,7 +3026,7 @@
         "tokens_in": 8892,
         "tokens_out": 54,
         "cost_usd": 0.0,
-        "cached": false,
+        "cached": true,
         "error": null,
         "trace": null
       },
@@ -2456,10 +3037,17 @@
           "reason": null,
           "judge_tokens": 0,
           "judge_cost_usd": 0.0
+        },
+        "answer_key_reviewed": {
+          "value": 1.0,
+          "passed": true,
+          "reason": null,
+          "judge_tokens": 0,
+          "judge_cost_usd": 0.0
         }
       },
-      "case_hash": "97ea0e6e083b1ff6",
-      "content_hash": "cf6ade20cc5431aa",
+      "case_hash": "e7bfa2388ad6a31a",
+      "content_hash": "f906ff5963afcd1d",
       "trial": 1
     }
   ]

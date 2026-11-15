@@ -44,9 +44,15 @@ scorers:
   - name: answer_key
     type: regex
     params: {any_of_field: accept, none_of_field: reject}
+  # The same key after a hand review of every failure (README.md, "Answer key review"): curly
+  # apostrophes accepted everywhere; q05, q37 and q63 reject only the wrong claim, not any mention
+  # of another plan. It flips the 12 raw-key failures, all correct answers, and no passes.
+  - name: answer_key_reviewed
+    type: regex
+    params: {any_of_field: accept_reviewed, none_of_field: reject_reviewed}
 
 gate:
-  metric: answer_key
+  metric: answer_key_reviewed
   max_drop: 0.03
   alpha: 0.05
   min_cases: 40
