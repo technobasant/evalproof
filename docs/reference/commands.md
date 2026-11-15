@@ -34,8 +34,10 @@ It also adds an evalproof section to the repository's `AGENTS.md`, so any coding
 
 `--from FILE` starts from test cases you already have in another tool: `evals/cases.jsonl` is those cases and `evals/suite.yaml` has the scorers they need, in place of the sample cases. Everything else `init` writes is unchanged. The file is read before anything is written, so a file that cannot be imported (exit 2) leaves the directory as it was. See [Import test cases from other tools](../guides/import-test-cases.md#start-a-repository-from-existing-cases).
 
+`--node` (experimental) is for a system written in Node.js or TypeScript. Instead of a model with a system prompt, `init` writes `evals/system.mjs`, a program that imports `runCommand` from the `evalproof` npm package, and a suite whose target is `command:node system.mjs`. The judge is still a model. The program holds a placeholder that throws until you replace it with a call into your code, so every case errors until you do. Run `npm install --save-dev evalproof` in the repository root first. With `--ci api-key` on GitHub the workflow also sets up Node and runs `npm ci`.
+
 ```bash title="Terminal"
-evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab,bitbucket}] [--cli-auth {api-key,oauth-token}] [--from FILE] [--from-format FORMAT] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]
+evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--platform {github,gitlab,bitbucket}] [--cli-auth {api-key,oauth-token}] [--from FILE] [--from-format FORMAT] [--node] [--no-skill] [--no-agents-md] [--agent-files-only] [--force]
 ```
 
 | Flag | Type | Default | What it does |
@@ -47,6 +49,7 @@ evalproof init [--dir DIR] [--judge TARGET] [--ci {keyless,api-key,none}] [--pla
 | `--cli-auth` | one of `api-key`, `oauth-token` | `api-key` | with `--ci api-key` and a coding-agent CLI judge, what the workflow passes the CLI: its API key (`api-key`), or `oauth-token`: `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, for `claude-code` in your own repository and CI only |
 | `--from` | string | none | a file of test cases from another tool, imported into `evals/cases.jsonl` and a suite with the scorers they need, instead of the sample cases. It cannot be combined with `--agent-files-only` (exit 2) |
 | `--from-format` | one of `auto`, `promptfoo`, `deepeval`, `ragas`, `langsmith`, `openai-evals`, `inspect`, `braintrust`, `langfuse`, `phoenix`, `adk`, `jsonl`, `csv` | `auto` | the tool the `--from` file is from; `auto` reads it off the file. `jsonl` and `csv` need an `input` column here, as `init` has no field options: use `import-dataset` for other columns |
+| `--node` | flag | off | experimental. The system under test is a Node.js program: write `evals/system.mjs` and a suite whose target is `command:node system.mjs`, in place of a model with a system prompt. With `--from` the imported cases and scorers are used and the import's prompt template is dropped. It cannot be combined with `--agent-files-only` (exit 2), and `--platform gitlab` or `bitbucket` with `--ci api-key` is refused because the job image has no Node (exit 2) |
 | `--no-skill` | flag | off | do not write the agent skill |
 | `--no-agents-md` | flag | off | do not add the evalproof section to `AGENTS.md` |
 | `--agent-files-only` | flag | off | experimental. Write only the agent files, the evalproof section of `AGENTS.md` and the skill: no suite and no CI workflow. It cannot be combined with `--judge`, `--ci`, `--platform` or `--cli-auth`, or with both `--no-agents-md` and `--no-skill` (exit 2). An existing skill copy is kept unless you pass `--force`, and a note says when a kept copy differs from this version |

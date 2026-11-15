@@ -5,6 +5,7 @@ dataset: cases.jsonl
 seed: 0
 concurrency: @@CONCURRENCY@@
 
+#@@IF model
 # To test your own code instead of a prompt, point the system at it. The suite's own folder
 # is on the import path, so a small wrapper next to this file is the simplest way
 # (see examples/deterministic and examples/retrieval in the evalproof repository):
@@ -35,6 +36,23 @@ system:
   prompt_template: "{question}"
   params: {max_tokens: 400}
 
+#@@END
+#@@IF node
+# The system under test: the thing you change and measure again. This runs system.mjs, next
+# to this file, once for each case: the case is JSON on stdin and the answer is printed on
+# stdout. The command runs with this file's folder as its working directory. Replace the
+# placeholder in system.mjs with a call into your code. For TypeScript, use
+# "command:npx tsx system.ts". It can also be an HTTP endpoint:
+#
+#   system:
+#     target: http://localhost:8787/
+#
+system:
+  target: "command:node system.mjs"
+  label: node system
+  timeout_s: 120
+
+#@@END
 # The judge grades each answer against the rubric below. Where you can, use a different or
 # stronger model than the system's: a model grading its own answers tends to be lenient.
 judge:

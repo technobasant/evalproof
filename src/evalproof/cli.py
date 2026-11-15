@@ -606,6 +606,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         agent_files_only=args.agent_files_only,
         from_file=Path(args.from_file) if args.from_file else None,
         from_format=args.from_format,
+        node=args.node,
         emit=_say,
     )
 
@@ -834,6 +835,14 @@ def build_parser() -> argparse.ArgumentParser:
         choices=DATASET_FORMATS,
         default="auto",
         help="the tool the --from file is from (default: auto, read off the file)",
+    )
+    ini.add_argument(
+        "--node",
+        action="store_true",
+        help="the system under test is a Node.js program: write evals/system.mjs (it imports "
+        "runCommand from the evalproof npm package) and a suite whose target is "
+        "command:node system.mjs, instead of a model with a system prompt; the judge is still a "
+        "model (experimental)",
     )
     ini.add_argument("--no-skill", action="store_true", help="do not write the agent skill")
     ini.add_argument(

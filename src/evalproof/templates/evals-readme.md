@@ -5,6 +5,7 @@ Run the suite and write the run file (this is the command that writes `evals/run
     uvx evalproof run evals/suite.yaml --out evals/runs/latest.json
 
 @@CI_TEXT@@
+@@NODE_TEXT@@
 
 The three cases in `cases.jsonl` are samples. Replace them with real ones; the gate needs 20.
 Adding or editing cases does not block the gate: cases are paired by id and content, a new case

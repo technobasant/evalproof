@@ -7,6 +7,7 @@ dataset: @@DATASET@@
 seed: 0
 concurrency: @@CONCURRENCY@@
 
+#@@IF model
 # The system under test: the thing you change and measure again. This asks a model each case's
 # input under a placeholder system prompt, so the suite runs as soon as it is written. Replace
 # the prompt with your own, or point the system at your code. The suite's own folder is on the
@@ -28,6 +29,17 @@ system:
 @@TEMPLATE_LINE@@
   params: {max_tokens: 400}
 
+#@@END
+#@@IF node
+# The system under test: the thing you change and measure again. This runs system.mjs, next
+# to this file, once for each case: the case's input is JSON on stdin and the answer is printed
+# on stdout. Replace the placeholder in system.mjs with a call into your code.
+system:
+  target: "command:node system.mjs"
+  label: imported cases
+  timeout_s: 120
+
+#@@END
 #@@IF judge
 # The judge grades each answer against the case's reference or rubrics. Where you can, use a
 # different or stronger model than the system's: a model grading its own answers tends to be
