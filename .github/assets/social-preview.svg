@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1a237e"/><stop offset="1" stop-color="#303f9f"/></linearGradient></defs>
+<rect width="1280" height="640" fill="url(#g)"/>
+<g transform="translate(80,70) scale(4.2)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M9 19V5M14 19v-6"/><path d="M13 17l3 3 6-7" stroke="#64ffda"/></g>
+<text x="200" y="146" font-family="Helvetica, Arial, sans-serif" font-size="76" font-weight="700" fill="#fff">evalproof</text>
+<text x="80" y="250" font-family="Helvetica, Arial, sans-serif" font-size="38" font-weight="500" fill="#fff">LLM and agent evaluation as measurement.</text>
+<text x="80" y="300" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#c5cae9">Gate CI only on regressions that are real, not noise.</text>
+<rect x="80" y="362" width="253" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="102" y="395" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">Calibrate the judge</text>
+<rect x="349" y="362" width="309" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="371" y="395" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">Paired significance gate</text>
+<rect x="674" y="362" width="329" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="696" y="395" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">Latency and cost budgets</text>
+<rect x="80" y="428" width="287" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="102" y="461" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">Agent tool-call checks</text>
+<rect x="383" y="428" width="212" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="405" y="461" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">Repeated trials</text>
+<rect x="611" y="428" width="275" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="633" y="461" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">11 agent frameworks</text>
+<rect x="80" y="494" width="234" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="102" y="527" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">Import test cases</text>
+<rect x="330" y="494" width="327" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="352" y="527" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">Find untested model calls</text>
+<rect x="673" y="494" width="353" height="50" rx="25" fill="#ffffff" fill-opacity="0.10" stroke="#64ffda" stroke-opacity="0.55"/>
+<text x="695" y="527" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="#fff">Python, TypeScript, any CLI</text>
+<text x="80" y="606" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#c5cae9">pip install evalproof  ·  npx evalproof  ·  github.com/technobasant/evalproof</text>
+</svg>

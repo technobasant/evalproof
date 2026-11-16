@@ -2,14 +2,16 @@
 
 [![PyPI](https://img.shields.io/pypi/v/evalproof?label=PyPI)](https://pypi.org/project/evalproof/)
 [![Python](https://img.shields.io/pypi/pyversions/evalproof?label=Python)](https://pypi.org/project/evalproof/)
+[![npm](https://img.shields.io/npm/v/evalproof?label=npm)](https://www.npmjs.com/package/evalproof)
+[![docs](https://img.shields.io/badge/docs-basantbhattarai.com.np%2Fevalproof-indigo)](https://basantbhattarai.com.np/evalproof/)
 [![ci](https://github.com/technobasant/evalproof/actions/workflows/ci.yml/badge.svg)](https://github.com/technobasant/evalproof/actions/workflows/ci.yml)
 [![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](https://github.com/technobasant/evalproof/blob/main/LICENSE)
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://evalproof.streamlit.app)
 
 **Documentation: [basantbhattarai.com.np/evalproof](https://basantbhattarai.com.np/evalproof/)**
 
-**Treat LLM evaluation as measurement.** Calibrate the judge, correct its pass rate, and
-gate CI on regressions that are real rather than noise.
+**Treat LLM and agent evaluation as measurement.** Calibrate the judge, test agents through
+their tool calls, and gate CI on regressions that are real rather than noise.
 
 **Try it in the browser: [evalproof.streamlit.app](https://evalproof.streamlit.app).** Check whether
 a drop between two runs is real, or replay the
