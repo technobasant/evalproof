@@ -451,3 +451,16 @@ def test_glossary_defines_every_term() -> None:
     ]
     missing = [term for term in terms if f"| {term} |" not in page]
     assert not missing, f"glossary terms with no row: {missing}"
+
+
+def test_announcement_bar_names_the_current_release() -> None:
+    """The docs announcement bar is written by hand; a release must update it."""
+    from evalproof import __version__
+
+    major_minor = ".".join(__version__.split(".")[:2])
+    html = (ROOT / "overrides" / "main.html").read_text(encoding="utf-8")
+    match = re.search(r"evalproof (\d+\.\d+(?:\.\d+)?):", html)
+    assert match, "overrides/main.html: announcement bar has no 'evalproof X.Y:' text"
+    assert match.group(1) in (major_minor, __version__), (
+        f"overrides/main.html announces evalproof {match.group(1)}, but this is {__version__}"
+    )
