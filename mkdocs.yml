@@ -1,5 +1,5 @@
 site_name: evalproof
-site_description: Treat LLM evaluation as measurement. Calibrate the judge, correct the pass rate, gate CI on significant regressions.
+site_description: Treat LLM and agent evaluation as measurement. Calibrate the judge, test agents, gate CI on significant regressions.
 site_url: https://basantbhattarai.com.np/evalproof/
 repo_url: https://github.com/technobasant/evalproof
 repo_name: technobasant/evalproof
@@ -69,6 +69,9 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/evalproof/
       name: evalproof on PyPI
+    - icon: fontawesome/brands/npm
+      link: https://www.npmjs.com/package/evalproof
+      name: evalproof on npm
 
 # `mkdocs build --strict` (CI runs it) turns every one of these into an error.
 validation:

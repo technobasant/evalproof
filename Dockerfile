@@ -39,7 +39,7 @@ ARG VERSION=dev
 ARG REVISION=unknown
 
 LABEL org.opencontainers.image.title="evalproof" \
-      org.opencontainers.image.description="Treat LLM evaluation as measurement: calibrate the judge, correct the pass rate, gate CI on significant regressions." \
+      org.opencontainers.image.description="Treat LLM and agent evaluation as measurement: calibrate the judge, test agents, gate CI only on significant regressions." \
       org.opencontainers.image.source="https://github.com/technobasant/evalproof" \
       org.opencontainers.image.url="https://basantbhattarai.com.np/evalproof/" \
       org.opencontainers.image.documentation="https://basantbhattarai.com.np/evalproof/getting-started/install/" \

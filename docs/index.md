@@ -1,12 +1,12 @@
 ---
-description: evalproof calibrates the LLM judge, corrects its pass rate and gates CI on regressions that are real rather than noise.
+description: evalproof calibrates the LLM judge, tests agents, imports your test cases, finds untested model calls and gates CI only on real regressions.
 ---
 
 <div class="hero" markdown>
 
 # evalproof
 
-Treat LLM evaluation as measurement. Calibrate the judge, correct its pass rate, and gate CI on regressions that are real rather than noise.
+Treat LLM and agent evaluation as measurement. Calibrate the judge, test agents through their tool calls, and gate CI on regressions that are real rather than noise.
 { .lead }
 
 [Get started](getting-started/index.md){ .md-button .md-button--primary }
@@ -16,6 +16,7 @@ Treat LLM evaluation as measurement. Calibrate the judge, correct its pass rate,
 
 [![PyPI](https://img.shields.io/pypi/v/evalproof?label=PyPI)](https://pypi.org/project/evalproof/)
 [![Python](https://img.shields.io/pypi/pyversions/evalproof?label=Python)](https://pypi.org/project/evalproof/)
+[![npm](https://img.shields.io/npm/v/evalproof?label=npm)](https://www.npmjs.com/package/evalproof)
 [![licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](https://github.com/technobasant/evalproof/blob/main/LICENSE)
 
 **Try it in the browser: [evalproof.streamlit.app](https://evalproof.streamlit.app).** Check whether
@@ -71,13 +72,29 @@ is — the effect is worked through with a seeded simulation in
 
     [:octicons-arrow-right-24: Repeated trials](guides/repeated-trials.md#repeated-trials)
 
--   :material-import: **Import results**
+-   :material-import: **Import test cases and results**
 
     ---
 
-    Gate results from promptfoo, Inspect, DeepEval and lm-eval without re-running them.
+    Turn the test cases you have in promptfoo, DeepEval, Ragas, LangSmith and others into a suite, or gate their results without re-running them.
 
-    [:octicons-arrow-right-24: Import results](guides/import.md#import-results-from-other-tools)
+    [:octicons-arrow-right-24: Import test cases](guides/import-test-cases.md)
+
+-   :material-magnify-scan: **Find what is not tested**
+
+    ---
+
+    List the model calls, agents and tools in a Python or TypeScript repository that no suite reaches, and draft inputs for them.
+
+    [:octicons-arrow-right-24: Find what is not tested](guides/find-gaps.md)
+
+-   :material-language-typescript: **TypeScript and any language**
+
+    ---
+
+    Test a system in any language as a command or HTTP target, with a helper library on npm for TypeScript and JavaScript.
+
+    [:octicons-arrow-right-24: TypeScript and JavaScript](guides/typescript.md)
 
 </div>
 
